@@ -49,6 +49,7 @@ Definir la capa operativa oficial para GitHub Copilot en este repositorio sin cr
 - `policy-reviewer`: subagente de solo lectura para validar runtime policy, quality gates, seguridad operativa y forma de salida antes de editar o ejecutar.
 - `gitflow-governor`: subagente de solo lectura para validar que el trabajo se prepare desde `feature/*`, sin editar `main` o `develop` directamente.
 - `commit-agent`: subagente para preparar commits automáticos con Conventional Commits, agrupacion minima y push seguro desde `feature/*`.
+- `qa-automation-agent`: subagente para generar y orquestar proyectos de automatización QA (Serenity BDD/Screenplay/POM).
 
 ## Required skills
 
@@ -56,6 +57,7 @@ Definir la capa operativa oficial para GitHub Copilot en este repositorio sin cr
 - `delivery-orchestration`: ejecuta el flujo documental y tecnico aprobado.
 - `gitflow-enforcement`: valida y refuerza la politica Git Flow del repositorio.
 - `git-automation`: automatiza `git add`, `git commit` y `git push` con Conventional Commits y validaciones de rama.
+- `qa-automation-generator`: genera scaffolds de proyectos de pruebas y artefactos BDD/TDD.
 
 ## Execution sequence
 

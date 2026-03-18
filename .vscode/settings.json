@@ -21,5 +21,14 @@
       "strings": false
     },
     "editor.defaultFormatter": "DavidAnson.vscode-markdownlint"
+  },
+  "[java]": {
+    "editor.defaultFormatter": "redhat.java",
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": "explicit"
+    }
+  },
+  "[gradle]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
   }
 }
