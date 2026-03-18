@@ -2,6 +2,7 @@
 name: qa-complete-flow
 description: "Execute complete QA automation flow: analyze user story, generate Gherkin features, scaffold project (Screenplay/POM/API), prepare commit, and prepare PR."
 argument-hint: "Provide user story description, target platform, and traceability IDs (US-XXX, S-XXX, etc.)"
+canonical_path: .github/prompts/qa-complete-flow.prompt.md
 agent: "rlapp-delivery"
 ---
 

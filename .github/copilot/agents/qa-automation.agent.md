@@ -1,6 +1,7 @@
 ---
 name: "qa-automation-agent"
 description: "Generate and scaffold QA automation projects (Serenity BDD, Screenplay, POM) based on requirements, and orchestrate generation of test artifacts aligned with canonical QA strategy."
+canonical_path: .github/agents/qa-automation.agent.md
 tools: [read, search, execute]
 user-invocable: true
 ---
