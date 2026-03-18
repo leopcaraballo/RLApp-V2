@@ -23,5 +23,9 @@ agents:
     canonical_path: .github/agents/traceability-auditor.agent.md
     mirror_path: .github/copilot/agents/traceability-auditor.agent.md
     description: Resolve canonical US, UC, S, BDD, and TDD mappings.
+  - name: qa-automation-agent
+    canonical_path: .github/agents/qa-automation.agent.md
+    mirror_path: .github/copilot/agents/qa-automation.agent.md
+    description: Generate and scaffold QA automation projects aligned with canonical QA strategy.
 
 # Compatibility mirror only. Source of truth remains under .github/agents/ and docs/project.

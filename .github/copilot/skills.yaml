@@ -11,5 +11,8 @@ skills:
   - name: traceability-gate
     canonical_path: .github/skills/traceability-gate/SKILL.md
     description: Validate the canonical traceability chain before implementation.
+  - name: qa-automation-generator
+    canonical_path: .github/skills/qa-automation-generator/SKILL.md
+    description: Generate QA automation scaffolding (Serenity BDD / Screenplay / POM) from requirements.
 
 # Compatibility mirror only. Source of truth remains under .github/skills/ and docs/project.
