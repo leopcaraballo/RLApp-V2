@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Validate canonical documentation layout
         shell: bash
@@ -198,12 +198,12 @@ jobs:
             exit 1
           }
 
-          grep -q '^- .github/workflows/gitflow-governor.yml$' .github/copilot/guardrails.yaml || {
+          grep -Eq '^[[:space:]]*-[[:space:]]+\.github/workflows/gitflow-governor\.yml$' .github/copilot/guardrails.yaml || {
             echo "guardrails.yaml must reference gitflow-governor.yml."
             exit 1
           }
 
-          grep -q '^- .github/workflows/commit-standards.yml$' .github/copilot/guardrails.yaml || {
+          grep -Eq '^[[:space:]]*-[[:space:]]+\.github/workflows/commit-standards\.yml$' .github/copilot/guardrails.yaml || {
             echo "guardrails.yaml must reference commit-standards.yml."
             exit 1
           }
@@ -215,7 +215,7 @@ jobs:
 
           for spec in "$DOCS_ROOT"/11-specifications/S-*.md; do
             spec_id=$(basename "$spec" .md)
-            if ! compgen -G "$DOCS_ROOT/12-testing/tdd/TDD-${spec_id}-*.md" > /dev/null; then
+            if ! compgen -G "$DOCS_ROOT/12-testing/tdd/TDD-${spec_id}*.md" > /dev/null; then
               echo "Missing TDD document for ${spec_id}"
               exit 1
             fi
@@ -225,10 +225,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup .NET 10
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 10.0.x
 

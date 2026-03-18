@@ -49,7 +49,7 @@ jobs:
     steps:
       - name: Evaluate protected branch push
         id: evaluation
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const branch = context.ref.replace('refs/heads/', '');
@@ -87,7 +87,7 @@ jobs:
 
       - name: Checkout repository for protected-branch restore
         if: steps.evaluation.outputs.authorized != 'true' && github.event.before != '0000000000000000000000000000000000000000'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
