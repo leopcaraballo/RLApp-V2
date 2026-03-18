@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\RLApp.Infrastructure\RLApp.Infrastructure.csproj" />
+    <ProjectReference Include="..\RLApp.Application\RLApp.Application.csproj" />
+    <ProjectReference Include="..\RLApp.Ports\RLApp.Ports.csproj" />
+    <ProjectReference Include="..\RLApp.Domain\RLApp.Domain.csproj" />
+  </ItemGroup>
+
+</Project>
