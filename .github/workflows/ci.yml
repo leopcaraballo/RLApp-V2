@@ -1,0 +1,276 @@
+name: CI
+
+env:
+  DOCS_ROOT: docs/project
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - "feature/**"
+  pull_request:
+
+jobs:
+  docs-traceability:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Validate canonical documentation layout
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          required_paths=(
+            "$DOCS_ROOT/11-specifications"
+            "$DOCS_ROOT/12-testing/bdd"
+            "$DOCS_ROOT/12-testing/tdd"
+            "$DOCS_ROOT/15-traceability"
+          )
+
+          for path in "${required_paths[@]}"; do
+            [[ -d "$path" ]] || { echo "Missing required path: $path"; exit 1; }
+          done
+
+          spec_count=$(find "$DOCS_ROOT/11-specifications" -maxdepth 1 -name 'S-*.md' | wc -l)
+          tdd_count=$(find "$DOCS_ROOT/12-testing/tdd" -maxdepth 1 -name 'TDD-S-*.md' | wc -l)
+          bdd_count=$(find "$DOCS_ROOT/12-testing/bdd" -maxdepth 1 -name 'BDD-*.feature' | wc -l)
+
+          [[ "$spec_count" -gt 0 ]] || { echo "No canonical specs found"; exit 1; }
+          [[ "$tdd_count" -gt 0 ]] || { echo "No canonical TDD artifacts found"; exit 1; }
+          [[ "$bdd_count" -gt 0 ]] || { echo "No canonical BDD artifacts found"; exit 1; }
+
+      - name: Validate Copilot execution layer layout
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          required_files=(
+            ".ai-entrypoint.md"
+            "ai/context/README.md"
+            "ai/guardrails/README.md"
+            "ai/operating-model/README.md"
+            "ai/orchestration/README.md"
+            ".github/copilot-instructions.md"
+            ".github/copilot/agents.yaml"
+            ".github/copilot/skills.yaml"
+            ".github/copilot/guardrails.yaml"
+            ".github/instructions/documentation.instructions.md"
+            ".github/instructions/orchestration.instructions.md"
+            ".github/agents/rlapp-delivery.agent.md"
+            ".github/agents/traceability-auditor.agent.md"
+            ".github/agents/docs-gap-detector.agent.md"
+            ".github/agents/policy-reviewer.agent.md"
+            ".github/agents/gitflow-governor.agent.md"
+            ".github/agents/commit-agent.agent.md"
+            ".github/skills/traceability-gate/SKILL.md"
+            ".github/skills/delivery-orchestration/SKILL.md"
+            ".github/skills/gitflow-enforcement/SKILL.md"
+            ".github/skills/git-automation/SKILL.md"
+            ".github/prompts/full-flow.prompt.md"
+            ".github/prompts/policy-review.prompt.md"
+            ".github/prompts/traceability-check.prompt.md"
+            ".github/prompts/gitflow-check.prompt.md"
+            ".github/prompts/commit-agent.prompt.md"
+            ".github/scripts/validate-conventional-commit.sh"
+            ".github/scripts/generate-conventional-commit.sh"
+            ".github/scripts/git-automation.sh"
+            ".githooks/commit-msg"
+            ".githooks/pre-push"
+            ".github/workflows/gitflow-governor.yml"
+            ".github/workflows/commit-standards.yml"
+            "$DOCS_ROOT/16-generation-pack/08-COPILOT-OPERATING-MODEL.md"
+            "$DOCS_ROOT/16-generation-pack/09-AI-RUNTIME-POLICY.md"
+            "$DOCS_ROOT/16-generation-pack/10-AI-TESTING-AND-OBSERVABILITY.md"
+          )
+
+          for path in "${required_files[@]}"; do
+            [[ -f "$path" ]] || { echo "Missing required Copilot asset: $path"; exit 1; }
+          done
+
+          required_dirs=(
+            ".github/copilot/agents"
+            ".github/copilot/prompts"
+            ".github/copilot/instructions"
+          )
+
+          for path in "${required_dirs[@]}"; do
+            [[ -d "$path" ]] || { echo "Missing required Copilot directory: $path"; exit 1; }
+          done
+
+          [[ ! -d ".claude" ]] || { echo "Legacy .claude directory is not allowed"; exit 1; }
+          [[ ! -f "AGENTS.md" ]] || { echo "Do not add AGENTS.md while .github/copilot-instructions.md is the repo-wide instruction file"; exit 1; }
+
+          for file in .github/instructions/*.instructions.md; do
+            grep -q '^description:' "$file" || { echo "Instruction missing description frontmatter: $file"; exit 1; }
+          done
+
+          for file in .github/prompts/*.prompt.md; do
+            grep -q '^agent:' "$file" || { echo "Prompt missing agent frontmatter: $file"; exit 1; }
+          done
+
+          for file in .github/agents/*.agent.md; do
+            grep -q '^description:' "$file" || { echo "Agent missing description frontmatter: $file"; exit 1; }
+            grep -q '^tools:' "$file" || { echo "Agent missing tools frontmatter: $file"; exit 1; }
+          done
+
+          for file in .github/agents/traceability-auditor.agent.md .github/agents/docs-gap-detector.agent.md .github/agents/policy-reviewer.agent.md .github/agents/gitflow-governor.agent.md; do
+            if grep -Eq 'tools: \[[^]]*(edit|execute|todo|agent)' "$file"; then
+              echo "Read-only agent has forbidden tools: $file"
+              exit 1
+            fi
+          done
+
+          grep -q 'agent: "policy-reviewer"' .github/prompts/qa-task.prompt.md || {
+            echo "qa-task prompt must use policy-reviewer."
+            exit 1
+          }
+
+          grep -q 'Artifacts Reviewed' .github/agents/rlapp-delivery.agent.md || {
+            echo "rlapp-delivery must expose the structured output contract."
+            exit 1
+          }
+
+          grep -q 'feature/\\*' .github/copilot-instructions.md || {
+            echo "copilot-instructions must require feature/* branches."
+            exit 1
+          }
+
+          grep -q 'agent: "gitflow-governor"' .github/prompts/gitflow-check.prompt.md || {
+            echo "gitflow-check prompt must use gitflow-governor."
+            exit 1
+          }
+
+          grep -q 'agent: "commit-agent"' .github/prompts/commit-agent.prompt.md || {
+            echo "commit-agent prompt must use commit-agent."
+            exit 1
+          }
+
+          for file in .github/skills/*/SKILL.md; do
+            grep -q '^name:' "$file" || { echo "Skill missing name frontmatter: $file"; exit 1; }
+            grep -q '^description:' "$file" || { echo "Skill missing description frontmatter: $file"; exit 1; }
+            rel_path="${file#./}"
+            grep -q "canonical_path: ${rel_path}" .github/copilot/skills.yaml || {
+              echo "skills.yaml compatibility manifest is out of sync for ${rel_path}."
+              exit 1
+            }
+          done
+
+          for file in .github/agents/*.agent.md; do
+            rel_path="${file#./}"
+            grep -q "canonical_path: ${rel_path}" .github/copilot/agents.yaml || {
+              echo "agents.yaml compatibility manifest is out of sync for ${rel_path}."
+              exit 1
+            }
+
+            mirror=".github/copilot/agents/$(basename "$file")"
+            [[ -f "$mirror" ]] || { echo "Missing agent mirror: $mirror"; exit 1; }
+            grep -q "canonical_path: ${rel_path}" "$mirror" || {
+              echo "Agent mirror is out of sync for ${rel_path}."
+              exit 1
+            }
+          done
+
+          for file in .github/prompts/*.prompt.md; do
+            rel_path="${file#./}"
+            mirror=".github/copilot/prompts/$(basename "$file")"
+            [[ -f "$mirror" ]] || { echo "Missing prompt mirror: $mirror"; exit 1; }
+            grep -q "canonical_path: ${rel_path}" "$mirror" || {
+              echo "Prompt mirror is out of sync for ${rel_path}."
+              exit 1
+            }
+          done
+
+          for file in .github/instructions/*.instructions.md; do
+            rel_path="${file#./}"
+            mirror=".github/copilot/instructions/$(basename "$file")"
+            [[ -f "$mirror" ]] || { echo "Missing instruction mirror: $mirror"; exit 1; }
+            grep -q "canonical_path: ${rel_path}" "$mirror" || {
+              echo "Instruction mirror is out of sync for ${rel_path}."
+              exit 1
+            }
+          done
+
+          grep -q '^entrypoint: .ai-entrypoint.md$' .github/copilot/guardrails.yaml || {
+            echo "guardrails.yaml must declare the AI entrypoint."
+            exit 1
+          }
+
+          grep -Eq '^[[:space:]]*-[[:space:]]+\.github/workflows/gitflow-governor\.yml$' .github/copilot/guardrails.yaml || {
+            echo "guardrails.yaml must reference gitflow-governor.yml."
+            exit 1
+          }
+
+          grep -Eq '^[[:space:]]*-[[:space:]]+\.github/workflows/commit-standards\.yml$' .github/copilot/guardrails.yaml || {
+            echo "guardrails.yaml must reference commit-standards.yml."
+            exit 1
+          }
+
+      - name: Validate spec to test coverage markers
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          for spec in "$DOCS_ROOT"/11-specifications/S-*.md; do
+            spec_id=$(basename "$spec" .md)
+            if ! compgen -G "$DOCS_ROOT/12-testing/tdd/TDD-${spec_id}*.md" > /dev/null; then
+              echo "Missing TDD document for ${spec_id}"
+              exit 1
+            fi
+          done
+
+  lint-test-coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Detect executable projects
+        id: detect
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if find . -maxdepth 4 \( -name '*.sln' -o -name '*.csproj' \) | grep -q .; then
+            echo "has_dotnet=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_dotnet=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Lint
+        if: steps.detect.outputs.has_dotnet == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          solution=$(find . -maxdepth 3 -name '*.sln' | head -n 1)
+          if [[ -n "$solution" ]]; then
+            dotnet format "$solution" --verify-no-changes
+          else
+            project=$(find . -maxdepth 4 -name '*.csproj' | head -n 1)
+            dotnet format "$project" --verify-no-changes
+          fi
+
+      - name: Tests with coverage
+        if: steps.detect.outputs.has_dotnet == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          target=$(find . -maxdepth 3 -name '*.sln' | head -n 1)
+          if [[ -z "$target" ]]; then
+            target=$(find . -maxdepth 4 -name '*.csproj' | head -n 1)
+          fi
+
+          dotnet test "$target" --configuration Release --collect:"XPlat Code Coverage" --results-directory ./TestResults
+
+      - name: No executable project detected
+        if: steps.detect.outputs.has_dotnet != 'true'
+        run: echo "No .NET solution or project found. Lint, test and coverage are intentionally skipped in this template repository."

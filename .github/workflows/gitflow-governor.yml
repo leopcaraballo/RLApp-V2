@@ -1,0 +1,109 @@
+name: GitFlow Governor
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    types:
+      - opened
+      - edited
+      - synchronize
+      - reopened
+
+jobs:
+  validate-pr-branches:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate Git Flow PR policy
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          head_ref="${{ github.head_ref }}"
+          base_ref="${{ github.base_ref }}"
+
+          [[ "$head_ref" =~ ^feature/.+ ]] || {
+            echo "Pull Request source branch must match feature/*"
+            exit 1
+          }
+
+          [[ "$base_ref" == "main" || "$base_ref" == "develop" ]] || {
+            echo "Pull Request target branch must be main or develop"
+            exit 1
+          }
+
+          [[ "$head_ref" != "main" && "$head_ref" != "develop" ]] || {
+            echo "Protected branches cannot be used as Pull Request source branches"
+            exit 1
+          }
+
+  protect-branches:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: read
+    steps:
+      - name: Evaluate protected branch push
+        id: evaluation
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const branch = context.ref.replace('refs/heads/', '');
+            const actor = context.actor;
+            const forced = Boolean(context.payload.forced);
+            const before = context.payload.before;
+            const after = context.sha;
+
+            if (actor === 'github-actions[bot]' && forced) {
+              core.notice('Skipping remediation loop for automated protected-branch restore.');
+              core.setOutput('authorized', 'true');
+              return;
+            }
+
+            const pulls = await github.paginate(
+              github.rest.repos.listPullRequestsAssociatedWithCommit,
+              {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                commit_sha: after,
+              }
+            );
+
+            const authorized = pulls.some((pull) => pull.merged_at && pull.base && pull.base.ref === branch);
+
+            core.setOutput('authorized', authorized ? 'true' : 'false');
+            core.setOutput('before', before);
+            core.setOutput('branch', branch);
+
+            if (authorized) {
+              core.notice(`Protected branch push accepted because commit ${after} is associated with a merged PR into ${branch}.`);
+            } else {
+              core.warning(`Protected branch push ${after} is not associated with a merged PR into ${branch}.`);
+            }
+
+      - name: Checkout repository for protected-branch restore
+        if: steps.evaluation.outputs.authorized != 'true' && github.event.before != '0000000000000000000000000000000000000000'
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Restore protected branch to previous commit
+        if: steps.evaluation.outputs.authorized != 'true' && github.event.before != '0000000000000000000000000000000000000000'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git push --force origin "${{ steps.evaluation.outputs.before }}:refs/heads/${{ steps.evaluation.outputs.branch }}"
+
+      - name: Fail unauthorized protected-branch push
+        if: steps.evaluation.outputs.authorized != 'true'
+        shell: bash
+        run: |
+          echo "Direct pushes to protected branches are not allowed. Use a feature/* branch and merge through Pull Request."
+          exit 1

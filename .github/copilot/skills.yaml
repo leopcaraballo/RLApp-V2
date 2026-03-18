@@ -1,0 +1,15 @@
+skills:
+  - name: delivery-orchestration
+    canonical_path: .github/skills/delivery-orchestration/SKILL.md
+    description: Execute docs-first RLApp delivery across documentation and execution assets.
+  - name: git-automation
+    canonical_path: .github/skills/git-automation/SKILL.md
+    description: Automate git add, Conventional Commit generation, commit validation, and push for feature branches.
+  - name: gitflow-enforcement
+    canonical_path: .github/skills/gitflow-enforcement/SKILL.md
+    description: Validate and reinforce Git Flow guardrails for protected branches and PR paths.
+  - name: traceability-gate
+    canonical_path: .github/skills/traceability-gate/SKILL.md
+    description: Validate the canonical traceability chain before implementation.
+
+# Compatibility mirror only. Source of truth remains under .github/skills/ and docs/project.
