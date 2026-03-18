@@ -1,6 +1,6 @@
 ---
 name: qa-automation-lab
-description: "Generate a full QA automation lab (Serenity BDD + Gradle) or individual automation artifacts based on requirements." 
+description: "Generate a full QA automation lab (Serenity BDD + Gradle) or individual automation artifacts based on requirements."
 argument-hint: "Provide a short description of the QA scenario, target platform, and preferred design pattern (Screenplay, POM, API)."
 agent: "qa-automation-agent"
 skill: "qa-automation-generator"

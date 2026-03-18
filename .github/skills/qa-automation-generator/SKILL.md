@@ -1,6 +1,6 @@
 ---
 name: qa-automation-generator
-description: "Generate end-to-end QA automation projects (Serenity BDD, Screenplay, POM) including Gradle build, feature files, runners, and base test packages." 
+description: "Generate end-to-end QA automation projects (Serenity BDD, Screenplay, POM) including Gradle build, feature files, runners, and base test packages."
 argument-hint: "Describe the QA scenario, target platform (web/api), and preferred pattern (Screenplay, POM, BDD)."
 user-invocable: true
 ---
