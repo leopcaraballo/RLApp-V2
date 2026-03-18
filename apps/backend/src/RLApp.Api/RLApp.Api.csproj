@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.4" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.4" />
   </ItemGroup>
 
   <ItemGroup>
@@ -15,6 +16,9 @@
     <ProjectReference Include="..\RLApp.Application\RLApp.Application.csproj" />
     <ProjectReference Include="..\RLApp.Ports\RLApp.Ports.csproj" />
     <ProjectReference Include="..\RLApp.Domain\RLApp.Domain.csproj" />
+    <ProjectReference Include="..\RLApp.Adapters.Http\RLApp.Adapters.Http.csproj" />
+    <ProjectReference Include="..\RLApp.Adapters.Persistence\RLApp.Adapters.Persistence.csproj" />
+    <ProjectReference Include="..\RLApp.Adapters.Messaging\RLApp.Adapters.Messaging.csproj" />
   </ItemGroup>
 
 </Project>

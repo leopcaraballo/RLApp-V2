@@ -6,7 +6,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using RLApp.Adapters.Persistence.Data;
 
-namespace RLApp.Adapters.Messaging.BackgroundServices;
+namespace RLApp.Infrastructure.BackgroundServices;
 
 public class OutboxProcessor : BackgroundService
 {
