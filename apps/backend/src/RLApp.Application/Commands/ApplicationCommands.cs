@@ -1,10 +1,13 @@
+using MediatR;
+using RLApp.Application.DTOs;
+
 namespace RLApp.Application.Commands;
 
 /// <summary>
 /// Base command for all application commands.
 /// Reference: Command Handler Guidelines
 /// </summary>
-public abstract class Command
+public abstract class Command : IRequest<CommandResult>
 {
     public string CorrelationId { get; set; }
     public string UserId { get; set; }
