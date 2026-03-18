@@ -1,0 +1,250 @@
+name: PR Quality Gate
+
+env:
+  DOCS_ROOT: docs/project
+
+on:
+  pull_request:
+    types:
+      - opened
+      - edited
+      - synchronize
+      - reopened
+
+jobs:
+  quality-gate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate PR metadata
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = context.payload.pull_request.body || "";
+            const title = context.payload.pull_request.title || "";
+            const text = `${title}\n${body}`;
+
+            const hasSpec = /\bS-\d{3}\b/.test(text);
+            const hasStory = /\bUS-\d{3}\b/.test(text);
+            const hasUseCase = /\bUC-\d{3}\b/.test(text);
+            const hasTests = /(BDD-\d{3}|TDD-S-\d{3}|tests?)/i.test(text);
+
+            if (!hasSpec) {
+              core.setFailed("PR must reference at least one canonical spec ID (S-XXX).");
+            }
+
+            if (!hasStory) {
+              core.setFailed("PR must reference at least one user story ID (US-XXX).");
+            }
+
+            if (!hasUseCase) {
+              core.setFailed("PR must reference at least one canonical use case ID (UC-XXX).");
+            }
+
+            if (!hasTests) {
+              core.setFailed("PR must describe associated tests or reference BDD/TDD artifacts.");
+            }
+
+      - name: Validate Git Flow PR policy
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          head_ref="${{ github.head_ref }}"
+          base_ref="${{ github.base_ref }}"
+
+          [[ "$head_ref" =~ ^feature/.+ ]] || {
+            echo "Pull Request source branch must match feature/*"
+            exit 1
+          }
+
+          [[ "$base_ref" == "main" || "$base_ref" == "develop" ]] || {
+            echo "Pull Request target branch must be main or develop"
+            exit 1
+          }
+
+      - name: Validate changed files against traceability rules
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          base_ref="origin/${{ github.base_ref }}"
+          git fetch origin "${{ github.base_ref }}" --depth=1
+          changed_files=$(git diff --name-only "$base_ref"...HEAD)
+
+          echo "$changed_files"
+
+          code_changes=$(echo "$changed_files" | grep -E '\.(cs|ts|tsx|js|jsx)$' || true)
+          test_changes=$(echo "$changed_files" | grep -E '(^|/)(tests|Tests|__tests__)/|\.feature$|TDD-S-' || true)
+
+          if [[ -n "$code_changes" && -z "$test_changes" ]]; then
+            echo "Code changes detected without associated tests or testing artifacts."
+            exit 1
+          fi
+
+      - name: Validate architecture guardrails on domain code
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          base_ref="origin/${{ github.base_ref }}"
+          domain_files=$(git diff --name-only "$base_ref"...HEAD | grep -Ei 'domain/.+\.cs$' || true)
+
+          if [[ -z "$domain_files" ]]; then
+            exit 0
+          fi
+
+          forbidden='Http|HttpClient|DbContext|Npgsql|RabbitMQ|SignalR|EntityFramework|SqlConnection'
+
+          while IFS= read -r file; do
+            [[ -n "$file" ]] || continue
+            if grep -E "$forbidden" "$file" > /dev/null; then
+              echo "Forbidden infrastructure dependency found in domain file: $file"
+              exit 1
+            fi
+          done <<< "$domain_files"
+
+      - name: Validate traceability docs still exist
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          [[ -f "$DOCS_ROOT/03-TRACEABILITY-MODEL.md" ]]
+          [[ -f "$DOCS_ROOT/15-traceability/03-USE-CASES-TO-SPECS.md" ]]
+          [[ -f "$DOCS_ROOT/15-traceability/05-SPECS-TO-TESTS.md" ]]
+
+      - name: Validate Copilot execution layer guardrails
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          base_ref="origin/${{ github.base_ref }}"
+          git fetch origin "${{ github.base_ref }}" --depth=1
+          changed_files=$(git diff --name-only "$base_ref"...HEAD)
+
+          if echo "$changed_files" | grep -Eq '^\.claude/'; then
+            echo "Legacy .claude assets are not allowed."
+            exit 1
+          fi
+
+          if echo "$changed_files" | grep -Eq '^AGENTS\.md$'; then
+            echo "Do not add AGENTS.md while .github/copilot-instructions.md is the repo-wide instruction file."
+            exit 1
+          fi
+
+          ai_changes=$(echo "$changed_files" | grep -E '^\.ai-entrypoint\.md$|^ai/.+|^\.github/(copilot-instructions\.md|copilot/.+|instructions/.+\.instructions\.md|prompts/.+\.prompt\.md|agents/.+\.agent\.md|skills/.+/SKILL\.md|scripts/.+)$|^\.githooks/.+' || true)
+
+          if [[ -n "$ai_changes" ]]; then
+            [[ -f "$DOCS_ROOT/16-generation-pack/08-COPILOT-OPERATING-MODEL.md" ]] || {
+              echo "Missing canonical Copilot operating model doc."
+              exit 1
+            }
+
+            [[ -f "$DOCS_ROOT/16-generation-pack/09-AI-RUNTIME-POLICY.md" ]] || {
+              echo "Missing canonical AI runtime policy doc."
+              exit 1
+            }
+
+            [[ -f "$DOCS_ROOT/16-generation-pack/10-AI-TESTING-AND-OBSERVABILITY.md" ]] || {
+              echo "Missing canonical AI testing and observability doc."
+              exit 1
+            }
+
+            [[ -f ".ai-entrypoint.md" ]] || {
+              echo "Missing repository AI entrypoint."
+              exit 1
+            }
+          fi
+
+      - name: Validate read-only agent permissions
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          readonly_agents=(
+            ".github/agents/traceability-auditor.agent.md"
+            ".github/agents/docs-gap-detector.agent.md"
+            ".github/agents/policy-reviewer.agent.md"
+            ".github/agents/gitflow-governor.agent.md"
+          )
+
+          for file in "${readonly_agents[@]}"; do
+            if grep -Eq 'tools: \[[^]]*(edit|execute|todo|agent)' "$file"; then
+              echo "Read-only agent has forbidden tools: $file"
+              exit 1
+            fi
+          done
+
+      - name: Validate AI prompt routing
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          grep -q 'agent: "policy-reviewer"' .github/prompts/qa-task.prompt.md || {
+            echo "qa-task prompt must use policy-reviewer."
+            exit 1
+          }
+
+          grep -q 'Artifacts Reviewed' .github/agents/rlapp-delivery.agent.md || {
+            echo "rlapp-delivery must keep the structured output contract."
+            exit 1
+          }
+
+          grep -q 'agent: "gitflow-governor"' .github/prompts/gitflow-check.prompt.md || {
+            echo "gitflow-check prompt must use gitflow-governor."
+            exit 1
+          }
+
+          grep -q 'agent: "commit-agent"' .github/prompts/commit-agent.prompt.md || {
+            echo "commit-agent prompt must use commit-agent."
+            exit 1
+          }
+
+      - name: Validate compatibility mirrors
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          for file in .github/agents/*.agent.md; do
+            rel_path="${file#./}"
+            grep -q "canonical_path: ${rel_path}" .github/copilot/agents.yaml || {
+              echo "agents.yaml compatibility mirror is out of sync for ${rel_path}."
+              exit 1
+            }
+          done
+
+          for file in .github/skills/*/SKILL.md; do
+            rel_path="${file#./}"
+            grep -q "canonical_path: ${rel_path}" .github/copilot/skills.yaml || {
+              echo "skills.yaml compatibility mirror is out of sync for ${rel_path}."
+              exit 1
+            }
+          done
+
+          grep -q '^entrypoint: .ai-entrypoint.md$' .github/copilot/guardrails.yaml || {
+            echo "guardrails.yaml must declare .ai-entrypoint.md."
+            exit 1
+          }
+
+          grep -q '^branch_policy:' .github/copilot/guardrails.yaml || {
+            echo "guardrails.yaml must declare branch policy metadata."
+            exit 1
+          }
+
+      - name: Validate commit automation scripts and hooks exist
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          [[ -f .github/scripts/validate-conventional-commit.sh ]]
+          [[ -f .github/scripts/generate-conventional-commit.sh ]]
+          [[ -f .github/scripts/git-automation.sh ]]
+          [[ -f .githooks/commit-msg ]]
+          [[ -f .githooks/pre-push ]]

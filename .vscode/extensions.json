@@ -1,0 +1,15 @@
+{
+  "recommendations": [
+    "github.copilot",
+    "github.copilot-chat",
+    "github.vscode-pull-request-github",
+    "github.vscode-github-actions",
+    "davidanson.vscode-markdownlint",
+    "redhat.vscode-yaml",
+    "eamodio.gitlens",
+    "ms-dotnettools.csdevkit",
+    "ms-dotnettools.csharp",
+    "docker.docker"
+  ],
+  "unwantedRecommendations": ["openai.chatgpt"]
+}

@@ -1,0 +1,46 @@
+name: Commit Standards
+
+on:
+  push:
+    branches:
+      - "feature/**"
+  pull_request:
+    types:
+      - opened
+      - edited
+      - synchronize
+      - reopened
+
+jobs:
+  validate-commit-subjects:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate Conventional Commit subjects
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            git fetch origin "${{ github.base_ref }}" --depth=1
+            range="origin/${{ github.base_ref }}..HEAD"
+          else
+            before="${{ github.event.before }}"
+            if [[ "$before" == "0000000000000000000000000000000000000000" ]]; then
+              range="HEAD~1..HEAD"
+            else
+              range="$before..HEAD"
+            fi
+          fi
+
+          commits="$(git log --format=%s $range)"
+          [[ -n "$commits" ]] || { echo "No commit subjects found to validate."; exit 0; }
+
+          while IFS= read -r subject; do
+            [[ -n "$subject" ]] || continue
+            ./.github/scripts/validate-conventional-commit.sh "$subject"
+          done <<< "$commits"

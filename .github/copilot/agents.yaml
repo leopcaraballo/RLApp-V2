@@ -1,0 +1,27 @@
+agents:
+  - name: docs-gap-detector
+    canonical_path: .github/agents/docs-gap-detector.agent.md
+    mirror_path: .github/copilot/agents/docs-gap-detector.agent.md
+    description: Detect documentation gaps before implementation or automation.
+  - name: commit-agent
+    canonical_path: .github/agents/commit-agent.agent.md
+    mirror_path: .github/copilot/agents/commit-agent.agent.md
+    description: Prepare Conventional Commits and automate safe pushes from feature branches.
+  - name: gitflow-governor
+    canonical_path: .github/agents/gitflow-governor.agent.md
+    mirror_path: .github/copilot/agents/gitflow-governor.agent.md
+    description: Validate branch and PR compliance with Git Flow guardrails.
+  - name: policy-reviewer
+    canonical_path: .github/agents/policy-reviewer.agent.md
+    mirror_path: .github/copilot/agents/policy-reviewer.agent.md
+    description: Review runtime policy, quality gates, and AI governance before changes.
+  - name: rlapp-delivery
+    canonical_path: .github/agents/rlapp-delivery.agent.md
+    mirror_path: .github/copilot/agents/rlapp-delivery.agent.md
+    description: Orchestrate docs-first RLApp delivery under policy and Git Flow constraints.
+  - name: traceability-auditor
+    canonical_path: .github/agents/traceability-auditor.agent.md
+    mirror_path: .github/copilot/agents/traceability-auditor.agent.md
+    description: Resolve canonical US, UC, S, BDD, and TDD mappings.
+
+# Compatibility mirror only. Source of truth remains under .github/agents/ and docs/project.
