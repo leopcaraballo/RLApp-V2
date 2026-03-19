@@ -34,6 +34,7 @@ public static class DependencyInjection
         // Register adapters for interfaces
         services.AddScoped<IEventStore, EventStoreRepository>();
         services.AddScoped<IEventPublisher, OutboxEventPublisher>(); // Pushes to the outbox via EF Core
+        services.AddScoped<IProjectionStore, ProjectionStoreRepository>(); // Read model projections
 
         // Configure MassTransit with RabbitMQ
         services.AddMassTransit(x =>

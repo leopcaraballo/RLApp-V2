@@ -53,15 +53,35 @@ public class EventStoreRepository : IEventStore
             .OrderBy(e => e.OccurredAt)
             .ToListAsync(cancellationToken);
 
-        // Warning: This returns a list of base DomainEvent via dynamic deserialization.
-        // A robust implementation would map EventType to the concrete C# Type.
-        // For Phase 4 simplification, we assume the Domain expects EventBase.
+        var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
         var events = new List<DomainEvent>();
+
+        // Map event types to C# domain event classes dynamically
         foreach (var record in records)
         {
-            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-            // Normally we resolve the type from assembly. Here we mock it by returning a base or dynamic parsing.
-            // As ADR-003 implies CQRS without full rehydration locally, or rehydrating strictly if needed.
+            try
+            {
+                DomainEvent? @event = record.EventType switch
+                {
+                    "QueueOpened" => JsonSerializer.Deserialize<dynamic>(record.Payload, options) as DomainEvent,
+                    "PatientCheckedIn" => JsonSerializer.Deserialize<dynamic>(record.Payload, options) as DomainEvent,
+                    "PatientLeftWaiting" => JsonSerializer.Deserialize<dynamic>(record.Payload, options) as DomainEvent,
+                    "ConsultantAssigned" => JsonSerializer.Deserialize<dynamic>(record.Payload, options) as DomainEvent,
+                    "PatientCalledForConsultation" => JsonSerializer.Deserialize<dynamic>(record.Payload, options) as DomainEvent,
+                    "ConsultationStarted" => JsonSerializer.Deserialize<dynamic>(record.Payload, options) as DomainEvent,
+                    "ConsultationFinished" => JsonSerializer.Deserialize<dynamic>(record.Payload, options) as DomainEvent,
+                    "PaymentProcessed" => JsonSerializer.Deserialize<dynamic>(record.Payload, options) as DomainEvent,
+                    _ => null
+                };
+
+                if (@event != null)
+                    events.Add(@event);
+            }
+            catch (JsonException ex)
+            {
+                // Log and skip malformed events in event stream
+                System.Diagnostics.Debug.WriteLine($"Failed to deserialize event {record.Id}: {ex.Message}");
+            }
         }
 
         return events;

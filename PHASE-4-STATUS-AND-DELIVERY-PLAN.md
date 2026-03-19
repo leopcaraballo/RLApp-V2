@@ -24,32 +24,34 @@
 ## ✅ QUÉ ESTÁ COMPLETADO (Fase 4a)
 
 ### Security Foundation (S-001)
+
 ```
-✅ JwtTokenService  
+✅ JwtTokenService
    - GenerateToken() con 60min TTL
    - ValidateToken() con HMAC256
    - Issuer/Audience validation
-   
+
 ✅ Pbkdf2PasswordHashService
    - HashPassword() con 100k iterations
    - VerifyPassword() con constant-time comparison
    - OWASP 2023 compliant
-   
+
 ✅ Program.cs Configuration
    - JWT middleware registered
    - Authentication/Authorization pipelines
    - Bearer token validation
-   
+
 ✅ AuthenticateStaffHandler
    - Real password verification (no plaintext)
    - JWT token generation
    - S-001 contract compliance
-   
+
 ✅ DTOs
    - AuthenticationResultDto con accesToken, tokenType, expiresInSeconds
 ```
 
 ### Architecture Foundation
+
 - ✅ Hexagonal architecture enforced
 - ✅ Security ports in Ports.Outbound
 - ✅ All dependencies correct
@@ -62,6 +64,7 @@
 ### Fase 4b: Persistencia e Infraestructura (15-20 horas)
 
 **TODO #1**: EventStoreRepository completo
+
 ```csharp
 public async Task<EventRecord> SaveEventAsync(DomainEvent @event)
 {
@@ -78,6 +81,7 @@ public async Task<IEnumerable<EventRecord>> GetEventsByAggregateAsync(string agg
 ```
 
 **TODO #2**: OutboxProcessor.cs (está esqueletizado)
+
 ```csharp
 public async Task ExecuteAsync(CancellationToken cancellationToken)
 {
@@ -92,6 +96,7 @@ public async Task ExecuteAsync(CancellationToken cancellationToken)
 ```
 
 **TODO #3**: Database Migrations (Ef Core)
+
 ```
 dotnet ef migrations add Phase4_Security --project RLApp.Adapters.Persistence
 dotnet ef migrations add Phase4_EventStore --project RLApp.Adapters.Persistence
@@ -113,6 +118,7 @@ dotnet ef migrations add Phase4_EventStore --project RLApp.Adapters.Persistence
 ### Fase 4d: Realtime & Observability (10-15 horas)
 
 Necesario para S-006, S-007, S-009:
+
 - WebSocket via SignalR o Socket.IO
 - Public display sanitization
 - Immutable audit logging
@@ -122,6 +128,7 @@ Necesario para S-006, S-007, S-009:
 ### Fase 4e: Testing (20-30 horas)
 
 Necesarios:
+
 - 100+ unit tests
 - 50+ integration tests
 - 9 BDD scenarios (Cucumber/Gherkin)
@@ -136,6 +143,7 @@ Necesarios:
 ### SEMANA 1: Persistencia + Core Flows
 
 **Lunes-Miércoles**: Fase 4b
+
 ```bash
 # 1. Completar EventStoreRepository
 # 2. Completar OutboxProcessor
@@ -151,6 +159,7 @@ dotnet test RLApp.slnx
 ```
 
 **Jueves-Viernes**: Fase 4c (iniciar)
+
 ```bash
 # 1. Resolver TODO #1: ConsultingRoom aggregate
 # 2. Resolver TODO #4: Check-in time query
@@ -161,6 +170,7 @@ git commit -m "feat(consulting): implement room lifecycle handlers"
 ### SEMANA 2: Flows Completados + Realtime
 
 **Lunes-Martes**: Fase 4c (completar)
+
 ```bash
 # 1. Resolver TODO #2, #5, #7, #8
 # 2. Add payment handler stubs
@@ -169,6 +179,7 @@ git commit -m "feat(handlers): complete all use case implementations"
 ```
 
 **Miércoles-Viernes**: Fase 4d
+
 ```bash
 # 1. Add SignalR
 # 2. Add public display sanitization
@@ -180,6 +191,7 @@ git commit -m "feat(realtime): add websocket and observability"
 ### SEMANA 3: Tests + Producción
 
 **Lunes-Viernes**: Fase 4e
+
 ```bash
 # 1. Write unit tests (100+)
 # 2. Write integration tests (50+)
@@ -247,30 +259,34 @@ git log --oneline origin/develop..origin/feature/backend-phase-4
 ## 🚀 Próximos Pasos Inmediatos (HOY)
 
 1. **Commit actual está en**:
+
    ```
    commit 18e61a6 (HEAD -> feature/backend-phase-4)
    feat(security): implement jwt authentication and password hashing
    ```
 
 2. **Para continuar**:
+
    ```bash
    # Asegúrate de estar en la rama
    git branch  # debe mostrar: * feature/backend-phase-4
-   
+
    # Comienza con Fase 4b (persistencia)
    # Ref: /docs/project/09-data-and-messaging/
-   
+
    # Completa EventStoreRepository
    # File: apps/backend/src/RLApp.Adapters.Persistence/Repositories/EventStoreRepository.cs
    ```
 
 3. **Valida compilación**:
+
    ```bash
    cd apps/backend
    dotnet build RLApp.slnx
    ```
 
 4. **Cuando termines cada fase**:
+
    ```bash
    # Valida spec
    # Escribe tests
@@ -283,6 +299,7 @@ git log --oneline origin/develop..origin/feature/backend-phase-4
 ## 📚 Referencias Documentales
 
 Todos tus contratos están listos en:
+
 - [07-interfaces-and-contracts/](docs/project/07-interfaces-and-contracts/)
 - [05-domain/](docs/project/05-domain/) - Estado y eventos
 - [11-specifications/](docs/project/11-specifications/) - Requerimientos detallados
