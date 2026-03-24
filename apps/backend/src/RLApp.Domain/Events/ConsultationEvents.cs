@@ -1,6 +1,7 @@
 namespace RLApp.Domain.Events;
 
 using Common;
+using System.Text.Json.Serialization;
 
 /// <summary>
 /// EV-008 ConsultingRoomActivated
@@ -8,15 +9,20 @@ using Common;
 /// </summary>
 public class ConsultingRoomActivated : DomainEvent
 {
-    public string RoomId { get; }
-    public string RoomName { get; }
+    [JsonPropertyName("roomId")]
+    public string RoomId { get; set; } = string.Empty;
 
-    public ConsultingRoomActivated(string roomId, string roomName, string correlationId)
-        : base(nameof(ConsultingRoomActivated), roomId, correlationId)
+    [JsonPropertyName("roomName")]
+    public string RoomName { get; set; } = string.Empty;
+
+    public ConsultingRoomActivated(string aggregateId, string roomName, string correlationId)
+        : base(nameof(ConsultingRoomActivated), aggregateId, correlationId)
     {
-        RoomId = roomId;
+        RoomId = aggregateId;
         RoomName = roomName;
     }
+
+    protected ConsultingRoomActivated() { }
 }
 
 /// <summary>
@@ -25,13 +31,16 @@ public class ConsultingRoomActivated : DomainEvent
 /// </summary>
 public class ConsultingRoomDeactivated : DomainEvent
 {
-    public string RoomId { get; }
+    [JsonPropertyName("roomId")]
+    public string RoomId { get; set; } = string.Empty;
 
-    public ConsultingRoomDeactivated(string roomId, string correlationId)
-        : base(nameof(ConsultingRoomDeactivated), roomId, correlationId)
+    public ConsultingRoomDeactivated(string aggregateId, string correlationId)
+        : base(nameof(ConsultingRoomDeactivated), aggregateId, correlationId)
     {
-        RoomId = roomId;
+        RoomId = aggregateId;
     }
+
+    protected ConsultingRoomDeactivated() { }
 }
 
 /// <summary>
@@ -40,15 +49,20 @@ public class ConsultingRoomDeactivated : DomainEvent
 /// </summary>
 public class PatientClaimedForAttention : DomainEvent
 {
-    public string PatientId { get; }
-    public string RoomId { get; }
+    [JsonPropertyName("patientId")]
+    public string PatientId { get; set; } = string.Empty;
 
-    public PatientClaimedForAttention(string queueId, string patientId, string roomId, string correlationId)
-        : base(nameof(PatientClaimedForAttention), queueId, correlationId)
+    [JsonPropertyName("roomId")]
+    public string RoomId { get; set; } = string.Empty;
+
+    public PatientClaimedForAttention(string aggregateId, string patientId, string roomId, string correlationId)
+        : base(nameof(PatientClaimedForAttention), aggregateId, correlationId)
     {
         PatientId = patientId;
         RoomId = roomId;
     }
+
+    protected PatientClaimedForAttention() { }
 }
 
 /// <summary>
@@ -57,15 +71,20 @@ public class PatientClaimedForAttention : DomainEvent
 /// </summary>
 public class PatientCalled : DomainEvent
 {
-    public string PatientId { get; }
-    public string RoomId { get; }
+    [JsonPropertyName("patientId")]
+    public string PatientId { get; set; } = string.Empty;
 
-    public PatientCalled(string queueId, string patientId, string roomId, string correlationId)
-        : base(nameof(PatientCalled), queueId, correlationId)
+    [JsonPropertyName("roomId")]
+    public string RoomId { get; set; } = string.Empty;
+
+    public PatientCalled(string aggregateId, string patientId, string roomId, string correlationId)
+        : base(nameof(PatientCalled), aggregateId, correlationId)
     {
         PatientId = patientId;
         RoomId = roomId;
     }
+
+    protected PatientCalled() { }
 }
 
 /// <summary>
@@ -74,15 +93,34 @@ public class PatientCalled : DomainEvent
 /// </summary>
 public class PatientAttentionCompleted : DomainEvent
 {
-    public string PatientId { get; }
-    public string RoomId { get; }
+    [JsonPropertyName("patientId")]
+    public string PatientId { get; set; } = string.Empty;
 
-    public PatientAttentionCompleted(string queueId, string patientId, string roomId, string correlationId)
-        : base(nameof(PatientAttentionCompleted), queueId, correlationId)
+    [JsonPropertyName("roomId")]
+    public string RoomId { get; set; } = string.Empty;
+
+    [JsonPropertyName("turnId")]
+    public string? TurnId { get; set; }
+
+    [JsonPropertyName("outcome")]
+    public string? Outcome { get; set; }
+
+    public PatientAttentionCompleted(
+        string aggregateId, 
+        string patientId, 
+        string roomId, 
+        string? turnId, 
+        string? outcome, 
+        string correlationId)
+        : base(nameof(PatientAttentionCompleted), aggregateId, correlationId)
     {
         PatientId = patientId;
         RoomId = roomId;
+        TurnId = turnId;
+        Outcome = outcome;
     }
+
+    protected PatientAttentionCompleted() { }
 }
 
 /// <summary>
@@ -91,13 +129,24 @@ public class PatientAttentionCompleted : DomainEvent
 /// </summary>
 public class PatientAbsentAtConsultation : DomainEvent
 {
-    public string PatientId { get; }
+    [JsonPropertyName("patientId")]
+    public string PatientId { get; set; } = string.Empty;
 
-    public PatientAbsentAtConsultation(string queueId, string patientId, string correlationId)
-        : base(nameof(PatientAbsentAtConsultation), queueId, correlationId)
+    [JsonPropertyName("turnId")]
+    public string? TurnId { get; set; }
+
+    [JsonPropertyName("reason")]
+    public string? Reason { get; set; }
+
+    public PatientAbsentAtConsultation(string aggregateId, string patientId, string? turnId, string? reason, string correlationId)
+        : base(nameof(PatientAbsentAtConsultation), aggregateId, correlationId)
     {
         PatientId = patientId;
+        TurnId = turnId;
+        Reason = reason;
     }
+
+    protected PatientAbsentAtConsultation() { }
 }
 
 /// <summary>
@@ -106,11 +155,14 @@ public class PatientAbsentAtConsultation : DomainEvent
 /// </summary>
 public class PatientCancelledByAbsence : DomainEvent
 {
-    public string PatientId { get; }
+    [JsonPropertyName("patientId")]
+    public string PatientId { get; set; } = string.Empty;
 
-    public PatientCancelledByAbsence(string queueId, string patientId, string correlationId)
-        : base(nameof(PatientCancelledByAbsence), queueId, correlationId)
+    public PatientCancelledByAbsence(string aggregateId, string patientId, string correlationId)
+        : base(nameof(PatientCancelledByAbsence), aggregateId, correlationId)
     {
         PatientId = patientId;
     }
+
+    protected PatientCancelledByAbsence() { }
 }

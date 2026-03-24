@@ -84,11 +84,23 @@ See architecture specs:
 dotnet build RLApp.slnx
 ```
 
+## Database Migrations
+
+```bash
+dotnet ef migrations add <MigrationName> --project src/RLApp.Adapters.Persistence/RLApp.Adapters.Persistence.csproj --context AppDbContext --output-dir Data/Migrations
+dotnet ef database update --project src/RLApp.Adapters.Persistence/RLApp.Adapters.Persistence.csproj --context AppDbContext
+```
+
 ## Testing
 
 ```bash
 dotnet test RLApp.slnx
 ```
+
+## API Documentation
+
+- OpenAPI source of truth: [docs/api/openapi.yaml](./docs/api/openapi.yaml)
+- Critical API audit and frontend/QA guide: [docs/api/API-AUDIT-AND-GUIDE.md](./docs/api/API-AUDIT-AND-GUIDE.md)
 
 ## Running
 
