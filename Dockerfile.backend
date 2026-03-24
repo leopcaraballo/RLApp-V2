@@ -1,0 +1,39 @@
+# syntax=docker/dockerfile:1
+
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS restore
+WORKDIR /src/apps/backend
+
+COPY apps/backend/global.json ./
+COPY apps/backend/src/RLApp.Adapters.Http/RLApp.Adapters.Http.csproj src/RLApp.Adapters.Http/
+COPY apps/backend/src/RLApp.Adapters.Messaging/RLApp.Adapters.Messaging.csproj src/RLApp.Adapters.Messaging/
+COPY apps/backend/src/RLApp.Adapters.Persistence/RLApp.Adapters.Persistence.csproj src/RLApp.Adapters.Persistence/
+COPY apps/backend/src/RLApp.Api/RLApp.Api.csproj src/RLApp.Api/
+COPY apps/backend/src/RLApp.Application/RLApp.Application.csproj src/RLApp.Application/
+COPY apps/backend/src/RLApp.Domain/RLApp.Domain.csproj src/RLApp.Domain/
+COPY apps/backend/src/RLApp.Infrastructure/RLApp.Infrastructure.csproj src/RLApp.Infrastructure/
+COPY apps/backend/src/RLApp.Ports/RLApp.Ports.csproj src/RLApp.Ports/
+
+RUN dotnet restore src/RLApp.Api/RLApp.Api.csproj
+
+FROM restore AS build
+COPY apps/backend/ ./
+RUN find . -path '*\\*' -delete
+RUN dotnet publish src/RLApp.Api/RLApp.Api.csproj \
+    -c Release \
+    -o /app/publish \
+    --no-restore \
+    /p:UseAppHost=false
+
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
+WORKDIR /app
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=build /app/publish ./
+
+ENV ASPNETCORE_URLS=http://0.0.0.0:8080
+EXPOSE 8080
+
+ENTRYPOINT ["dotnet", "RLApp.Api.dll"]

@@ -1,0 +1,16 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/RLApp.Adapters.Http/RLApp.Adapters.Http.csproj" />
+    <Project Path="src/RLApp.Adapters.Messaging/RLApp.Adapters.Messaging.csproj" />
+    <Project Path="src/RLApp.Adapters.Persistence/RLApp.Adapters.Persistence.csproj" />
+    <Project Path="src/RLApp.Api/RLApp.Api.csproj" />
+    <Project Path="src/RLApp.Application/RLApp.Application.csproj" />
+    <Project Path="src/RLApp.Domain/RLApp.Domain.csproj" />
+    <Project Path="src/RLApp.Infrastructure/RLApp.Infrastructure.csproj" />
+    <Project Path="src/RLApp.Ports/RLApp.Ports.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/RLApp.Tests.Integration/RLApp.Tests.Integration.csproj" />
+    <Project Path="tests/RLApp.Tests.Unit/RLApp.Tests.Unit.csproj" />
+  </Folder>
+</Solution>

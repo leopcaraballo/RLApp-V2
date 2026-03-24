@@ -1,0 +1,1453 @@
+openapi: 3.0.3
+info:
+  title: RLApp Backend API
+  version: 1.0.0
+  description: |
+    Contrato HTTP documentado a partir del código fuente actual de `apps/backend/src`.
+
+    Este documento describe la implementación real expuesta hoy por el backend, no el contrato TO-BE descrito en `docs/project/07-interfaces-and-contracts`.
+    Cuando el código y la documentación objetivo no coinciden, este OpenAPI prioriza el comportamiento implementado y marca la desviación en la descripción del endpoint o del schema.
+
+    Limitaciones relevantes del estado actual:
+    - La API no implementa versionado por URL.
+    - Swagger/OpenAPI en runtime solo se publica en `Development`.
+    - Hay campos `required` aceptados por la API que hoy no son usados por la lógica de aplicación.
+    - El formato de errores no está unificado; conviven errores de validación ASP.NET, errores inline del controller y `ProblemDetails` del middleware.
+servers:
+  - url: http://localhost:5094
+    description: Perfil HTTP local definido en `launchSettings.json`
+  - url: https://localhost:7059
+    description: Perfil HTTPS local definido en `launchSettings.json`
+tags:
+  - name: StaffAuth
+    description: Autenticación de usuarios internos.
+  - name: StaffUsers
+    description: Operaciones administrativas sobre usuarios internos.
+  - name: Reception
+    description: Registro operativo inicial de pacientes.
+  - name: WaitingRoom
+    description: Operaciones de cola de espera y flujo previo a consulta.
+  - name: Cashier
+    description: Flujo operativo de caja.
+  - name: Medical
+    description: Operaciones de consultorios y cierre de consulta.
+  - name: Health
+    description: Endpoints de salud y readiness.
+paths:
+  /api/staff/auth/login:
+    post:
+      tags:
+        - StaffAuth
+      summary: Autenticar usuario interno
+      description: |
+        Autentica un usuario interno y devuelve un token JWT Bearer.
+
+        Hallazgo importante:
+        - El campo `identifier` hoy solo se resuelve contra `username`; el backend no hace fallback a email ni a otro identificador.
+        - `capabilities` existe en la respuesta, pero actualmente se devuelve vacío.
+      operationId: loginStaff
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/CorrelationIdHeaderOptional'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            examples:
+              validLogin:
+                summary: Login válido
+                value:
+                  identifier: admin
+                  password: Password123!
+      responses:
+        '200':
+          description: Usuario autenticado correctamente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthenticationResult'
+              examples:
+                success:
+                  summary: Respuesta exitosa real
+                  value:
+                    staffId: staff-admin
+                    username: admin
+                    email: admin@clinic.local
+                    role: Supervisor
+                    accessToken: eyJhbGciOi...
+                    tokenType: Bearer
+                    expiresInSeconds: 3600
+                    authenticatedAt: '2026-03-19T14:00:00Z'
+                    correlationId: CORR-login-001
+                    capabilities: []
+        '400':
+          description: Credenciales inválidas o error de validación.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/InlineCommandError'
+                  - $ref: '#/components/schemas/ValidationProblemDetails'
+              examples:
+                invalidCredentials:
+                  summary: Credenciales inválidas
+                  value:
+                    error: AUTH_INVALID_CREDENTIALS
+                    correlationId: CORR-login-001
+                missingPassword:
+                  summary: Validación de modelo ASP.NET
+                  value:
+                    type: https://tools.ietf.org/html/rfc9110#section-15.5.1
+                    title: One or more validation errors occurred.
+                    status: 400
+                    traceId: 00-a1b2c3d4e5f6-0000000000000000-00
+                    errors:
+                      password:
+                        - The Password field is required.
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /api/staff/users/change-role:
+    post:
+      tags:
+        - StaffUsers
+      summary: Cambiar rol de un usuario interno
+      description: |
+        Cambia el rol operativo de un usuario interno.
+
+        Hallazgos importantes:
+        - Requiere política `SupervisorOnly`.
+        - El campo `reason` es obligatorio en el request DTO, pero hoy no se usa en el handler.
+        - La respuesta real es un `CommandResult` genérico y no el `ChangeRoleResponse` definido en `Adapters.Http/Responses`.
+      operationId: changeStaffRole
+      parameters:
+        - $ref: '#/components/parameters/CorrelationIdHeaderRequired'
+        - $ref: '#/components/parameters/IdempotencyKeyHeaderDeclaredRequired'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangeRoleRequest'
+            examples:
+              validRoleChange:
+                value:
+                  staffUserId: staff-cashier-01
+                  newRole: Supervisor
+                  reason: Cobertura temporal del turno
+      responses:
+        '200':
+          description: Rol cambiado correctamente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommandResult'
+              examples:
+                success:
+                  value:
+                    success: true
+                    message: Role changed to Supervisor
+                    correlationId: CORR-role-001
+                    executedAt: '2026-03-19T14:05:00Z'
+        '400':
+          $ref: '#/components/responses/BadRequestCommandOrValidation'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /api/reception/register:
+    post:
+      tags:
+        - Reception
+      summary: Registrar llegada de paciente desde recepción
+      description: |
+        Alias operativo para registrar la llegada de un paciente.
+
+        Hallazgos importantes:
+        - Requiere política `ReceptionOperations`.
+        - `appointmentReference`, `priority` y `notes` son requeridos/aceptados por el DTO, pero hoy no influyen en el handler.
+        - `patientName` es opcional; si no se envía, el backend usa `patientId` como nombre.
+        - La respuesta no devuelve `queueId` ni `turnId`; devuelve un `CommandResult` genérico.
+      operationId: receptionRegisterPatient
+      parameters:
+        - $ref: '#/components/parameters/CorrelationIdHeaderRequired'
+        - $ref: '#/components/parameters/IdempotencyKeyHeaderDeclaredRequired'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReceptionRegisterRequest'
+            examples:
+              validRegister:
+                value:
+                  queueId: Q-2026-03-19-MAIN
+                  patientId: PAT-0045
+                  patientName: Ana Perez
+                  appointmentReference: APT-20260319-0045
+                  priority: Standard
+                  notes: Primera vez en el día
+      responses:
+        '200':
+          description: Llegada registrada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommandResult'
+              examples:
+                success:
+                  value:
+                    success: true
+                    message: Patient checked in successfully
+                    correlationId: CORR-rec-001
+                    executedAt: '2026-03-19T14:10:00Z'
+        '400':
+          $ref: '#/components/responses/BadRequestCommandOrValidation'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /api/waiting-room/check-in:
+    post:
+      tags:
+        - WaitingRoom
+      summary: Registrar check-in de paciente en la cola
+      description: |
+        Registra al paciente en la cola operativa.
+
+        Hallazgos importantes:
+        - Requiere política `ReceptionOperations`.
+        - `appointmentReference`, `consultationType` y `priority` hoy no son consumidos por el handler.
+        - `patientName` es opcional; si no se envía, el backend usa `patientId` como nombre.
+        - La respuesta implementada es un `CommandResult` genérico, no el contrato rico descrito en la documentación TO-BE.
+      operationId: checkInPatient
+      parameters:
+        - $ref: '#/components/parameters/CorrelationIdHeaderRequired'
+        - $ref: '#/components/parameters/IdempotencyKeyHeaderDeclaredRequired'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckInRequest'
+            examples:
+              validCheckIn:
+                value:
+                  queueId: Q-2026-03-19-MAIN
+                  appointmentReference: APT-20260319-0045
+                  patientId: PAT-0045
+                  patientName: Ana Perez
+                  consultationType: GeneralMedicine
+                  priority: Standard
+      responses:
+        '200':
+          description: Check-in procesado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommandResult'
+              examples:
+                success:
+                  value:
+                    success: true
+                    message: Patient checked in successfully
+                    correlationId: CORR-checkin-001
+                    executedAt: '2026-03-19T14:12:00Z'
+        '400':
+          $ref: '#/components/responses/BadRequestCommandOrValidation'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /api/waiting-room/call-patient:
+    post:
+      tags:
+        - WaitingRoom
+      summary: Llamar un paciente ya identificado a consulta
+      description: |
+        Llama a un paciente específico hacia el consultorio.
+
+        Hallazgos importantes:
+        - Requiere política `DoctorOperations`.
+        - `queueId` llega por query string, mientras otros endpoints mutantes usan body; esto rompe consistencia del contrato.
+        - El backend no usa `turnId`; el request opera por `patientId`.
+        - Si falta `queueId`, el controller devuelve un error inline 400 propio.
+      operationId: callPatientToConsultation
+      parameters:
+        - $ref: '#/components/parameters/QueueIdQueryRequired'
+        - $ref: '#/components/parameters/CorrelationIdHeaderOptional'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CallPatientRequest'
+            examples:
+              validCall:
+                value:
+                  patientId: PAT-0045
+                  roomId: ROOM-01
+      responses:
+        '200':
+          description: Paciente llamado a consulta.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommandResult'
+              examples:
+                success:
+                  value:
+                    success: true
+                    message: Patient called to consultation
+                    correlationId: CORR-call-001
+                    executedAt: '2026-03-19T14:20:00Z'
+        '400':
+          $ref: '#/components/responses/BadRequestCommandOrValidation'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /api/waiting-room/claim-next:
+    post:
+      tags:
+        - WaitingRoom
+      summary: Reclamar el siguiente paciente elegible para consulta
+      description: |
+        Reclama el siguiente paciente de la cola y lo asigna a un consultorio.
+
+        Hallazgos importantes:
+        - Requiere política `DoctorOperations`.
+        - `queueId` se pasa por query string.
+        - La respuesta real contiene `patientId`, `roomId` y `claimedAt`; no devuelve `turnId`, `turnNumber` ni `claimStatus`.
+      operationId: claimNextPatient
+      parameters:
+        - $ref: '#/components/parameters/QueueIdQueryRequired'
+        - $ref: '#/components/parameters/CorrelationIdHeaderOptional'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClaimNextPatientRequest'
+            examples:
+              validClaim:
+                value:
+                  roomId: ROOM-01
+      responses:
+        '200':
+          description: Paciente reclamado correctamente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClaimedPatientResult'
+              examples:
+                success:
+                  value:
+                    patientId: PAT-0045
+                    roomId: ROOM-01
+                    claimedAt: '2026-03-19T14:18:00Z'
+        '400':
+          $ref: '#/components/responses/BadRequestCommandOrValidation'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /api/cashier/call-next:
+    post:
+      tags:
+        - Cashier
+      summary: Llamar el siguiente paciente en caja
+      description: |
+        Obtiene el siguiente paciente elegible de la cola y lo marca como llamado a caja.
+
+        Hallazgos importantes:
+        - Requiere política `CashierOperations`.
+        - `cashierStationId` es obligatorio en el DTO, pero hoy no se usa en la lógica.
+        - La respuesta real devuelve `patientId`, `calledAt` y `queuePosition`; no devuelve `turnId`, `turnNumber` ni `cashierStationId`.
+      operationId: callNextAtCashier
+      parameters:
+        - $ref: '#/components/parameters/CorrelationIdHeaderRequired'
+        - $ref: '#/components/parameters/IdempotencyKeyHeaderDeclaredRequired'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CallNextAtCashierRequest'
+            examples:
+              validCallNext:
+                value:
+                  queueId: Q-2026-03-19-MAIN
+                  cashierStationId: CASH-01
+      responses:
+        '200':
+          description: Paciente llamado a caja.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PatientCallResult'
+              examples:
+                success:
+                  value:
+                    patientId: PAT-0045
+                    calledAt: '2026-03-19T14:15:00Z'
+                    queuePosition: 1
+        '400':
+          $ref: '#/components/responses/BadRequestCommandOrValidation'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /api/cashier/validate-payment:
+    post:
+      tags:
+        - Cashier
+      summary: Validar pago de un paciente
+      description: |
+        Marca el pago de un paciente como validado.
+
+        Hallazgos importantes:
+        - Requiere política `CashierOperations`.
+        - `turnId` y `paymentReference` son obligatorios en el request DTO, pero no se usan en el command ni en el handler.
+        - El flujo opera por `queueId` + `patientId`.
+      operationId: validatePayment
+      parameters:
+        - $ref: '#/components/parameters/CorrelationIdHeaderOptional'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ValidatePaymentRequest'
+            examples:
+              validPayment:
+                value:
+                  turnId: TURN-00045
+                  queueId: Q-2026-03-19-MAIN
+                  patientId: PAT-0045
+                  paymentReference: PAY-20260319-0001
+                  validatedAmount: 85.5
+      responses:
+        '200':
+          description: Pago validado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommandResult'
+              examples:
+                success:
+                  value:
+                    success: true
+                    message: Payment validated successfully
+                    correlationId: CORR-pay-001
+                    executedAt: '2026-03-19T14:25:00Z'
+        '400':
+          description: Error de negocio o validación.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/InlineCommandError'
+                  - $ref: '#/components/schemas/ValidationProblemDetails'
+              examples:
+                invalidAmount:
+                  value:
+                    error: Invalid payment amount
+                    correlationId: CORR-pay-001
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /api/cashier/mark-payment-pending:
+    post:
+      tags:
+        - Cashier
+      summary: Marcar pago como pendiente
+      description: |
+        Marca el pago de un paciente como pendiente.
+
+        Hallazgos importantes:
+        - Requiere política `CashierOperations`.
+        - `turnId`, `reason` y `attemptNumber` son obligatorios en el request DTO, pero hoy no se usan en el handler.
+      operationId: markPaymentPending
+      parameters:
+        - $ref: '#/components/parameters/CorrelationIdHeaderOptional'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MarkPaymentPendingRequest'
+            examples:
+              pendingPayment:
+                value:
+                  turnId: TURN-00045
+                  queueId: Q-2026-03-19-MAIN
+                  patientId: PAT-0045
+                  reason: Datáfono temporalmente caído
+                  attemptNumber: 1
+      responses:
+        '200':
+          description: Pago marcado como pendiente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommandResult'
+              examples:
+                success:
+                  value:
+                    success: true
+                    message: Payment marked as pending for patient PAT-0045
+                    correlationId: CORR-pending-001
+                    executedAt: '2026-03-19T14:28:00Z'
+        '400':
+          $ref: '#/components/responses/BadRequestCommandOrValidation'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /api/cashier/mark-absent:
+    post:
+      tags:
+        - Cashier
+      summary: Marcar ausencia en caja
+      description: |
+        Marca un paciente como ausente durante el flujo de caja.
+
+        Hallazgos importantes:
+        - Requiere política `CashierOperations`.
+        - `turnId` y `reason` son obligatorios en el DTO, pero hoy no se usan.
+        - El handler inyecta internamente `ROOM-CASHIER` como identificador de ubicación.
+      operationId: markAbsentAtCashier
+      parameters:
+        - $ref: '#/components/parameters/CorrelationIdHeaderOptional'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CashierMarkAbsentRequest'
+            examples:
+              absentAtCashier:
+                value:
+                  turnId: TURN-00045
+                  queueId: Q-2026-03-19-MAIN
+                  patientId: PAT-0045
+                  reason: No respondió al llamado
+      responses:
+        '200':
+          description: Ausencia registrada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommandResult'
+              examples:
+                success:
+                  value:
+                    success: true
+                    message: Patient PAT-0045 marked as absent
+                    correlationId: CORR-absent-cash-001
+                    executedAt: '2026-03-19T14:30:00Z'
+        '400':
+          $ref: '#/components/responses/BadRequestCommandOrValidation'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /api/medical/consulting-room/activate:
+    post:
+      tags:
+        - Medical
+      summary: Activar consultorio
+      description: |
+        Activa un consultorio para operación diaria.
+
+        Requiere política `SupervisorOnly`.
+      operationId: activateConsultingRoom
+      parameters:
+        - $ref: '#/components/parameters/CorrelationIdHeaderRequired'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActivateConsultingRoomRequest'
+            examples:
+              activateRoom:
+                value:
+                  roomId: ROOM-01
+                  roomName: Consultorio 1
+      responses:
+        '200':
+          description: Consultorio activado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommandResult'
+              examples:
+                success:
+                  value:
+                    success: true
+                    message: Consulting room Consultorio 1 activated
+                    correlationId: CORR-room-activate-001
+                    executedAt: '2026-03-19T14:35:00Z'
+        '400':
+          $ref: '#/components/responses/BadRequestCommandOrValidation'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /api/medical/consulting-room/deactivate:
+    post:
+      tags:
+        - Medical
+      summary: Desactivar consultorio
+      description: |
+        Desactiva un consultorio.
+
+        Hallazgos importantes:
+        - Requiere política `SupervisorOnly`.
+        - Si el consultorio no existe, el handler responde 400 con mensaje de negocio en lugar de 404.
+      operationId: deactivateConsultingRoom
+      parameters:
+        - $ref: '#/components/parameters/CorrelationIdHeaderRequired'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeactivateConsultingRoomRequest'
+            examples:
+              deactivateRoom:
+                value:
+                  roomId: ROOM-01
+      responses:
+        '200':
+          description: Consultorio desactivado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommandResult'
+              examples:
+                success:
+                  value:
+                    success: true
+                    message: Consulting room ROOM-01 deactivated
+                    correlationId: CORR-room-deactivate-001
+                    executedAt: '2026-03-19T18:00:00Z'
+        '400':
+          $ref: '#/components/responses/BadRequestCommandOrValidation'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /api/medical/finish-consultation:
+    post:
+      tags:
+        - Medical
+      summary: Finalizar consulta
+      description: |
+        Finaliza la atención de un paciente y libera el consultorio.
+
+        Hallazgos importantes:
+        - Requiere política `DoctorOperations`.
+        - `turnId` y `outcome` son obligatorios en el request DTO, pero hoy no son usados en el handler.
+        - La respuesta real es un `CommandResult` simple, no incluye `finishedAt` ni confirmación de liberación del consultorio.
+      operationId: finishConsultation
+      parameters:
+        - $ref: '#/components/parameters/CorrelationIdHeaderOptional'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FinishConsultationRequest'
+            examples:
+              finishConsultation:
+                value:
+                  turnId: TURN-00052
+                  queueId: Q-2026-03-19-MAIN
+                  patientId: PAT-0052
+                  consultingRoomId: ROOM-01
+                  outcome: completed
+      responses:
+        '200':
+          description: Consulta finalizada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommandResult'
+              examples:
+                success:
+                  value:
+                    success: true
+                    message: Consultation completed
+                    correlationId: CORR-finish-001
+                    executedAt: '2026-03-19T14:45:00Z'
+        '400':
+          $ref: '#/components/responses/BadRequestCommandOrValidation'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /api/medical/mark-absent:
+    post:
+      tags:
+        - Medical
+      summary: Marcar ausencia en consulta
+      description: |
+        Marca a un paciente como ausente durante el flujo de consulta.
+
+        Hallazgos importantes:
+        - Requiere política `DoctorOperations`.
+        - `turnId` y `reason` son obligatorios en el request DTO, pero hoy no se usan en el handler.
+        - La respuesta real es un `CommandResult` simple; no devuelve `policyOutcome`.
+      operationId: markAbsentAtConsultation
+      parameters:
+        - $ref: '#/components/parameters/CorrelationIdHeaderOptional'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MedicalMarkAbsentRequest'
+            examples:
+              absentAtConsultation:
+                value:
+                  turnId: TURN-00052
+                  queueId: Q-2026-03-19-MAIN
+                  patientId: PAT-0052
+                  consultingRoomId: ROOM-01
+                  reason: No ingresó al consultorio
+      responses:
+        '200':
+          description: Ausencia registrada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommandResult'
+              examples:
+                success:
+                  value:
+                    success: true
+                    message: Patient PAT-0052 marked as absent at consultation
+                    correlationId: CORR-med-absent-001
+                    executedAt: '2026-03-19T14:48:00Z'
+        '400':
+          $ref: '#/components/responses/BadRequestCommandOrValidation'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Estado agregado de salud
+      description: |
+        Devuelve el estado agregado de health checks registrados.
+
+        Hallazgos importantes:
+        - No requiere autenticación.
+        - La implementación actual no evalúa `projection lag` ni el canal realtime, aunque la documentación operativa TO-BE sí lo exige.
+      operationId: getHealth
+      security: []
+      responses:
+        '200':
+          description: El servicio está saludable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatusResponse'
+              examples:
+                healthy:
+                  value:
+                    status: Healthy
+                    details:
+                      - key: npgsql
+                        status: Healthy
+                        description: null
+                      - key: Self
+                        status: Healthy
+                        description: null
+        '503':
+          description: El servicio o alguna dependencia crítica no está lista.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatusResponse'
+              examples:
+                unhealthy:
+                  value:
+                    status: Unhealthy
+                    details:
+                      - key: RabbitMQ
+                        status: Unhealthy
+                        description: Broker unreachable
+  /health/ready:
+    get:
+      tags:
+        - Health
+      summary: Readiness del servicio
+      description: |
+        Expone el mismo payload de salud agregado usado hoy para readiness.
+      operationId: getReadiness
+      security: []
+      responses:
+        '200':
+          description: Dependencias listas.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatusResponse'
+        '503':
+          description: Dependencias no listas.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatusResponse'
+  /health/live:
+    get:
+      tags:
+        - Health
+      summary: Liveness del proceso
+      description: |
+        Expone los checks etiquetados como `live`.
+        Actualmente evalúa principalmente el check `Self`.
+      operationId: getLiveness
+      security: []
+      responses:
+        '200':
+          description: Proceso vivo.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatusResponse'
+        '503':
+          description: El proceso reporta fallo de liveness.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatusResponse'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT Bearer emitido por `POST /api/staff/auth/login`.
+
+        Roles implementados actualmente:
+        - Receptionist
+        - Cashier
+        - Doctor
+        - Supervisor
+        - Support
+  parameters:
+    CorrelationIdHeaderRequired:
+      name: X-Correlation-Id
+      in: header
+      required: true
+      description: |
+        Identificador de trazabilidad. El controller lo espera de forma obligatoria en este endpoint.
+        No existe una política uniforme de validación; la obligatoriedad depende de cómo el action method fue declarado.
+      schema:
+        type: string
+        example: CORR-9d8818f8
+    CorrelationIdHeaderOptional:
+      name: X-Correlation-Id
+      in: header
+      required: false
+      description: |
+        Identificador de trazabilidad opcional. Si no se envía, el controller genera uno.
+      schema:
+        type: string
+        example: CORR-9d8818f8
+    IdempotencyKeyHeaderDeclaredRequired:
+      name: X-Idempotency-Key
+      in: header
+      required: true
+      description: |
+        Header declarado por el contrato mutante y recibido por el controller.
+        Hallazgo crítico: actualmente no existe persistencia ni replay real de idempotencia; el valor se ignora en la lógica de aplicación.
+      schema:
+        type: string
+        example: IDEMP-20260319-0001
+    QueueIdQueryRequired:
+      name: queueId
+      in: query
+      required: true
+      description: Identificador de la cola operativa.
+      schema:
+        type: string
+        example: Q-2026-03-19-MAIN
+  responses:
+    BadRequestCommandOrValidation:
+      description: Error de negocio inline o error de validación ASP.NET.
+      content:
+        application/json:
+          schema:
+            oneOf:
+              - $ref: '#/components/schemas/InlineCommandError'
+              - $ref: '#/components/schemas/ValidationProblemDetails'
+          examples:
+            commandFailure:
+              value:
+                error: Queue not found
+                correlationId: CORR-err-001
+            validationFailure:
+              value:
+                type: https://tools.ietf.org/html/rfc9110#section-15.5.1
+                title: One or more validation errors occurred.
+                status: 400
+                traceId: 00-a1b2c3d4e5f6-0000000000000000-00
+                errors:
+                  queueId:
+                    - The QueueId field is required.
+    Unauthorized:
+      description: |
+        Token ausente, inválido o expirado.
+        La implementación actual usa el challenge por defecto de ASP.NET Core JWT y puede devolver una respuesta sin body estructurado.
+    Forbidden:
+      description: |
+        El token es válido, pero el rol no satisface la policy del endpoint.
+        La implementación actual puede responder sin body estructurado.
+    InternalServerError:
+      description: Error no controlado manejado por `GlobalExceptionMiddleware`.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          examples:
+            unexpectedError:
+              value:
+                title: An unexpected error occurred.
+                status: 500
+                detail: The server could not process the request.
+                instance: /api/cashier/validate-payment
+                traceId: 00-a1b2c3d4e5f6-0000000000000000-00
+                correlationId: CORR-500-001
+  schemas:
+    StaffRole:
+      type: string
+      description: Rol operativo interno.
+      enum:
+        - Receptionist
+        - Cashier
+        - Doctor
+        - Supervisor
+        - Support
+      example: Supervisor
+    LoginRequest:
+      type: object
+      required:
+        - identifier
+        - password
+      properties:
+        identifier:
+          type: string
+          description: |
+            Identificador enviado por el cliente.
+            Hallazgo: la implementación actual solo resuelve este valor contra `username`.
+          example: admin
+        password:
+          type: string
+          format: password
+          example: Password123!
+    ChangeRoleRequest:
+      type: object
+      required:
+        - staffUserId
+        - newRole
+        - reason
+      properties:
+        staffUserId:
+          type: string
+          example: staff-cashier-01
+        newRole:
+          $ref: '#/components/schemas/StaffRole'
+        reason:
+          type: string
+          description: Campo requerido en el request, pero actualmente ignorado por el handler.
+          example: Cobertura temporal del turno
+    CheckInRequest:
+      type: object
+      required:
+        - queueId
+        - appointmentReference
+        - patientId
+        - consultationType
+        - priority
+      properties:
+        queueId:
+          type: string
+          example: Q-2026-03-19-MAIN
+        appointmentReference:
+          type: string
+          description: Campo requerido, pero hoy no se usa en la lógica.
+          example: APT-20260319-0045
+        patientId:
+          type: string
+          example: PAT-0045
+        patientName:
+          type: string
+          nullable: true
+          description: Si se omite, el backend usa `patientId` como nombre.
+          example: Ana Perez
+        consultationType:
+          type: string
+          description: Campo requerido, pero hoy no se usa en la lógica.
+          example: GeneralMedicine
+        priority:
+          type: string
+          description: Campo requerido, pero hoy no se usa en la lógica.
+          example: Standard
+    ReceptionRegisterRequest:
+      type: object
+      required:
+        - queueId
+        - patientId
+        - appointmentReference
+        - priority
+      properties:
+        queueId:
+          type: string
+          example: Q-2026-03-19-MAIN
+        patientId:
+          type: string
+          example: PAT-0045
+        patientName:
+          type: string
+          nullable: true
+          description: Si se omite, el backend usa `patientId` como nombre.
+          example: Ana Perez
+        appointmentReference:
+          type: string
+          description: Campo requerido, pero hoy no se usa en la lógica.
+          example: APT-20260319-0045
+        priority:
+          type: string
+          description: Campo requerido, pero hoy no se usa en la lógica.
+          example: Standard
+        notes:
+          type: string
+          nullable: true
+          description: Campo opcional aceptado por la API, pero hoy ignorado.
+          example: Paciente con movilidad reducida
+    CallPatientRequest:
+      type: object
+      required:
+        - patientId
+        - roomId
+      properties:
+        patientId:
+          type: string
+          example: PAT-0045
+        roomId:
+          type: string
+          example: ROOM-01
+    ClaimNextPatientRequest:
+      type: object
+      required:
+        - roomId
+      properties:
+        roomId:
+          type: string
+          example: ROOM-01
+    CallNextAtCashierRequest:
+      type: object
+      required:
+        - queueId
+        - cashierStationId
+      properties:
+        queueId:
+          type: string
+          example: Q-2026-03-19-MAIN
+        cashierStationId:
+          type: string
+          description: Campo requerido en el DTO, pero hoy no se usa en el handler.
+          example: CASH-01
+    ValidatePaymentRequest:
+      type: object
+      required:
+        - turnId
+        - queueId
+        - patientId
+        - paymentReference
+        - validatedAmount
+      properties:
+        turnId:
+          type: string
+          description: Campo requerido, pero actualmente ignorado por el backend.
+          example: TURN-00045
+        queueId:
+          type: string
+          example: Q-2026-03-19-MAIN
+        patientId:
+          type: string
+          example: PAT-0045
+        paymentReference:
+          type: string
+          description: Campo requerido, pero actualmente ignorado por el backend.
+          example: PAY-20260319-0001
+        validatedAmount:
+          type: number
+          format: double
+          example: 85.5
+    MarkPaymentPendingRequest:
+      type: object
+      required:
+        - turnId
+        - queueId
+        - patientId
+        - reason
+        - attemptNumber
+      properties:
+        turnId:
+          type: string
+          description: Campo requerido, pero actualmente ignorado por el backend.
+          example: TURN-00045
+        queueId:
+          type: string
+          example: Q-2026-03-19-MAIN
+        patientId:
+          type: string
+          example: PAT-0045
+        reason:
+          type: string
+          description: Campo requerido, pero actualmente ignorado por el backend.
+          example: Datáfono temporalmente caído
+        attemptNumber:
+          type: integer
+          description: Campo requerido, pero actualmente ignorado por el backend.
+          minimum: 1
+          example: 1
+    CashierMarkAbsentRequest:
+      type: object
+      required:
+        - turnId
+        - queueId
+        - patientId
+        - reason
+      properties:
+        turnId:
+          type: string
+          description: Campo requerido, pero actualmente ignorado por el backend.
+          example: TURN-00045
+        queueId:
+          type: string
+          example: Q-2026-03-19-MAIN
+        patientId:
+          type: string
+          example: PAT-0045
+        reason:
+          type: string
+          description: Campo requerido, pero actualmente ignorado por el backend.
+          example: No respondió al llamado
+    ActivateConsultingRoomRequest:
+      type: object
+      required:
+        - roomId
+        - roomName
+      properties:
+        roomId:
+          type: string
+          example: ROOM-01
+        roomName:
+          type: string
+          example: Consultorio 1
+    DeactivateConsultingRoomRequest:
+      type: object
+      required:
+        - roomId
+      properties:
+        roomId:
+          type: string
+          example: ROOM-01
+    FinishConsultationRequest:
+      type: object
+      required:
+        - turnId
+        - queueId
+        - patientId
+        - consultingRoomId
+        - outcome
+      properties:
+        turnId:
+          type: string
+          description: Campo requerido, pero actualmente ignorado por el backend.
+          example: TURN-00052
+        queueId:
+          type: string
+          example: Q-2026-03-19-MAIN
+        patientId:
+          type: string
+          example: PAT-0052
+        consultingRoomId:
+          type: string
+          example: ROOM-01
+        outcome:
+          type: string
+          description: Campo requerido, pero actualmente ignorado por el backend.
+          example: completed
+    MedicalMarkAbsentRequest:
+      type: object
+      required:
+        - turnId
+        - queueId
+        - patientId
+        - consultingRoomId
+        - reason
+      properties:
+        turnId:
+          type: string
+          description: Campo requerido, pero actualmente ignorado por el backend.
+          example: TURN-00052
+        queueId:
+          type: string
+          example: Q-2026-03-19-MAIN
+        patientId:
+          type: string
+          example: PAT-0052
+        consultingRoomId:
+          type: string
+          example: ROOM-01
+        reason:
+          type: string
+          description: Campo requerido, pero actualmente ignorado por el backend.
+          example: No ingresó al consultorio
+    AuthenticationResult:
+      type: object
+      required:
+        - staffId
+        - username
+        - email
+        - role
+        - accessToken
+        - tokenType
+        - expiresInSeconds
+        - authenticatedAt
+        - correlationId
+        - capabilities
+      properties:
+        staffId:
+          type: string
+          example: staff-admin
+        username:
+          type: string
+          example: admin
+        email:
+          type: string
+          format: email
+          example: admin@clinic.local
+        role:
+          $ref: '#/components/schemas/StaffRole'
+        accessToken:
+          type: string
+          example: eyJhbGciOi...
+        tokenType:
+          type: string
+          example: Bearer
+        expiresInSeconds:
+          type: integer
+          example: 3600
+        authenticatedAt:
+          type: string
+          format: date-time
+          example: '2026-03-19T14:00:00Z'
+        correlationId:
+          type: string
+          example: CORR-login-001
+        capabilities:
+          type: array
+          description: Actualmente la implementación devuelve `[]`.
+          items:
+            type: string
+          example: []
+    CommandResult:
+      type: object
+      required:
+        - success
+        - message
+        - correlationId
+        - executedAt
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Operation completed successfully
+        correlationId:
+          type: string
+          example: CORR-001
+        executedAt:
+          type: string
+          format: date-time
+          example: '2026-03-19T14:00:00Z'
+    PatientCallResult:
+      type: object
+      required:
+        - patientId
+        - calledAt
+        - queuePosition
+      properties:
+        patientId:
+          type: string
+          example: PAT-0045
+        calledAt:
+          type: string
+          format: date-time
+          example: '2026-03-19T14:15:00Z'
+        queuePosition:
+          type: integer
+          example: 1
+    ClaimedPatientResult:
+      type: object
+      required:
+        - patientId
+        - roomId
+        - claimedAt
+      properties:
+        patientId:
+          type: string
+          example: PAT-0045
+        roomId:
+          type: string
+          example: ROOM-01
+        claimedAt:
+          type: string
+          format: date-time
+          example: '2026-03-19T14:18:00Z'
+    InlineCommandError:
+      type: object
+      required:
+        - error
+        - correlationId
+      properties:
+        error:
+          type: string
+          description: |
+            Mensaje devuelto directamente por el controller ante `CommandResult.Failure`.
+            Puede ser un código canónico (`AUTH_INVALID_CREDENTIALS`) o un texto libre (`Queue not found`).
+          example: Queue not found
+        correlationId:
+          type: string
+          example: CORR-err-001
+    ProblemDetails:
+      type: object
+      required:
+        - title
+        - status
+        - detail
+        - instance
+        - traceId
+      properties:
+        title:
+          type: string
+          example: An unexpected error occurred.
+        status:
+          type: integer
+          example: 500
+        detail:
+          type: string
+          example: The server could not process the request.
+        instance:
+          type: string
+          example: /api/cashier/validate-payment
+        traceId:
+          type: string
+          example: 00-a1b2c3d4e5f6-0000000000000000-00
+        correlationId:
+          type: string
+          nullable: true
+          example: CORR-500-001
+    ValidationProblemDetails:
+      type: object
+      required:
+        - title
+        - status
+        - errors
+      properties:
+        type:
+          type: string
+          nullable: true
+          example: https://tools.ietf.org/html/rfc9110#section-15.5.1
+        title:
+          type: string
+          example: One or more validation errors occurred.
+        status:
+          type: integer
+          example: 400
+        traceId:
+          type: string
+          nullable: true
+          example: 00-a1b2c3d4e5f6-0000000000000000-00
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+          example:
+            queueId:
+              - The QueueId field is required.
+    HealthDetail:
+      type: object
+      required:
+        - key
+        - status
+      properties:
+        key:
+          type: string
+          example: npgsql
+        status:
+          type: string
+          example: Healthy
+        description:
+          type: string
+          nullable: true
+          example: null
+    HealthStatusResponse:
+      type: object
+      required:
+        - status
+        - details
+      properties:
+        status:
+          type: string
+          example: Healthy
+        details:
+          type: array
+          items:
+            $ref: '#/components/schemas/HealthDetail'
+security:
+  - bearerAuth: []

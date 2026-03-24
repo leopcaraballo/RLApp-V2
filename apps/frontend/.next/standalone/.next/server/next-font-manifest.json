@@ -1,0 +1,43 @@
+{
+  "app": {
+    "[project]/src/app/(workspace)/cashier/page": [
+      "static/media/03fc1b4a8d284b5e-s.p.09.f.n_ccld80.woff2",
+      "static/media/0c89a48fa5027cee-s.p.0rd3rjvnnhw7n.woff2"
+    ],
+    "[project]/src/app/(workspace)/health/page": [
+      "static/media/03fc1b4a8d284b5e-s.p.09.f.n_ccld80.woff2",
+      "static/media/0c89a48fa5027cee-s.p.0rd3rjvnnhw7n.woff2"
+    ],
+    "[project]/src/app/(workspace)/medical/page": [
+      "static/media/03fc1b4a8d284b5e-s.p.09.f.n_ccld80.woff2",
+      "static/media/0c89a48fa5027cee-s.p.0rd3rjvnnhw7n.woff2"
+    ],
+    "[project]/src/app/(workspace)/page": [
+      "static/media/03fc1b4a8d284b5e-s.p.09.f.n_ccld80.woff2",
+      "static/media/0c89a48fa5027cee-s.p.0rd3rjvnnhw7n.woff2"
+    ],
+    "[project]/src/app/(workspace)/reception/page": [
+      "static/media/03fc1b4a8d284b5e-s.p.09.f.n_ccld80.woff2",
+      "static/media/0c89a48fa5027cee-s.p.0rd3rjvnnhw7n.woff2"
+    ],
+    "[project]/src/app/(workspace)/staff/page": [
+      "static/media/03fc1b4a8d284b5e-s.p.09.f.n_ccld80.woff2",
+      "static/media/0c89a48fa5027cee-s.p.0rd3rjvnnhw7n.woff2"
+    ],
+    "[project]/src/app/(workspace)/waiting-room/page": [
+      "static/media/03fc1b4a8d284b5e-s.p.09.f.n_ccld80.woff2",
+      "static/media/0c89a48fa5027cee-s.p.0rd3rjvnnhw7n.woff2"
+    ],
+    "[project]/src/app/_not-found/page": [
+      "static/media/03fc1b4a8d284b5e-s.p.09.f.n_ccld80.woff2",
+      "static/media/0c89a48fa5027cee-s.p.0rd3rjvnnhw7n.woff2"
+    ],
+    "[project]/src/app/login/page": [
+      "static/media/03fc1b4a8d284b5e-s.p.09.f.n_ccld80.woff2",
+      "static/media/0c89a48fa5027cee-s.p.0rd3rjvnnhw7n.woff2"
+    ]
+  },
+  "appUsingSizeAdjust": true,
+  "pages": {},
+  "pagesUsingSizeAdjust": false
+}
