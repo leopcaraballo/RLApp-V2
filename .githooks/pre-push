@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+branch="$(git branch --show-current)"
+
+if [[ "$branch" == "main" || "$branch" == "develop" ]]; then
+  echo "Push blocked: direct pushes to main and develop are not allowed." >&2
+  exit 1
+fi
+
+if ! [[ "$branch" =~ ^feature/.+ ]]; then
+  echo "Push blocked: active branch must match feature/*" >&2
+  exit 1
+fi

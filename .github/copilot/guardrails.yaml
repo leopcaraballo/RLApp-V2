@@ -1,0 +1,56 @@
+entrypoint: .ai-entrypoint.md
+
+knowledge_layer:
+  root: docs/project
+  bootstrap:
+    - docs/project/00-README.md
+    - docs/project/03-TRACEABILITY-MODEL.md
+    - docs/project/04-DOCUMENT-MAP.md
+    - docs/project/16-generation-pack/08-COPILOT-OPERATING-MODEL.md
+    - docs/project/16-generation-pack/09-AI-RUNTIME-POLICY.md
+    - docs/project/16-generation-pack/10-AI-TESTING-AND-OBSERVABILITY.md
+
+ai_operating_layer:
+  root: ai
+  paths:
+    - ai/context/README.md
+    - ai/guardrails/README.md
+    - ai/operating-model/README.md
+    - ai/orchestration/README.md
+  rule: ai layer is navigation only and cannot replace canonical governance
+
+execution_layer:
+  repo_wide_instruction: .github/copilot-instructions.md
+  canonical_roots:
+    - .github/instructions
+    - .github/prompts
+    - .github/agents
+    - .github/skills
+    - .github/scripts
+    - .github/workflows
+  compatibility_roots:
+    - .github/copilot/agents.yaml
+    - .github/copilot/skills.yaml
+    - .github/copilot/guardrails.yaml
+    - .github/copilot/agents
+    - .github/copilot/prompts
+    - .github/copilot/instructions
+
+branch_policy:
+  protected:
+    - main
+    - develop
+  working_pattern: feature/*
+  integration: pull-request-only
+
+commit_policy:
+  validator: .github/scripts/validate-conventional-commit.sh
+  generator: .github/scripts/generate-conventional-commit.sh
+  automation: .github/scripts/git-automation.sh
+  format: "<type>(scope): <description>"
+
+workflows:
+  - .github/workflows/ci.yml
+  - .github/workflows/pr-quality-gate.yml
+  - .github/workflows/gitflow-governor.yml
+  - .github/workflows/commit-standards.yml
