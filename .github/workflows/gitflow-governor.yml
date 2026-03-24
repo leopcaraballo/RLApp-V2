@@ -35,8 +35,8 @@ jobs:
             exit 1
           }
 
-          [[ "$head_ref" != "main" && "$head_ref" != "develop" ]] || {
-            echo "Protected branches cannot be used as Pull Request source branches"
+          [[ "$head_ref" != "main" ]] || {
+            echo "Protected branch (main) cannot be used as a Pull Request source branch"
             exit 1
           }
 
