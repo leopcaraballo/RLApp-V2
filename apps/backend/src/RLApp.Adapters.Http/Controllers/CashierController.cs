@@ -1,13 +1,16 @@
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RLApp.Adapters.Http.Requests;
+using RLApp.Adapters.Http.Security;
 using RLApp.Application.Commands;
 
 namespace RLApp.Adapters.Http.Controllers;
 
 [ApiController]
+[Authorize(Policy = AuthorizationPolicies.CashierOperations)]
 [Route("api/cashier")]
-public class CashierController : ControllerBase
+public class CashierController : RLAppControllerBase
 {
     private readonly IMediator _mediator;
 
@@ -23,20 +26,12 @@ public class CashierController : ControllerBase
     public async Task<IActionResult> CallNext(
         [FromBody] CallNextAtCashierRequest request,
         [FromHeader(Name = "X-Correlation-Id")] string correlationId,
-        [FromHeader(Name = "X-Idempotency-Key")] string idempotencyKey)
+        [FromHeader(Name = "X-Idempotency-Key")] string idempotencyKey,
+        CancellationToken cancellationToken)
     {
-        var userId = User.Identity?.Name ?? "system";
-        
-        var command = new CallNextAtCashierCommand(request.QueueId, correlationId, userId);
-        
-        var result = await _mediator.Send(command);
-
-        if (!result.Success)
-            return BadRequest(new { Error = result.Message, CorrelationId = correlationId });
-
-        var dataProp = result.GetType().GetProperty("Data");
-        var data = dataProp != null ? dataProp.GetValue(result) : result;
-        return Ok(data);
+        var command = new CallNextAtCashierCommand(request.QueueId, request.CashierStationId, correlationId, CurrentUserId);
+        var result = await _mediator.Send(command, cancellationToken);
+        return FromCommandResult(result);
     }
 
     /// <summary>
@@ -45,22 +40,21 @@ public class CashierController : ControllerBase
     [HttpPost("validate-payment")]
     public async Task<IActionResult> ValidatePayment(
         [FromBody] ValidatePaymentRequest request,
-        [FromHeader(Name = "X-Correlation-Id")] string? correlationId)
+        [FromHeader(Name = "X-Correlation-Id")] string? correlationId,
+        CancellationToken cancellationToken)
     {
-        var userId = User.Identity?.Name ?? "system";
         var activeCorrelationId = correlationId ?? Guid.NewGuid().ToString();
 
-        // QueueId and PatientId normally resolved from TurnId lookup. Mapped loosely for adaptation phase:
-        var command = new ValidatePaymentCommand("Q-DEFAULT", "PAT-DEFAULT", request.ValidatedAmount, activeCorrelationId, userId);
-        
-        var result = await _mediator.Send(command);
-
-        if (!result.Success)
-            return BadRequest(new { Error = result.Message, CorrelationId = activeCorrelationId });
-
-        var dataProp = result.GetType().GetProperty("Data");
-        var data = dataProp != null ? dataProp.GetValue(result) : result;
-        return Ok(data);
+        var command = new ValidatePaymentCommand(
+            request.QueueId, 
+            request.PatientId, 
+            request.ValidatedAmount, 
+            request.TurnId,
+            request.PaymentReference,
+            activeCorrelationId, 
+            CurrentUserId);
+        var result = await _mediator.Send(command, cancellationToken);
+        return FromCommandResult(result);
     }
 
     /// <summary>
@@ -69,21 +63,14 @@ public class CashierController : ControllerBase
     [HttpPost("mark-payment-pending")]
     public async Task<IActionResult> MarkPaymentPending(
         [FromBody] MarkPaymentPendingRequest request,
-        [FromHeader(Name = "X-Correlation-Id")] string? correlationId)
+        [FromHeader(Name = "X-Correlation-Id")] string? correlationId,
+        CancellationToken cancellationToken)
     {
-        var userId = User.Identity?.Name ?? "system";
         var activeCorrelationId = correlationId ?? Guid.NewGuid().ToString();
 
-        var command = new MarkPaymentPendingCommand("Q-DEFAULT", "PAT-DEFAULT", activeCorrelationId, userId);
-        
-        var result = await _mediator.Send(command);
-
-        if (!result.Success)
-            return BadRequest(new { Error = result.Message, CorrelationId = activeCorrelationId });
-
-        var dataProp = result.GetType().GetProperty("Data");
-        var data = dataProp != null ? dataProp.GetValue(result) : result;
-        return Ok(data);
+        var command = new MarkPaymentPendingCommand(request.QueueId, request.PatientId, activeCorrelationId, CurrentUserId);
+        var result = await _mediator.Send(command, cancellationToken);
+        return FromCommandResult(result);
     }
 
     /// <summary>
@@ -92,20 +79,20 @@ public class CashierController : ControllerBase
     [HttpPost("mark-absent")]
     public async Task<IActionResult> MarkAbsent(
         [FromBody] CashierMarkAbsentRequest request,
-        [FromHeader(Name = "X-Correlation-Id")] string? correlationId)
+        [FromHeader(Name = "X-Correlation-Id")] string? correlationId,
+        CancellationToken cancellationToken)
     {
-        var userId = User.Identity?.Name ?? "system";
         var activeCorrelationId = correlationId ?? Guid.NewGuid().ToString();
 
-        var command = new MarkAbsenceCommand("Q-DEFAULT", "PAT-DEFAULT", "ROOM-CASHIER", activeCorrelationId, userId);
-        
-        var result = await _mediator.Send(command);
-
-        if (!result.Success)
-            return BadRequest(new { Error = result.Message, CorrelationId = activeCorrelationId });
-
-        var dataProp = result.GetType().GetProperty("Data");
-        var data = dataProp != null ? dataProp.GetValue(result) : result;
-        return Ok(data);
+        var command = new MarkAbsenceCommand(
+            request.QueueId, 
+            request.PatientId, 
+            "ROOM-CASHIER", // Default RoomId for cashier
+            request.TurnId,
+            request.Reason,
+            activeCorrelationId, 
+            CurrentUserId);
+        var result = await _mediator.Send(command, cancellationToken);
+        return FromCommandResult(result);
     }
 }

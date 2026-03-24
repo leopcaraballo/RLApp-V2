@@ -19,25 +19,27 @@ public class OutboxEventPublisher : IEventPublisher
     {
         var message = new OutboxMessage
         {
+            AggregateId = domainEvent.AggregateId,
+            CorrelationId = domainEvent.CorrelationId,
             Type = domainEvent.EventType,
             Payload = JsonSerializer.Serialize((object)domainEvent),
             OccurredAt = domainEvent.OccurredAt
         };
 
         await _context.OutboxMessages.AddAsync(message, cancellationToken);
-        await _context.SaveChangesAsync(cancellationToken);
     }
 
     public async Task PublishBatchAsync(IEnumerable<DomainEvent> domainEvents, CancellationToken cancellationToken = default)
     {
         var messages = domainEvents.Select(e => new OutboxMessage
         {
+            AggregateId = e.AggregateId,
+            CorrelationId = e.CorrelationId,
             Type = e.EventType,
             Payload = JsonSerializer.Serialize((object)e),
             OccurredAt = e.OccurredAt
         });
 
         await _context.OutboxMessages.AddRangeAsync(messages, cancellationToken);
-        await _context.SaveChangesAsync(cancellationToken);
     }
 }

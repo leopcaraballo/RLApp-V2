@@ -7,6 +7,7 @@ namespace RLApp.Application.DTOs;
 public class CommandResult
 {
     public bool Success { get; set; }
+    public bool IsNotFound { get; set; }
     public string Message { get; set; }
     public string CorrelationId { get; set; }
     public DateTime ExecutedAt { get; set; }
@@ -16,6 +17,9 @@ public class CommandResult
 
     public static CommandResult Failure(string message, string correlationId)
         => new() { Success = false, Message = message, CorrelationId = correlationId, ExecutedAt = DateTime.UtcNow };
+
+    public static CommandResult NotFound(string message, string correlationId)
+        => new() { Success = false, IsNotFound = true, Message = message, CorrelationId = correlationId, ExecutedAt = DateTime.UtcNow };
 }
 
 /// <summary>
@@ -30,4 +34,7 @@ public class CommandResult<T> : CommandResult
 
     public static new CommandResult<T> Failure(string message, string correlationId)
         => new() { Success = false, Message = message, CorrelationId = correlationId, ExecutedAt = DateTime.UtcNow };
+
+    public static new CommandResult<T> NotFound(string message, string correlationId)
+        => new() { Success = false, IsNotFound = true, Message = message, CorrelationId = correlationId, ExecutedAt = DateTime.UtcNow };
 }

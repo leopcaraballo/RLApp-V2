@@ -2,6 +2,7 @@ namespace RLApp.Domain.Aggregates;
 
 using Common;
 using ValueObjects;
+using Events;
 
 /// <summary>
 /// StaffUser Aggregate Root
@@ -47,13 +48,15 @@ public class StaffUser : DomainEntity
     /// <summary>
     /// Change the role of the staff user.
     /// </summary>
-    public void ChangeRole(StaffRole newRole)
+    public void ChangeRole(StaffRole newRole, string? reason, string correlationId)
     {
-        if (newRole == null)
-            throw new DomainException("New role cannot be null");
+        // Enums are value types and cannot be null
+        if (!Enum.IsDefined(typeof(StaffRole), newRole))
+            throw new DomainException("Invalid staff role");
 
         Role = newRole;
         UpdatedAt = DateTime.UtcNow;
+        RaiseDomainEvent(new StaffRoleChanged(Id, Id, newRole.ToString(), reason, correlationId));
     }
 
     /// <summary>

@@ -58,22 +58,34 @@ public class OutboxProcessor : BackgroundService
         {
             try
             {
-                // In a production scenario, we'd deserialize to the actual event type using reflection or a registry.
-                // For Phase 4 we use dynamic/object publishing to demonstrate the pipeline over MassTransit.
-                var eventPayload = JsonSerializer.Deserialize<dynamic>(message.Payload);
+                // Resolve the concrete event type from the string name
+                // Look in the Domain assembly where events are defined
+                var eventType = typeof(RLApp.Domain.Events.WaitingQueueCreated).Assembly
+                    .GetTypes()
+                    .FirstOrDefault(t => t.Name == message.Type);
+
+                if (eventType == null)
+                {
+                    _logger.LogWarning("Unknown event type {Type} in outbox message {MessageId}", message.Type, message.Id);
+                    message.ProcessedAt = DateTime.UtcNow;
+                    continue;
+                }
+
+                var eventPayload = JsonSerializer.Deserialize(message.Payload, eventType);
                 
                 if (eventPayload != null)
                 {
-                    // MassTransit handles generic object publishing if configured, 
-                    // or ideally we'd use IPublishEndpoint.Publish(object, Type)
-                    await publishEndpoint.Publish(eventPayload, stoppingToken);
+                    // Publish to the bus (this will be handled by MassTransit)
+                    await publishEndpoint.Publish(eventPayload, eventType, stoppingToken);
                 }
 
                 message.ProcessedAt = DateTime.UtcNow;
+                message.Error = null;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to publish outbox message {MessageId}", message.Id);
+                message.AttemptCount++;
                 message.Error = ex.Message;
             }
         }

@@ -1,13 +1,15 @@
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RLApp.Adapters.Http.Requests;
+using RLApp.Adapters.Http.Security;
 using RLApp.Application.Commands;
 
 namespace RLApp.Adapters.Http.Controllers;
 
 [ApiController]
 [Route("api/waiting-room")]
-public class WaitingRoomController : ControllerBase
+public class WaitingRoomController : RLAppControllerBase
 {
     private readonly IMediator _mediator;
 
@@ -19,76 +21,62 @@ public class WaitingRoomController : ControllerBase
     /// <summary>
     /// POST /api/waiting-room/check-in
     /// </summary>
+    [Authorize(Policy = AuthorizationPolicies.ReceptionOperations)]
     [HttpPost("check-in")]
     public async Task<IActionResult> CheckIn(
         [FromBody] CheckInRequest request,
         [FromHeader(Name = "X-Correlation-Id")] string correlationId,
-        [FromHeader(Name = "X-Idempotency-Key")] string idempotencyKey)
+        [FromHeader(Name = "X-Idempotency-Key")] string idempotencyKey,
+        CancellationToken cancellationToken)
     {
-        var userId = User.Identity?.Name ?? "system";
-        
-        // Wait, RegisterPatientArrivalCommand in Application Layer expects QueueId and PatientName instead of AppointmentReference etc.
-        // Assuming QueueId is generated or derived. To strictly map to command:
-        var queueId = $"Q-{DateTime.UtcNow:yyyy-MM-dd}-MAIN"; // Simplified for this layer mapping
-        var patientName = "Unknown"; // Needs to be fetched typically, but command dictates PatientName
+        var patientName = string.IsNullOrWhiteSpace(request.PatientName)
+            ? request.PatientId
+            : request.PatientName;
 
-        var command = new RegisterPatientArrivalCommand(queueId, request.PatientId, patientName, correlationId, userId);
-        
-        var result = await _mediator.Send(command);
-
-        if (!result.Success)
-            return BadRequest(new { Error = result.Message, CorrelationId = correlationId });
-
-        var dataProp = result.GetType().GetProperty("Data");
-        var data = dataProp != null ? dataProp.GetValue(result) : result;
-        return Ok(data);
+        var command = new RegisterPatientArrivalCommand(
+            request.QueueId, 
+            request.PatientId, 
+            patientName, 
+            request.AppointmentReference,
+            int.TryParse(request.Priority, out var p) ? p : 0,
+            request.Notes,
+            correlationId, 
+            CurrentUserId);
+        var result = await _mediator.Send(command, cancellationToken);
+        return FromCommandResult(result);
     }
 
     /// <summary>
     /// POST /api/waiting-room/call-patient
     /// </summary>
+    [Authorize(Policy = AuthorizationPolicies.DoctorOperations)]
     [HttpPost("call-patient")]
     public async Task<IActionResult> CallPatient(
-        [FromQuery] string queueId, // Assuming passed in route or query if not in body
         [FromBody] CallPatientRequest request,
-        [FromHeader(Name = "X-Correlation-Id")] string? correlationId)
+        [FromHeader(Name = "X-Correlation-Id")] string? correlationId,
+        CancellationToken cancellationToken)
     {
-        var userId = User.Identity?.Name ?? "system";
         var activeCorrelationId = correlationId ?? Guid.NewGuid().ToString();
 
-        var command = new CallPatientCommand(queueId ?? "DEFAULT", request.PatientId, request.RoomId, activeCorrelationId, userId);
-        
-        var result = await _mediator.Send(command);
-
-        if (!result.Success)
-            return BadRequest(new { Error = result.Message, CorrelationId = activeCorrelationId });
-
-        var dataProp = result.GetType().GetProperty("Data");
-        var data = dataProp != null ? dataProp.GetValue(result) : result;
-        return Ok(data);
+        var command = new CallPatientCommand(request.QueueId, request.PatientId, request.RoomId, activeCorrelationId, CurrentUserId);
+        var result = await _mediator.Send(command, cancellationToken);
+        return FromCommandResult(result);
     }
     
     /// <summary>
     /// POST /api/waiting-room/claim-next
     /// </summary>
+    [Authorize(Policy = AuthorizationPolicies.DoctorOperations)]
     [HttpPost("claim-next")]
     public async Task<IActionResult> ClaimNext(
-        [FromQuery] string queueId,
         [FromBody] ClaimNextPatientRequest request,
-        [FromHeader(Name = "X-Correlation-Id")] string? correlationId)
+        [FromHeader(Name = "X-Correlation-Id")] string? correlationId,
+        CancellationToken cancellationToken)
     {
-        var userId = User.Identity?.Name ?? "system";
         var activeCorrelationId = correlationId ?? Guid.NewGuid().ToString();
 
-        var command = new ClaimNextPatientCommand(queueId ?? "DEFAULT", request.RoomId, activeCorrelationId, userId);
-        
-        var result = await _mediator.Send(command);
-
-        if (!result.Success)
-            return BadRequest(new { Error = result.Message, CorrelationId = activeCorrelationId });
-
-        var dataProp = result.GetType().GetProperty("Data");
-        var data = dataProp != null ? dataProp.GetValue(result) : result;
-        return Ok(data);
+        var command = new ClaimNextPatientCommand(request.QueueId, request.RoomId, activeCorrelationId, CurrentUserId);
+        var result = await _mediator.Send(command, cancellationToken);
+        return FromCommandResult(result);
     }
 }

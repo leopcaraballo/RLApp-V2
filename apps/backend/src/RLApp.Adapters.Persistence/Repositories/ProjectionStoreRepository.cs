@@ -90,20 +90,16 @@ public class ProjectionStoreRepository : IProjectionStore
     private async Task UpsertQueueStateAsync(string queueId, object projectionData,
         CancellationToken cancellationToken)
     {
-        // Parse dynamic projection data
         if (projectionData is not System.Collections.Generic.IDictionary<string, object> dict)
             throw new InvalidOperationException("Projection data must be a dictionary");
-
-        var pending = Convert.ToInt32(dict.TryGetValue("PendingPatients", out var p) ? p : 0);
-        var avgWait = Convert.ToDouble(dict.TryGetValue("AverageWaitTimeMinutes", out var w) ? w : 0.0);
 
         var existing = await _context.QueueStates
             .FirstOrDefaultAsync(q => q.QueueId == queueId, cancellationToken);
 
         if (existing != null)
         {
-            existing.TotalPending = pending;
-            existing.AverageWaitTimeMinutes = avgWait;
+            if (dict.TryGetValue("TotalPending", out var p)) existing.TotalPending = Convert.ToInt32(p);
+            if (dict.TryGetValue("AverageWaitTimeMinutes", out var w)) existing.AverageWaitTimeMinutes = Convert.ToDouble(w);
             existing.LastUpdatedAt = DateTime.UtcNow;
             _context.QueueStates.Update(existing);
         }
@@ -112,8 +108,8 @@ public class ProjectionStoreRepository : IProjectionStore
             var newQueue = new QueueStateView
             {
                 QueueId = queueId,
-                TotalPending = pending,
-                AverageWaitTimeMinutes = avgWait,
+                TotalPending = Convert.ToInt32(dict.TryGetValue("TotalPending", out var p) ? p : 0),
+                AverageWaitTimeMinutes = Convert.ToDouble(dict.TryGetValue("AverageWaitTimeMinutes", out var w) ? w : 0.0),
                 LastUpdatedAt = DateTime.UtcNow
             };
             await _context.QueueStates.AddAsync(newQueue, cancellationToken);
@@ -128,20 +124,16 @@ public class ProjectionStoreRepository : IProjectionStore
         if (projectionData is not System.Collections.Generic.IDictionary<string, object> dict)
             throw new InvalidOperationException("Projection data must be a dictionary");
 
-        var patientName = dict.TryGetValue("PatientName", out var pn) ? pn?.ToString() ?? "" : "";
-        var ticketNumber = dict.TryGetValue("TicketNumber", out var tn) ? tn?.ToString() ?? "" : "";
-        var status = dict.TryGetValue("Status", out var s) ? s?.ToString() ?? "" : "";
-        var roomAssigned = dict.TryGetValue("RoomAssigned", out var ra) ? ra?.ToString() : null;
-
         var existing = await _context.WaitingRoomMonitors
             .FirstOrDefaultAsync(w => w.TurnId == turnId, cancellationToken);
 
         if (existing != null)
         {
-            existing.PatientName = patientName;
-            existing.TicketNumber = ticketNumber;
-            existing.Status = status;
-            existing.RoomAssigned = roomAssigned;
+            if (dict.TryGetValue("PatientName", out var pn) && pn != null) existing.PatientName = pn.ToString()!;
+            if (dict.TryGetValue("TicketNumber", out var tn) && tn != null) existing.TicketNumber = tn.ToString()!;
+            if (dict.TryGetValue("Status", out var s) && s != null) existing.Status = s.ToString()!;
+            if (dict.TryGetValue("RoomAssigned", out var ra)) existing.RoomAssigned = ra?.ToString();
+            
             existing.UpdatedAt = DateTime.UtcNow;
             _context.WaitingRoomMonitors.Update(existing);
         }
@@ -150,10 +142,10 @@ public class ProjectionStoreRepository : IProjectionStore
             var newMonitor = new WaitingRoomMonitorView
             {
                 TurnId = turnId,
-                PatientName = patientName,
-                TicketNumber = ticketNumber,
-                Status = status,
-                RoomAssigned = roomAssigned,
+                PatientName = dict.TryGetValue("PatientName", out var pn) ? pn?.ToString() ?? "Unknown" : "Unknown",
+                TicketNumber = dict.TryGetValue("TicketNumber", out var tn) ? tn?.ToString() ?? turnId : turnId,
+                Status = dict.TryGetValue("Status", out var s) ? s?.ToString() ?? "Waiting" : "Waiting",
+                RoomAssigned = dict.TryGetValue("RoomAssigned", out var ra) ? ra?.ToString() : null,
                 UpdatedAt = DateTime.UtcNow
             };
             await _context.WaitingRoomMonitors.AddAsync(newMonitor, cancellationToken);
@@ -167,18 +159,14 @@ public class ProjectionStoreRepository : IProjectionStore
         if (projectionData is not System.Collections.Generic.IDictionary<string, object> dict)
             throw new InvalidOperationException("Projection data must be a dictionary");
 
-        var totalToday = Convert.ToInt32(dict.TryGetValue("TotalPatientsToday", out var t) ? t : 0);
-        var activeRooms = Convert.ToInt32(dict.TryGetValue("ActiveRooms", out var ar) ? ar : 0);
-        var completed = Convert.ToInt32(dict.TryGetValue("TotalCompleted", out var c) ? c : 0);
-
         var dashboard = await _context.OperationsDashboards
             .FirstOrDefaultAsync(cancellationToken);
 
         if (dashboard != null)
         {
-            dashboard.TotalPatientsToday = totalToday;
-            dashboard.ActiveRooms = activeRooms;
-            dashboard.TotalCompleted = completed;
+            if (dict.TryGetValue("TotalPatientsToday", out var t)) dashboard.TotalPatientsToday = Convert.ToInt32(t);
+            if (dict.TryGetValue("ActiveRooms", out var ar)) dashboard.ActiveRooms = Convert.ToInt32(ar);
+            if (dict.TryGetValue("TotalCompleted", out var c)) dashboard.TotalCompleted = Convert.ToInt32(c);
             dashboard.Date = DateTime.UtcNow.Date;
             _context.OperationsDashboards.Update(dashboard);
         }
@@ -187,9 +175,9 @@ public class ProjectionStoreRepository : IProjectionStore
             var newDashboard = new OperationsDashboardView
             {
                 Id = "SYSTEM_SINGLETON",
-                TotalPatientsToday = totalToday,
-                ActiveRooms = activeRooms,
-                TotalCompleted = completed,
+                TotalPatientsToday = Convert.ToInt32(dict.TryGetValue("TotalPatientsToday", out var t) ? t : 0),
+                ActiveRooms = Convert.ToInt32(dict.TryGetValue("ActiveRooms", out var ar) ? ar : 0),
+                TotalCompleted = Convert.ToInt32(dict.TryGetValue("TotalCompleted", out var c) ? c : 0),
                 Date = DateTime.UtcNow.Date
             };
             await _context.OperationsDashboards.AddAsync(newDashboard, cancellationToken);

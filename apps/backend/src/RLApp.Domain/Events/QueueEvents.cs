@@ -1,6 +1,7 @@
 namespace RLApp.Domain.Events;
 
 using Common;
+using System.Text.Json.Serialization;
 
 /// <summary>
 /// EV-001 WaitingQueueCreated
@@ -8,13 +9,16 @@ using Common;
 /// </summary>
 public class WaitingQueueCreated : DomainEvent
 {
-    public string QueueName { get; }
+    [JsonPropertyName("queueName")]
+    public string QueueName { get; set; } = string.Empty;
 
-    public WaitingQueueCreated(string queueId, string queueName, string correlationId)
-        : base(nameof(WaitingQueueCreated), queueId, correlationId)
+    public WaitingQueueCreated(string aggregateId, string queueName, string correlationId)
+        : base(nameof(WaitingQueueCreated), aggregateId, correlationId)
     {
         QueueName = queueName;
     }
+
+    protected WaitingQueueCreated() { }
 }
 
 /// <summary>
@@ -23,15 +27,39 @@ public class WaitingQueueCreated : DomainEvent
 /// </summary>
 public class PatientCheckedIn : DomainEvent
 {
-    public string PatientId { get; }
-    public string PatientName { get; }
+    [JsonPropertyName("patientId")]
+    public string PatientId { get; set; } = string.Empty;
 
-    public PatientCheckedIn(string queueId, string patientId, string patientName, string correlationId)
-        : base(nameof(PatientCheckedIn), queueId, correlationId)
+    [JsonPropertyName("patientName")]
+    public string PatientName { get; set; } = string.Empty;
+
+    [JsonPropertyName("appointmentReference")]
+    public string? AppointmentReference { get; set; }
+
+    [JsonPropertyName("priority")]
+    public int Priority { get; set; }
+
+    [JsonPropertyName("notes")]
+    public string? Notes { get; set; }
+
+    public PatientCheckedIn(
+        string aggregateId, 
+        string patientId, 
+        string patientName, 
+        string? appointmentReference, 
+        int priority, 
+        string? notes, 
+        string correlationId)
+        : base(nameof(PatientCheckedIn), aggregateId, correlationId)
     {
         PatientId = patientId;
         PatientName = patientName;
+        AppointmentReference = appointmentReference;
+        Priority = priority;
+        Notes = notes;
     }
+
+    protected PatientCheckedIn() { }
 }
 
 /// <summary>
@@ -40,13 +68,20 @@ public class PatientCheckedIn : DomainEvent
 /// </summary>
 public class PatientCalledAtCashier : DomainEvent
 {
-    public string PatientId { get; }
+    [JsonPropertyName("patientId")]
+    public string PatientId { get; set; } = string.Empty;
 
-    public PatientCalledAtCashier(string queueId, string patientId, string correlationId)
-        : base(nameof(PatientCalledAtCashier), queueId, correlationId)
+    [JsonPropertyName("cashierStationId")]
+    public string? CashierStationId { get; set; }
+
+    public PatientCalledAtCashier(string aggregateId, string patientId, string? cashierStationId, string correlationId)
+        : base(nameof(PatientCalledAtCashier), aggregateId, correlationId)
     {
         PatientId = patientId;
+        CashierStationId = cashierStationId;
     }
+
+    protected PatientCalledAtCashier() { }
 }
 
 /// <summary>
@@ -55,15 +90,34 @@ public class PatientCalledAtCashier : DomainEvent
 /// </summary>
 public class PatientPaymentValidated : DomainEvent
 {
-    public string PatientId { get; }
-    public decimal Amount { get; }
+    [JsonPropertyName("patientId")]
+    public string PatientId { get; set; } = string.Empty;
 
-    public PatientPaymentValidated(string queueId, string patientId, decimal amount, string correlationId)
-        : base(nameof(PatientPaymentValidated), queueId, correlationId)
+    [JsonPropertyName("amount")]
+    public decimal Amount { get; set; }
+
+    [JsonPropertyName("turnId")]
+    public string? TurnId { get; set; }
+
+    [JsonPropertyName("paymentReference")]
+    public string? PaymentReference { get; set; }
+
+    public PatientPaymentValidated(
+        string aggregateId, 
+        string patientId, 
+        decimal amount, 
+        string? turnId, 
+        string? paymentReference, 
+        string correlationId)
+        : base(nameof(PatientPaymentValidated), aggregateId, correlationId)
     {
         PatientId = patientId;
         Amount = amount;
+        TurnId = turnId;
+        PaymentReference = paymentReference;
     }
+
+    protected PatientPaymentValidated() { }
 }
 
 /// <summary>
@@ -72,13 +126,16 @@ public class PatientPaymentValidated : DomainEvent
 /// </summary>
 public class PatientPaymentPending : DomainEvent
 {
-    public string PatientId { get; }
+    [JsonPropertyName("patientId")]
+    public string PatientId { get; set; } = string.Empty;
 
-    public PatientPaymentPending(string queueId, string patientId, string correlationId)
-        : base(nameof(PatientPaymentPending), queueId, correlationId)
+    public PatientPaymentPending(string aggregateId, string patientId, string correlationId)
+        : base(nameof(PatientPaymentPending), aggregateId, correlationId)
     {
         PatientId = patientId;
     }
+
+    protected PatientPaymentPending() { }
 }
 
 /// <summary>
@@ -87,13 +144,24 @@ public class PatientPaymentPending : DomainEvent
 /// </summary>
 public class PatientAbsentAtCashier : DomainEvent
 {
-    public string PatientId { get; }
+    [JsonPropertyName("patientId")]
+    public string PatientId { get; set; } = string.Empty;
 
-    public PatientAbsentAtCashier(string queueId, string patientId, string correlationId)
-        : base(nameof(PatientAbsentAtCashier), queueId, correlationId)
+    [JsonPropertyName("turnId")]
+    public string? TurnId { get; set; }
+
+    [JsonPropertyName("reason")]
+    public string? Reason { get; set; }
+
+    public PatientAbsentAtCashier(string aggregateId, string patientId, string? turnId, string? reason, string correlationId)
+        : base(nameof(PatientAbsentAtCashier), aggregateId, correlationId)
     {
         PatientId = patientId;
+        TurnId = turnId;
+        Reason = reason;
     }
+
+    protected PatientAbsentAtCashier() { }
 }
 
 /// <summary>
@@ -102,11 +170,14 @@ public class PatientAbsentAtCashier : DomainEvent
 /// </summary>
 public class PatientCancelledByPayment : DomainEvent
 {
-    public string PatientId { get; }
+    [JsonPropertyName("patientId")]
+    public string PatientId { get; set; } = string.Empty;
 
-    public PatientCancelledByPayment(string queueId, string patientId, string correlationId)
-        : base(nameof(PatientCancelledByPayment), queueId, correlationId)
+    public PatientCancelledByPayment(string aggregateId, string patientId, string correlationId)
+        : base(nameof(PatientCancelledByPayment), aggregateId, correlationId)
     {
         PatientId = patientId;
     }
+
+    protected PatientCancelledByPayment() { }
 }

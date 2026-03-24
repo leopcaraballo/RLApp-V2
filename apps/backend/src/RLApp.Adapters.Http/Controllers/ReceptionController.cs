@@ -1,13 +1,16 @@
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RLApp.Adapters.Http.Requests;
+using RLApp.Adapters.Http.Security;
 using RLApp.Application.Commands;
 
 namespace RLApp.Adapters.Http.Controllers;
 
 [ApiController]
+[Authorize(Policy = AuthorizationPolicies.ReceptionOperations)]
 [Route("api/reception")]
-public class ReceptionController : ControllerBase
+public class ReceptionController : RLAppControllerBase
 {
     private readonly IMediator _mediator;
 
@@ -23,21 +26,23 @@ public class ReceptionController : ControllerBase
     public async Task<IActionResult> Register(
         [FromBody] ReceptionRegisterRequest request,
         [FromHeader(Name = "X-Correlation-Id")] string correlationId,
-        [FromHeader(Name = "X-Idempotency-Key")] string idempotencyKey)
+        [FromHeader(Name = "X-Idempotency-Key")] string idempotencyKey,
+        CancellationToken cancellationToken)
     {
-        var userId = User.Identity?.Name ?? "system";
-        
-        // This is an operational alias mapped to RegisterPatientArrivalCommand
-        var queueId = $"Q-{DateTime.UtcNow:yyyy-MM-dd}-MAIN"; 
-        var command = new RegisterPatientArrivalCommand(queueId, request.PatientId, "PatientName", correlationId, userId);
-        
-        var result = await _mediator.Send(command);
+        var patientName = string.IsNullOrWhiteSpace(request.PatientName)
+            ? request.PatientId
+            : request.PatientName;
 
-        if (!result.Success)
-            return BadRequest(new { Error = result.Message, CorrelationId = correlationId });
-
-        var dataProp = result.GetType().GetProperty("Data");
-        var data = dataProp != null ? dataProp.GetValue(result) : result;
-        return Ok(data);
+        var command = new RegisterPatientArrivalCommand(
+            request.QueueId, 
+            request.PatientId, 
+            patientName, 
+            request.AppointmentReference,
+            int.TryParse(request.Priority, out var p) ? p : 0,
+            request.Notes,
+            correlationId, 
+            CurrentUserId);
+        var result = await _mediator.Send(command, cancellationToken);
+        return FromCommandResult(result);
     }
 }

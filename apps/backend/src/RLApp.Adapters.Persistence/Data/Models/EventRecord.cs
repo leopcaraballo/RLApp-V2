@@ -25,6 +25,8 @@ public class EventRecord
             builder.Property(e => e.Payload).HasColumnType("jsonb").IsRequired();
             
             builder.HasIndex(e => new { e.AggregateId, e.OccurredAt });
+            builder.HasIndex(e => e.CorrelationId);
+            builder.HasIndex(e => new { e.EventType, e.OccurredAt });
         }
     }
 }

@@ -63,7 +63,13 @@ public class WaitingQueue : DomainEntity
     /// <summary>
     /// Register a patient arrival (check-in).
     /// </summary>
-    public void CheckInPatient(string patientId, string patientName, string correlationId)
+    public void CheckInPatient(
+        string patientId, 
+        string patientName, 
+        string? appointmentReference, 
+        int priority, 
+        string? notes, 
+        string correlationId)
     {
         if (!IsOpen)
             throw new DomainException("Queue is not open for check-ins");
@@ -72,7 +78,7 @@ public class WaitingQueue : DomainEntity
             throw new DomainException("Patient is already in the queue");
 
         PatientIds.Add(patientId);
-        RaiseDomainEvent(new PatientCheckedIn(Id, patientId, patientName, correlationId));
+        RaiseDomainEvent(new PatientCheckedIn(Id, patientId, patientName, appointmentReference, priority, notes, correlationId));
     }
 
     /// <summary>
@@ -113,29 +119,78 @@ public class WaitingQueue : DomainEntity
     }
 
     /// <summary>
+    /// Call a patient for cashier flow.
+    /// </summary>
+    public void CallPatientAtCashier(string patientId, string? cashierStationId, string correlationId)
+    {
+        if (!PatientIds.Contains(patientId))
+            throw new DomainException("Patient is not in the queue");
+
+        RaiseDomainEvent(new PatientCalledAtCashier(Id, patientId, cashierStationId, correlationId));
+    }
+
+    /// <summary>
+    /// Register a successful payment validation for a patient still in the operational flow.
+    /// </summary>
+    public void MarkPaymentValidated(string patientId, decimal amount, string? turnId, string? paymentReference, string correlationId)
+    {
+        if (!PatientIds.Contains(patientId))
+            throw new DomainException("Patient is not in the queue");
+
+        if (amount <= 0)
+            throw new DomainException("Payment amount must be greater than zero");
+
+        RaiseDomainEvent(new PatientPaymentValidated(Id, patientId, amount, turnId, paymentReference, correlationId));
+    }
+
+    /// <summary>
+    /// Mark payment as pending while preserving the patient in the operational flow.
+    /// </summary>
+    public void MarkPaymentPending(string patientId, string correlationId)
+    {
+        if (!PatientIds.Contains(patientId))
+            throw new DomainException("Patient is not in the queue");
+
+        RaiseDomainEvent(new PatientPaymentPending(Id, patientId, correlationId));
+    }
+
+    /// <summary>
     /// Mark patient attention as completed.
     /// </summary>
-    public void CompletePatientAttention(string patientId, string roomId, string correlationId)
+    public void CompletePatientAttention(string patientId, string roomId, string? turnId, string? outcome, string correlationId)
     {
         if (!PatientIds.Contains(patientId))
             throw new DomainException("Patient is not in the queue");
 
         PatientIds.Remove(patientId);
         PatientRoomAssignments.Remove(patientId);
-        RaiseDomainEvent(new PatientAttentionCompleted(Id, patientId, roomId, correlationId));
+        RaiseDomainEvent(new PatientAttentionCompleted(Id, patientId, roomId, turnId, outcome, correlationId));
     }
 
     /// <summary>
     /// Mark patient as absent.
     /// </summary>
-    public void MarkPatientAbsent(string patientId, string correlationId)
+    public void MarkPatientAbsent(string patientId, string? turnId, string? reason, string correlationId)
     {
         if (!PatientIds.Contains(patientId))
             throw new DomainException("Patient is not in the queue");
 
         PatientIds.Remove(patientId);
         PatientRoomAssignments.Remove(patientId);
-        RaiseDomainEvent(new PatientAbsentAtConsultation(Id, patientId, correlationId));
+        RaiseDomainEvent(new PatientAbsentAtConsultation(Id, patientId, turnId, reason, correlationId));
+    }
+
+    /// <summary>
+    /// Mark patient as absent at cashier and remove them from the queue.
+    /// </summary>
+    public void MarkPatientAbsentAtCashier(string patientId, string? turnId, string? reason, string correlationId)
+    {
+        if (!PatientIds.Contains(patientId))
+            throw new DomainException("Patient is not in the queue");
+
+        PatientIds.Remove(patientId);
+        PatientRoomAssignments.Remove(patientId);
+        RaiseDomainEvent(new PatientAbsentAtCashier(Id, patientId, turnId, reason, correlationId));
     }
 
     /// <summary>

@@ -1,0 +1,96 @@
+name: ${COMPOSE_PROJECT_NAME:-rlapp}
+
+services:
+  db:
+    image: postgres:17-alpine
+    profiles:
+      - backend
+      - frontend
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-rlappdb}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - rlapp-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-rlappdb}
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - rlapp-network
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    profiles:
+      - backend
+      - frontend
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
+      ASPNETCORE_URLS: http://0.0.0.0:8080
+      ConnectionStrings__Postgres: Host=db;Port=5432;Database=${POSTGRES_DB:-rlappdb};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-postgres}
+      Jwt__Secret: ${JWT_SECRET:-local-dev-jwt-secret-change-this-before-production}
+      Messaging__Enabled: ${MESSAGING_ENABLED:-false}
+      Messaging__Transport: ${MESSAGING_TRANSPORT:-InMemory}
+      HealthChecks__RabbitMQ__Enabled: ${HEALTHCHECKS_RABBITMQ_ENABLED:-false}
+      Database__ApplyMigrationsOnStartup: ${APPLY_MIGRATIONS_ON_STARTUP:-true}
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${BACKEND_PORT:-5094}:8080"
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - curl --fail --silent http://127.0.0.1:8080/health/ready || exit 1
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 25s
+    networks:
+      - rlapp-network
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    profiles:
+      - frontend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      HOSTNAME: 0.0.0.0
+      PORT: 3000
+      BACKEND_API_BASE_URL: ${BACKEND_API_BASE_URL:-http://backend:8080}
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+      FRONTEND_SESSION_SECRET: ${FRONTEND_SESSION_SECRET:-local-dev-frontend-session-secret-change-this-before-production}
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    healthcheck:
+      test: >-
+        node -e "fetch('http://127.0.0.1:3000/api/health').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))"
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - rlapp-network
+
+networks:
+  rlapp-network:
+    driver: bridge
+
+volumes:
+  rlapp-postgres-data:

@@ -7,7 +7,7 @@ namespace RLApp.Application.Commands;
 /// Base command for all application commands.
 /// Reference: Command Handler Guidelines
 /// </summary>
-public abstract class Command : IRequest<CommandResult>
+public abstract class Command<TResult> : IRequest<TResult>
 {
     public string CorrelationId { get; set; }
     public string UserId { get; set; }
@@ -19,20 +19,28 @@ public abstract class Command : IRequest<CommandResult>
     }
 }
 
+public abstract class Command : Command<CommandResult>
+{
+    protected Command(string correlationId, string userId)
+        : base(correlationId, userId)
+    {
+    }
+}
+
 /// <summary>
 /// UC-001: Authenticate Staff
 /// Command to authenticate a staff member.
 /// Reference: S-001 Staff Identity And Access
 /// </summary>
-public class AuthenticateStaffCommand : Command
+public class AuthenticateStaffCommand : Command<CommandResult<AuthenticationResultDto>>
 {
-    public string Username { get; set; }
+    public string Identifier { get; set; }
     public string Password { get; set; }
 
-    public AuthenticateStaffCommand(string username, string password, string correlationId)
-        : base(correlationId, username)
+    public AuthenticateStaffCommand(string identifier, string password, string correlationId)
+        : base(correlationId, identifier)
     {
-        Username = username;
+        Identifier = identifier;
         Password = password;
     }
 }
@@ -46,12 +54,14 @@ public class ChangeStaffRoleCommand : Command
 {
     public string StaffId { get; set; }
     public string NewRole { get; set; }
+    public string? Reason { get; set; }
 
-    public ChangeStaffRoleCommand(string staffId, string newRole, string correlationId, string userId)
+    public ChangeStaffRoleCommand(string staffId, string newRole, string? reason, string correlationId, string userId)
         : base(correlationId, userId)
     {
         StaffId = staffId;
         NewRole = newRole;
+        Reason = reason;
     }
 }
 
@@ -78,18 +88,32 @@ public class ActivateConsultingRoomCommand : Command
 /// Command to check in a patient.
 /// Reference: S-003 Queue Open and Check-in
 /// </summary>
-public class RegisterPatientArrivalCommand : Command
+public class RegisterPatientArrivalCommand : Command<CommandResult<RegisterPatientResultDto>>
 {
     public string QueueId { get; set; }
     public string PatientId { get; set; }
     public string PatientName { get; set; }
+    public string? AppointmentReference { get; set; }
+    public int Priority { get; set; }
+    public string? Notes { get; set; }
 
-    public RegisterPatientArrivalCommand(string queueId, string patientId, string patientName, string correlationId, string userId)
+    public RegisterPatientArrivalCommand(
+        string queueId, 
+        string patientId, 
+        string patientName, 
+        string? appointmentReference, 
+        int priority, 
+        string? notes, 
+        string correlationId, 
+        string userId)
         : base(correlationId, userId)
     {
         QueueId = queueId;
         PatientId = patientId;
         PatientName = patientName;
+        AppointmentReference = appointmentReference;
+        Priority = priority;
+        Notes = notes;
     }
 }
 
@@ -98,14 +122,16 @@ public class RegisterPatientArrivalCommand : Command
 /// Command to call next patient at cashier.
 /// Reference: S-004 Cashier Flow
 /// </summary>
-public class CallNextAtCashierCommand : Command
+public class CallNextAtCashierCommand : Command<CommandResult<PatientCallResultDto>>
 {
     public string QueueId { get; set; }
+    public string? CashierStationId { get; set; }
 
-    public CallNextAtCashierCommand(string queueId, string correlationId, string userId)
+    public CallNextAtCashierCommand(string queueId, string? cashierStationId, string correlationId, string userId)
         : base(correlationId, userId)
     {
         QueueId = queueId;
+        CashierStationId = cashierStationId;
     }
 }
 
@@ -119,13 +145,24 @@ public class ValidatePaymentCommand : Command
     public string QueueId { get; set; }
     public string PatientId { get; set; }
     public decimal Amount { get; set; }
+    public string? TurnId { get; set; }
+    public string? PaymentReference { get; set; }
 
-    public ValidatePaymentCommand(string queueId, string patientId, decimal amount, string correlationId, string userId)
+    public ValidatePaymentCommand(
+        string queueId, 
+        string patientId, 
+        decimal amount, 
+        string? turnId, 
+        string? paymentReference, 
+        string correlationId, 
+        string userId)
         : base(correlationId, userId)
     {
         QueueId = queueId;
         PatientId = patientId;
         Amount = amount;
+        TurnId = turnId;
+        PaymentReference = paymentReference;
     }
 }
 
@@ -134,7 +171,7 @@ public class ValidatePaymentCommand : Command
 /// Command to claim next patient.
 /// Reference: S-005 Consultation Flow
 /// </summary>
-public class ClaimNextPatientCommand : Command
+public class ClaimNextPatientCommand : Command<CommandResult<ClaimedPatientResultDto>>
 {
     public string QueueId { get; set; }
     public string RoomId { get; set; }
@@ -211,13 +248,24 @@ public class MarkAbsenceCommand : Command
     public string QueueId { get; set; }
     public string PatientId { get; set; }
     public string RoomId { get; set; }
+    public string? TurnId { get; set; }
+    public string? Reason { get; set; }
 
-    public MarkAbsenceCommand(string queueId, string patientId, string roomId, string correlationId, string userId)
+    public MarkAbsenceCommand(
+        string queueId, 
+        string patientId, 
+        string roomId, 
+        string? turnId, 
+        string? reason, 
+        string correlationId, 
+        string userId)
         : base(correlationId, userId)
     {
         QueueId = queueId;
         PatientId = patientId;
         RoomId = roomId;
+        TurnId = turnId;
+        Reason = reason;
     }
 }
 
@@ -231,13 +279,24 @@ public class FinishConsultationCommand : Command
     public string QueueId { get; set; }
     public string PatientId { get; set; }
     public string RoomId { get; set; }
+    public string? TurnId { get; set; }
+    public string? Outcome { get; set; }
 
-    public FinishConsultationCommand(string queueId, string patientId, string roomId, string correlationId, string userId)
+    public FinishConsultationCommand(
+        string queueId, 
+        string patientId, 
+        string roomId, 
+        string? turnId, 
+        string? outcome, 
+        string correlationId, 
+        string userId)
         : base(correlationId, userId)
     {
         QueueId = queueId;
         PatientId = patientId;
         RoomId = roomId;
+        TurnId = turnId;
+        Outcome = outcome;
     }
 }
 
@@ -251,13 +310,24 @@ public class MarkAbsenceAtConsultationCommand : Command
     public string QueueId { get; set; }
     public string PatientId { get; set; }
     public string RoomId { get; set; }
+    public string? TurnId { get; set; }
+    public string? Reason { get; set; }
 
-    public MarkAbsenceAtConsultationCommand(string queueId, string patientId, string roomId, string correlationId, string userId)
+    public MarkAbsenceAtConsultationCommand(
+        string queueId, 
+        string patientId, 
+        string roomId, 
+        string? turnId, 
+        string? reason, 
+        string correlationId, 
+        string userId)
         : base(correlationId, userId)
     {
         QueueId = queueId;
         PatientId = patientId;
         RoomId = roomId;
+        TurnId = turnId;
+        Reason = reason;
     }
 }
 

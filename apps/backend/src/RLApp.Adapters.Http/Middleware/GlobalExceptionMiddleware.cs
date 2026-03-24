@@ -1,16 +1,27 @@
 using System.Net;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using RLApp.Domain.Common;
 
 namespace RLApp.Adapters.Http.Middleware;
 
 public class GlobalExceptionMiddleware
 {
     private readonly RequestDelegate _next;
+    private readonly ILogger<GlobalExceptionMiddleware> _logger;
+    private readonly IHostEnvironment _environment;
 
-    public GlobalExceptionMiddleware(RequestDelegate next)
+    public GlobalExceptionMiddleware(
+        RequestDelegate next,
+        ILogger<GlobalExceptionMiddleware> logger,
+        IHostEnvironment environment)
     {
         _next = next;
+        _logger = logger;
+        _environment = environment;
     }
 
     public async Task InvokeAsync(HttpContext context)
@@ -25,34 +36,35 @@ public class GlobalExceptionMiddleware
         }
     }
 
-    private static Task HandleExceptionAsync(HttpContext context, Exception exception)
+    private Task HandleExceptionAsync(HttpContext context, Exception exception)
     {
-        context.Response.ContentType = "application/json";
+        _logger.LogError(exception, "Unhandled exception while processing request {Path}", context.Request.Path);
 
-        var response = new 
+        var (statusCode, title, detail) = exception switch
         {
-            Title = "An error occurred while processing your request.",
-            Status = (int)HttpStatusCode.InternalServerError,
-            Detail = exception.Message
+            DomainException => ((int)HttpStatusCode.BadRequest, "Domain validation failed.", exception.Message),
+            KeyNotFoundException => ((int)HttpStatusCode.NotFound, "Resource not found.", exception.Message),
+            UnauthorizedAccessException => ((int)HttpStatusCode.Forbidden, "Access denied.", "You are not allowed to perform this operation."),
+            _ => ((int)HttpStatusCode.InternalServerError, "An unexpected error occurred.", _environment.IsDevelopment() ? exception.Message : "The server could not process the request.")
         };
 
-        // If DomainException or ApplicationException exists, map appropriately (e.g. 400 Bad Request, 404 Not Found)
-        if (exception.GetType().Name.Contains("DomainException", StringComparison.OrdinalIgnoreCase) ||
-            exception.GetType().Name.Contains("ApplicationException", StringComparison.OrdinalIgnoreCase))
+        context.Response.ContentType = "application/problem+json";
+        context.Response.StatusCode = statusCode;
+
+        var problem = new ProblemDetails
         {
-            response = new 
-            {
-                Title = "Domain validation failed.",
-                Status = (int)HttpStatusCode.BadRequest,
-                Detail = exception.Message
-            };
-            context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-        }
-        else
+            Title = title,
+            Status = statusCode,
+            Detail = detail,
+            Instance = context.Request.Path
+        };
+
+        problem.Extensions["traceId"] = context.TraceIdentifier;
+        if (context.Request.Headers.TryGetValue("X-Correlation-Id", out var correlationId))
         {
-            context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+            problem.Extensions["correlationId"] = correlationId.ToString();
         }
 
-        return context.Response.WriteAsync(JsonSerializer.Serialize(response));
+        return context.Response.WriteAsync(JsonSerializer.Serialize(problem));
     }
 }

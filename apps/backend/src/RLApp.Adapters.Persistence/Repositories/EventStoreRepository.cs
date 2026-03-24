@@ -3,12 +3,36 @@ using Microsoft.EntityFrameworkCore;
 using RLApp.Adapters.Persistence.Data;
 using RLApp.Adapters.Persistence.Data.Models;
 using RLApp.Domain.Common;
+using RLApp.Domain.Events;
 using RLApp.Ports.Outbound;
 
 namespace RLApp.Adapters.Persistence.Repositories;
 
 public class EventStoreRepository : IEventStore
 {
+    private static readonly JsonSerializerOptions SerializerOptions = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
+
+    private static readonly IReadOnlyDictionary<string, Type> EventTypeMap = new Dictionary<string, Type>(StringComparer.Ordinal)
+    {
+        [nameof(WaitingQueueCreated)] = typeof(WaitingQueueCreated),
+        [nameof(PatientCheckedIn)] = typeof(PatientCheckedIn),
+        [nameof(PatientCalledAtCashier)] = typeof(PatientCalledAtCashier),
+        [nameof(PatientPaymentValidated)] = typeof(PatientPaymentValidated),
+        [nameof(PatientPaymentPending)] = typeof(PatientPaymentPending),
+        [nameof(PatientAbsentAtCashier)] = typeof(PatientAbsentAtCashier),
+        [nameof(PatientCancelledByPayment)] = typeof(PatientCancelledByPayment),
+        [nameof(ConsultingRoomActivated)] = typeof(ConsultingRoomActivated),
+        [nameof(ConsultingRoomDeactivated)] = typeof(ConsultingRoomDeactivated),
+        [nameof(PatientClaimedForAttention)] = typeof(PatientClaimedForAttention),
+        [nameof(PatientCalled)] = typeof(PatientCalled),
+        [nameof(PatientAttentionCompleted)] = typeof(PatientAttentionCompleted),
+        [nameof(PatientAbsentAtConsultation)] = typeof(PatientAbsentAtConsultation),
+        [nameof(PatientCancelledByAbsence)] = typeof(PatientCancelledByAbsence)
+    };
+
     private readonly AppDbContext _context;
 
     public EventStoreRepository(AppDbContext context)
@@ -28,7 +52,6 @@ public class EventStoreRepository : IEventStore
         };
 
         await _context.EventStore.AddAsync(record, cancellationToken);
-        await _context.SaveChangesAsync(cancellationToken);
     }
 
     public async Task SaveBatchAsync(IEnumerable<DomainEvent> domainEvents, CancellationToken cancellationToken = default)
@@ -43,47 +66,62 @@ public class EventStoreRepository : IEventStore
         });
 
         await _context.EventStore.AddRangeAsync(records, cancellationToken);
-        await _context.SaveChangesAsync(cancellationToken);
     }
 
     public async Task<IList<DomainEvent>> GetEventsByAggregateIdAsync(string aggregateId, CancellationToken cancellationToken = default)
     {
         var records = await _context.EventStore
+            .AsNoTracking()
             .Where(e => e.AggregateId == aggregateId)
             .OrderBy(e => e.OccurredAt)
             .ToListAsync(cancellationToken);
 
-        var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
         var events = new List<DomainEvent>();
 
-        // Map event types to C# domain event classes dynamically
         foreach (var record in records)
         {
-            try
-            {
-                DomainEvent? @event = record.EventType switch
-                {
-                    "QueueOpened" => JsonSerializer.Deserialize<dynamic>(record.Payload, options) as DomainEvent,
-                    "PatientCheckedIn" => JsonSerializer.Deserialize<dynamic>(record.Payload, options) as DomainEvent,
-                    "PatientLeftWaiting" => JsonSerializer.Deserialize<dynamic>(record.Payload, options) as DomainEvent,
-                    "ConsultantAssigned" => JsonSerializer.Deserialize<dynamic>(record.Payload, options) as DomainEvent,
-                    "PatientCalledForConsultation" => JsonSerializer.Deserialize<dynamic>(record.Payload, options) as DomainEvent,
-                    "ConsultationStarted" => JsonSerializer.Deserialize<dynamic>(record.Payload, options) as DomainEvent,
-                    "ConsultationFinished" => JsonSerializer.Deserialize<dynamic>(record.Payload, options) as DomainEvent,
-                    "PaymentProcessed" => JsonSerializer.Deserialize<dynamic>(record.Payload, options) as DomainEvent,
-                    _ => null
-                };
-
-                if (@event != null)
-                    events.Add(@event);
-            }
-            catch (JsonException ex)
-            {
-                // Log and skip malformed events in event stream
-                System.Diagnostics.Debug.WriteLine($"Failed to deserialize event {record.Id}: {ex.Message}");
-            }
+            var @event = DeserializeEvent(record);
+            if (@event != null)
+                events.Add(@event);
         }
 
         return events;
+    }
+
+    public async Task<IList<DomainEvent>> GetEventsByDateRangeAsync(
+        DateTime from, DateTime to, CancellationToken cancellationToken = default)
+    {
+        var records = await _context.EventStore
+            .AsNoTracking()
+            .Where(e => e.OccurredAt >= from && e.OccurredAt <= to)
+            .OrderBy(e => e.OccurredAt)
+            .ToListAsync(cancellationToken);
+
+        var events = new List<DomainEvent>();
+
+        foreach (var record in records)
+        {
+            var @event = DeserializeEvent(record);
+            if (@event != null)
+                events.Add(@event);
+        }
+
+        return events;
+    }
+
+    private static DomainEvent? DeserializeEvent(EventRecord record)
+    {
+        if (!EventTypeMap.TryGetValue(record.EventType, out var eventClrType))
+            return null;
+
+        try
+        {
+            return JsonSerializer.Deserialize(record.Payload, eventClrType, SerializerOptions) as DomainEvent;
+        }
+        catch (JsonException ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Failed to deserialize event {record.Id}: {ex.Message}");
+            return null;
+        }
     }
 }

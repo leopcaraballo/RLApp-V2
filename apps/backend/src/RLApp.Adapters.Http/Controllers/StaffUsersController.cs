@@ -1,14 +1,16 @@
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RLApp.Adapters.Http.Requests;
-using RLApp.Adapters.Http.Responses;
+using RLApp.Adapters.Http.Security;
 using RLApp.Application.Commands;
 
 namespace RLApp.Adapters.Http.Controllers;
 
 [ApiController]
+[Authorize(Policy = AuthorizationPolicies.SupervisorOnly)]
 [Route("api/staff/users")]
-public class StaffUsersController : ControllerBase
+public class StaffUsersController : RLAppControllerBase
 {
     private readonly IMediator _mediator;
 
@@ -25,20 +27,11 @@ public class StaffUsersController : ControllerBase
     public async Task<IActionResult> ChangeRole(
         [FromBody] ChangeRoleRequest request, 
         [FromHeader(Name = "X-Correlation-Id")] string correlationId,
-        [FromHeader(Name = "X-Idempotency-Key")] string idempotencyKey)
+        [FromHeader(Name = "X-Idempotency-Key")] string idempotencyKey,
+        CancellationToken cancellationToken)
     {
-        // Extract userId from User Claims when Authorization is present
-        var userId = User.Identity?.Name ?? "system";
-        
-        var command = new ChangeStaffRoleCommand(request.StaffUserId, request.NewRole, correlationId, userId);
-        
-        var result = await _mediator.Send(command);
-
-        if (!result.Success)
-            return BadRequest(new { Error = result.Message, CorrelationId = correlationId });
-
-        var dataProp = result.GetType().GetProperty("Data");
-        var data = dataProp != null ? dataProp.GetValue(result) : result;
-        return Ok(data);
+        var command = new ChangeStaffRoleCommand(request.StaffUserId, request.NewRole, request.Reason, correlationId, CurrentUserId);
+        var result = await _mediator.Send(command, cancellationToken);
+        return FromCommandResult(result);
     }
 }
