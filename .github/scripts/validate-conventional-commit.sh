@@ -9,7 +9,12 @@ if [[ -z "$message" ]]; then
   exit 1
 fi
 
-valid_types='feat|fix|refactor|docs|test|chore'
+if [[ "$message" =~ ^Merge[[:space:]] ]]; then
+  printf 'Valid Conventional Commit subject (Merge commit bypassed): %s\n' "$message"
+  exit 0
+fi
+
+valid_types='feat|fix|refactor|docs|test|chore|ci'
 pattern="^(${valid_types})\(([a-z0-9][a-z0-9-]*)\): ([[:lower:]][[:lower:][:digit:] /,_-]*)$"
 extract_pattern="^(${valid_types})\(([^)]*)\):[[:space:]]*(.*)$"
 strict_extract_pattern="^(${valid_types})\(([a-z0-9][a-z0-9-]*)\):[[:space:]]*(.*)$"

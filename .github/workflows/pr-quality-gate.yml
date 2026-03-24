@@ -31,6 +31,12 @@ jobs:
             const title = context.payload.pull_request.title || "";
             const text = `${title}\n${body}`;
 
+            const headRef = context.payload.pull_request.head.ref;
+            const baseRef = context.payload.pull_request.base.ref;
+            if (headRef === "develop" && baseRef === "main") {
+              return;
+            }
+
             const hasSpec = /\bS-\d{3}\b/.test(text);
             const hasStory = /\bUS-\d{3}\b/.test(text);
             const hasUseCase = /\bUC-\d{3}\b/.test(text);
@@ -60,8 +66,8 @@ jobs:
           head_ref="${{ github.head_ref }}"
           base_ref="${{ github.base_ref }}"
 
-          [[ "$head_ref" =~ ^feature/.+ ]] || {
-            echo "Pull Request source branch must match feature/*"
+          [[ "$head_ref" =~ ^feature/.+ || "$head_ref" == "develop" ]] || {
+            echo "Pull Request source branch must match feature/* or develop"
             exit 1
           }
 
