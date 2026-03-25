@@ -11,6 +11,7 @@
 | 25/03/2026 | 2:15 PM | Análisis del sistema actual de turnos | Se empieza a identificar un problema más relacionado con pacientes que con médicos. |
 | 25/03/2026 | 2:20 PM | Definición del contexto y problema del sistema | Se identifica la falta de continuidad del paciente entre etapas como limitación principal. |
 | 25/03/2026 | 2:30 PM | Construcción de historias de usuario | Se aterriza la solución en necesidades concretas relacionadas con continuidad, transición y trazabilidad. |
+| 25/03/2026 | 3:45 PM | Definición de reglas de negocio | Se establecen restricciones iniciales para el flujo del paciente y la gestión de estados. |
 
 ---
 
@@ -76,3 +77,6 @@ A partir de lo anterior, se plantea la creación de un **Orquestador de Trayecto
 En esta etapa se empieza a concretar la solución:
 
 * Se definen historias de usuario relacionadas con continuidad, transición entre etapas y trazabilidad
+* Se definen reglas de negocio iniciales para mantener la coherencia del flujo del paciente
+
+---
