@@ -6,12 +6,13 @@
 
 | Fecha      | Hora    | Descripción del Cambio | Impacto en el Diseño |
 |------------|---------|------------------------|----------------------|
-| 25/03/2026 | 9:30 AM | Creación de la rama y [documento base](https://docs.google.com/document/d/1tQPaExwsD1HFYFfXh1atzBVtWVXCzYJSpAJz5XLoVmQ/edit?tab=t.0) | Se inicia el análisis de la feature y se define el espacio de trabajo. |
+| 25/03/2026 | 9:30 AM | Creación de la rama y [Orquestador de Trayectorias Clínicas Sincronizadas](https://docs.google.com/document/d/1tQPaExwsD1HFYFfXh1atzBVtWVXCzYJSpAJz5XLoVmQ/edit?tab=t.0) | Se inicia el análisis de la feature y se define el espacio de trabajo. |
 | 25/03/2026 | 1:00 PM | Revisión de la idea inicial con apoyo de IA | Se detecta que la idea original puede estar sobredimensionada. |
 | 25/03/2026 | 2:15 PM | Análisis del sistema actual de turnos | Se empieza a identificar un problema más relacionado con pacientes que con médicos. |
 | 25/03/2026 | 2:20 PM | Definición del contexto y problema del sistema | Se identifica la falta de continuidad del paciente entre etapas como limitación principal. |
 | 25/03/2026 | 2:30 PM | Construcción de historias de usuario | Se aterriza la solución en necesidades concretas relacionadas con continuidad, transición y trazabilidad. |
 | 25/03/2026 | 3:45 PM | Definición de reglas de negocio | Se establecen restricciones iniciales para el flujo del paciente y la gestión de estados. |
+| 26/03/2026 | 9:20 AM | Reinvestigacion y reconstruccion del documento [Product Feature Specification and Planning Document](https://docs.google.com/document/d/1tQPaExwsD1HFYFfXh1atzBVtWVXCzYJSpAJz5XLoVmQ/edit?tab=t.0) | Se reconstruye el documento para que se ajuste a la nueva idea. |
 
 ---
 
@@ -80,3 +81,7 @@ En esta etapa se empieza a concretar la solución:
 * Se definen reglas de negocio iniciales para mantener la coherencia del flujo del paciente
 
 ---
+
+### Reconstruccion del documento base
+
+Basado en la ultima meet del dia de ayer, se reconstruye el documento base para que se ajuste a la nueva idea. Se formalizo una estructura clara del contenido del documento.
