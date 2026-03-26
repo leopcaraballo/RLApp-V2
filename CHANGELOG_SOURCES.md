@@ -33,6 +33,7 @@ Se busca evidenciar:
 | Inclusión de PRD | Se formaliza la solución a nivel de producto |
 | Estimación con Scrum Poker | Se dimensiona el esfuerzo técnico |
 | Planificación por iteraciones | Se define una estrategia incremental de implementación |
+| Inclusión de requisitos no funcionales (NFR) | Se incorporan atributos de calidad del sistema (rendimiento, escalabilidad, disponibilidad, seguridad, consistencia, trazabilidad, mantenibilidad y usabilidad) alineando el diseño con estándares de sistemas distribuidos |
 
 ---
 
@@ -109,6 +110,7 @@ Se estructuró el documento completo incluyendo:
 - Historias de usuario con criterios de aceptación
 - Estimación y planificación por iteraciones
 - Consideraciones de seguridad, cumplimiento y trazabilidad
+- Definición de requisitos no funcionales (rendimiento, escalabilidad, disponibilidad, consistencia, seguridad, trazabilidad, mantenibilidad y usabilidad)
 
 ---
 
