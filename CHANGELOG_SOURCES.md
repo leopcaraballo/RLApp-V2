@@ -36,6 +36,8 @@ Se busca evidenciar:
 | Inclusión de requisitos no funcionales (NFR) | Se incorporan atributos de calidad del sistema (rendimiento, escalabilidad, disponibilidad, seguridad, consistencia, trazabilidad, mantenibilidad y usabilidad) alineando el diseño con estándares de sistemas distribuidos |
 | Definición del modelo conceptual | Se establece la estructura de datos del sistema |
 | Definición de la arquitectura | Se establece la estructura del sistema |
+| Se actualizaron los diagramas, el de Entidad-Relacion y el de bloques | Se detalló la arquitectura del sistema y se migro de la elaboracion original de los diagrmas en Miro a Elaboracion en [Mermaid](https://mermaid.ai) |
+| Se añadio un bloque explicativo de los diagramas | Se detalla la arquitectura del sistema y se explica el funcionamiento de los diagramas |
 
 ---
 
