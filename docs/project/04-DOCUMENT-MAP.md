@@ -8,6 +8,7 @@ Proveer una vista maestra de la estructura documental y de la dependencia entre 
 
 - 01-foundation: reglas fundacionales
 - 02-as-is-audit: evidencia objetiva del sistema actual
+ 	- 02-as-is-audit/10-FASE-0-DIAGNOSTICO.md: Fase 0 — Diagnóstico Ejecutivo (2026-04-01)
 - 03-target-architecture: arquitectura objetivo del proyecto nuevo
 - 04-adr: decisiones formales
 - 05-domain: modelo de dominio, estados y eventos

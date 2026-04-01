@@ -1,5 +1,7 @@
 # RLApp Frontend
 
+**Estado del proyecto:** Fase 0 — Diagnóstico Ejecutivo completado (2026-04-01). Ver: ../../docs/project/02-as-is-audit/10-FASE-0-DIAGNOSTICO.md
+
 Frontend operativo en Next.js 16 alineado al contrato HTTP real del backend actual.
 
 ## Qué incluye

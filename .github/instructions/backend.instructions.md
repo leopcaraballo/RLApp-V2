@@ -5,6 +5,8 @@ description: "Use when editing backend, API, worker, application, domain, infras
 
 # Backend Instructions
 
+**Estado del proyecto:** Fase 0 — Diagnóstico Ejecutivo completado (2026-04-01). Ver: /docs/project/02-as-is-audit/10-FASE-0-DIAGNOSTICO.md
+
 Usa `/docs/project` como fuente de verdad. Antes de escribir backend, lee como minimo:
 
 1. `/docs/project/11-specifications/S-XXX-*.md`

@@ -20,6 +20,7 @@ Antes de proponer cambios, leer siempre:
 1. `/docs/project/16-generation-pack/08-COPILOT-OPERATING-MODEL.md`
 1. `/docs/project/16-generation-pack/09-AI-RUNTIME-POLICY.md`
 1. `/docs/project/16-generation-pack/10-AI-TESTING-AND-OBSERVABILITY.md`
+1. `/docs/project/02-as-is-audit/10-FASE-0-DIAGNOSTICO.md`
 
 ## Flujo por defecto
 
