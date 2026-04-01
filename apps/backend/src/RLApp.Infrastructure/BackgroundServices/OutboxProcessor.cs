@@ -5,6 +5,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using RLApp.Adapters.Persistence.Data;
+using RLApp.Adapters.Persistence.Data.Models;
 using RLApp.Adapters.Persistence.Persistence;
 
 namespace RLApp.Infrastructure.BackgroundServices;
@@ -77,6 +78,7 @@ public class OutboxProcessor : BackgroundService
 
         var publishedCount = 0;
         var failedCount = 0;
+        var deadLetterCount = 0;
         var startedAt = DateTime.UtcNow;
 
         foreach (var message in messages)
@@ -91,19 +93,32 @@ public class OutboxProcessor : BackgroundService
 
                 if (eventType == null)
                 {
-                    _logger.LogWarning("Unknown event type {Type} in outbox message {MessageId}", message.Type, message.Id);
-                    OutboxProcessorTelemetry.RecordFailed(message.Type);
-                    failedCount++;
-                    message.Error = $"Unknown event type {message.Type}";
-                    message.ProcessedAt = DateTime.UtcNow;
+                    MoveToDeadLetter(context, message, $"Unknown event type {message.Type}");
+                    deadLetterCount++;
+                    OutboxProcessorTelemetry.RecordDeadLetter(message.Type);
                     continue;
                 }
 
-                var eventPayload = JsonSerializer.Deserialize(message.Payload, eventType);
+                object? eventPayload;
+
+                try
+                {
+                    eventPayload = JsonSerializer.Deserialize(message.Payload, eventType);
+                }
+                catch (JsonException ex)
+                {
+                    MoveToDeadLetter(context, message, $"Invalid payload for event type {message.Type}: {ex.Message}");
+                    deadLetterCount++;
+                    OutboxProcessorTelemetry.RecordDeadLetter(message.Type);
+                    continue;
+                }
 
                 if (eventPayload == null)
                 {
-                    throw new InvalidOperationException($"Failed to deserialize payload for event type {message.Type}.");
+                    MoveToDeadLetter(context, message, $"Invalid payload for event type {message.Type}: deserialized payload was null.");
+                    deadLetterCount++;
+                    OutboxProcessorTelemetry.RecordDeadLetter(message.Type);
+                    continue;
                 }
 
                 var publishStartedAt = DateTime.UtcNow;
@@ -133,13 +148,37 @@ public class OutboxProcessor : BackgroundService
         await context.SaveChangesAsync(stoppingToken);
 
         _logger.LogInformation(
-            "Outbox batch processed. Pending {PendingCount}, Processed {ProcessedCount}, Published {PublishedCount}, Failed {FailedCount}, DurationMs {DurationMs}.",
+            "Outbox batch processed. Pending {PendingCount}, Processed {ProcessedCount}, Published {PublishedCount}, Failed {FailedCount}, DeadLetter {DeadLetterCount}, DurationMs {DurationMs}.",
             pendingCount,
             messages.Count,
             publishedCount,
             failedCount,
+            deadLetterCount,
             (DateTime.UtcNow - startedAt).TotalMilliseconds);
 
-        return publishedCount;
+        return publishedCount + deadLetterCount;
+    }
+
+    private void MoveToDeadLetter(AppDbContext context, OutboxMessage message, string failureReason)
+    {
+        _logger.LogWarning(
+            "Moving outbox message {MessageId} with type {EventType} to dead-letter storage. Reason: {FailureReason}",
+            message.Id,
+            message.Type,
+            failureReason);
+
+        context.OutboxDeadLetterMessages.Add(new OutboxDeadLetterMessage
+        {
+            Id = message.Id,
+            AggregateId = message.AggregateId,
+            CorrelationId = message.CorrelationId,
+            Type = message.Type,
+            Payload = message.Payload,
+            OccurredAt = message.OccurredAt,
+            FailedAt = DateTime.UtcNow,
+            FailureReason = failureReason
+        });
+
+        context.OutboxMessages.Remove(message);
     }
 }

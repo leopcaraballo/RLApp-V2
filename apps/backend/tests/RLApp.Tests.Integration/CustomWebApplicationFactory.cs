@@ -1,5 +1,4 @@
 using DotNet.Testcontainers.Builders;
-using MassTransit;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -17,17 +16,31 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
     private readonly PostgreSqlContainer _dbContainer = new PostgreSqlBuilder("postgres:16-alpine")
         .Build();
 
+    protected virtual Dictionary<string, string?> GetConfigurationOverrides()
+    {
+        return new Dictionary<string, string?>
+        {
+            ["ConnectionStrings:Postgres"] = _dbContainer.GetConnectionString(),
+            ["Messaging:Enabled"] = "false",
+            ["Messaging:Transport"] = "InMemory",
+            ["HealthChecks:RabbitMQ:Enabled"] = "false",
+            ["Jwt:Secret"] = "ThisIsAVerySecretKeyForTestingPurposeOnly1234567890!"
+        };
+    }
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        foreach (var setting in GetConfigurationOverrides())
+        {
+            if (setting.Value is not null)
+            {
+                builder.UseSetting(setting.Key, setting.Value);
+            }
+        }
+
         builder.ConfigureAppConfiguration((context, config) =>
         {
-            config.AddInMemoryCollection(new Dictionary<string, string?>
-            {
-                ["ConnectionStrings:Postgres"] = _dbContainer.GetConnectionString(),
-                ["Messaging:Transport"] = "InMemory",
-                ["HealthChecks:RabbitMQ:Enabled"] = "false",
-                ["Jwt:Secret"] = "ThisIsAVerySecretKeyForTestingPurposeOnly1234567890!"
-            });
+            config.AddInMemoryCollection(GetConfigurationOverrides());
         });
 
         builder.ConfigureTestServices(services =>
@@ -43,12 +56,6 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
     {
         await _dbContainer.StartAsync();
 
-        // Brute force override for health checks and services
-        Environment.SetEnvironmentVariable("ConnectionStrings__Postgres", _dbContainer.GetConnectionString());
-        Environment.SetEnvironmentVariable("Messaging__Transport", "InMemory");
-        Environment.SetEnvironmentVariable("HealthChecks__RabbitMQ__Enabled", "false");
-        Environment.SetEnvironmentVariable("Jwt__Secret", "ThisIsAVerySecretKeyForTestingPurposeOnly1234567890!");
-
         using var scope = Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         await db.Database.MigrateAsync();
@@ -57,5 +64,15 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
     public new async Task DisposeAsync()
     {
         await _dbContainer.StopAsync();
+    }
+}
+
+public sealed class LocalOutboxWebApplicationFactory : CustomWebApplicationFactory
+{
+    protected override Dictionary<string, string?> GetConfigurationOverrides()
+    {
+        var settings = base.GetConfigurationOverrides();
+        settings["HealthChecks:RabbitMQ:Enabled"] = "false";
+        return settings;
     }
 }

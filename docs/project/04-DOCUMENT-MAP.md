@@ -8,8 +8,9 @@ Proveer una vista maestra de la estructura documental y de la dependencia entre 
 
 - 01-foundation: reglas fundacionales
 - 02-as-is-audit: evidencia objetiva del sistema actual
- 	- 02-as-is-audit/10-FASE-0-DIAGNOSTICO.md: Fase 0 — Diagnóstico Ejecutivo (2026-04-01)
-	- 02-as-is-audit/13-FASE-1-KICKOFF.md: Fase 1 — inicio de estabilizacion de propagacion y observabilidad
+  - 02-as-is-audit/10-FASE-0-DIAGNOSTICO.md: Fase 0 — Diagnóstico Ejecutivo (2026-04-01)
+ 	- 02-as-is-audit/13-FASE-1-KICKOFF.md: Fase 1 — inicio de estabilizacion de propagacion y observabilidad
+ 	- 02-as-is-audit/14-FASE-1-CIERRE.md: Fase 1 — cierre tecnico, evidencia y decision sobre LISTEN/NOTIFY
 - 03-target-architecture: arquitectura objetivo del proyecto nuevo
 - 04-adr: decisiones formales
 - 05-domain: modelo de dominio, estados y eventos

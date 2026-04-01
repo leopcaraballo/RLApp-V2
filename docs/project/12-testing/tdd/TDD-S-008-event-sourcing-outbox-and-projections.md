@@ -2,4 +2,6 @@
 
 - event store append and load
 - outbox exactly-once publishing behavior
+- unknown or invalid outbox messages are quarantined to dead-letter storage
+- local outbox fallback materializes projections when external messaging is disabled
 - projection rebuild idempotency
