@@ -19,3 +19,8 @@ Feature: AI governed execution layer
     Given repository changes are ready on a feature branch
     When the generated commit subject does not match Conventional Commits
     Then the commit is blocked and a corrected suggestion is returned
+
+  Scenario: Pull request commit validation ignores historical ancestry before divergence
+    Given a feature branch contains older commits before the merge-base with the target branch
+    When the workflow validates Conventional Commit subjects for the pull request
+    Then only the commits after the merge-base are evaluated
