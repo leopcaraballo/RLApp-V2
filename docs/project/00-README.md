@@ -48,3 +48,4 @@ Este paquete documental define la base Enterprise para generar con IA un proyect
 ## Estado del proyecto (resumen)
 
 - Fase 0 — Diagnóstico Ejecutivo completado (2026-04-01). Ver: docs/project/02-as-is-audit/10-FASE-0-DIAGNOSTICO.md
+- Fase 1 — Kickoff iniciado (2026-04-01). Ver: docs/project/02-as-is-audit/13-FASE-1-KICKOFF.md
