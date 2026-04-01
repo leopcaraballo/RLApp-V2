@@ -2,12 +2,13 @@ using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using RLApp.Adapters.Persistence.Persistence;
 using RLApp.Infrastructure.BackgroundServices;
 using RLApp.Infrastructure.Data;
 using RLApp.Infrastructure.Security;
 using RLApp.Adapters.Persistence.Data;
 using RLApp.Adapters.Persistence.Publishers;
-using RLApp.Adapters.Persistence.Persistence;
 using RLApp.Adapters.Persistence.Repositories;
 using RLApp.Application.Commands;
 using RLApp.Ports.Inbound;
@@ -38,7 +39,17 @@ public static class DependencyInjection
         services.AddDbContext<AppDbContext>(options =>
             options.UseNpgsql(configuration.GetConnectionString("Postgres")));
 
+        services
+            .AddOptions<OutboxProcessorOptions>()
+            .Bind(configuration.GetSection(OutboxProcessorOptions.SectionName))
+            .Validate(options => options.PollingIntervalMs >= 100 && options.PollingIntervalMs <= 5000,
+                "OutboxProcessor:PollingIntervalMs must be between 100 and 5000.")
+            .Validate(options => options.BatchSize >= 1 && options.BatchSize <= 500,
+                "OutboxProcessor:BatchSize must be between 1 and 500.")
+            .ValidateOnStart();
+
         // Register adapters for interfaces
+        services.AddSingleton<IOutboxProcessingSignal, OutboxProcessingSignal>();
         services.AddScoped<IEventStore, EventStoreRepository>();
         services.AddScoped<IEventPublisher, OutboxEventPublisher>(); // Pushes to the outbox via EF Core
         services.AddScoped<IProjectionStore, ProjectionStoreRepository>(); // Read model projections
@@ -71,6 +82,8 @@ public static class DependencyInjection
 
         if (messagingEnabled)
         {
+            services.AddScoped<IOutboxMessageDispatcher, MassTransitOutboxMessageDispatcher>();
+
             services.AddMassTransit(x =>
             {
                 // Register Core Consumers
@@ -107,6 +120,10 @@ public static class DependencyInjection
                 }
             });
         }
+        else
+        {
+            services.AddScoped<IOutboxMessageDispatcher, LocalOutboxMessageDispatcher>();
+        }
 
         // Add SignalR
         services.AddSignalR();
@@ -141,10 +158,7 @@ public static class DependencyInjection
         });
 
         // Configure the Outbox Background Service
-        if (messagingEnabled)
-        {
-            services.AddHostedService<OutboxProcessor>();
-        }
+        services.AddHostedService<OutboxProcessor>();
 
         return services;
     }

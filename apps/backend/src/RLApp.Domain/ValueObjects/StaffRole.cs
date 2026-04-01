@@ -6,6 +6,15 @@ namespace RLApp.Domain.ValueObjects;
 /// </summary>
 public class StaffRole : ValueObject
 {
+    private static readonly HashSet<string> ValidRoles = new(StringComparer.Ordinal)
+    {
+        "Receptionist",
+        "Cashier",
+        "Doctor",
+        "Supervisor",
+        "Support"
+    };
+
     public string Value { get; }
 
     public static readonly StaffRole Receptionist = new("Receptionist");
@@ -24,11 +33,15 @@ public class StaffRole : ValueObject
         if (string.IsNullOrWhiteSpace(role))
             throw new ArgumentException("Role cannot be empty");
 
-        var validRoles = new[] { "Receptionist", "Cashier", "Doctor", "Supervisor", "Support" };
-        if (!validRoles.Contains(role))
+        if (!ValidRoles.Contains(role))
             throw new ArgumentException($"Invalid role: {role}");
 
         return new StaffRole(role);
+    }
+
+    public static bool IsValid(StaffRole? role)
+    {
+        return role is not null && ValidRoles.Contains(role.Value);
     }
 
     protected override IEnumerable<object> GetEqualityComponents()

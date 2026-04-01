@@ -6,6 +6,7 @@ using RLApp.Adapters.Http.Middleware;
 using RLApp.Adapters.Http.Security;
 using RLApp.Adapters.Persistence.Data;
 using RLApp.Infrastructure;
+using RLApp.Infrastructure.BackgroundServices;
 using RLApp.Infrastructure.Data;
 using RLApp.Api.Hubs;
 using RLApp.Api.Consumers;
@@ -29,6 +30,7 @@ builder.Services.AddOpenTelemetry()
     .WithMetrics(metrics => metrics
         .AddAspNetCoreInstrumentation()
         .AddRuntimeInstrumentation()
+        .AddMeter(OutboxProcessorTelemetry.MeterName)
         .AddPrometheusExporter());
 
 // Configure Hexagonal Architecture dependencies with SignalR consumers
