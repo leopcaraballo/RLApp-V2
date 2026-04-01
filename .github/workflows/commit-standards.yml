@@ -26,8 +26,14 @@ jobs:
           set -euo pipefail
 
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            git fetch origin "${{ github.base_ref }}" --depth=1
-            range="origin/${{ github.base_ref }}..${{ github.event.pull_request.head.sha }}"
+            base_ref="refs/remotes/origin/${{ github.base_ref }}"
+            git fetch --no-tags origin "${{ github.base_ref }}:${base_ref}"
+            merge_base="$(git merge-base "$base_ref" "${{ github.event.pull_request.head.sha }}")"
+            [[ -n "$merge_base" ]] || {
+              echo "Unable to determine merge-base for ${base_ref} and ${{ github.event.pull_request.head.sha }}"
+              exit 1
+            }
+            range="$merge_base..${{ github.event.pull_request.head.sha }}"
           else
             before="${{ github.event.before }}"
             if [[ "$before" == "0000000000000000000000000000000000000000" ]]; then

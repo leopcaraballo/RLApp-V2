@@ -6,3 +6,4 @@
 - validar bloqueo de `main` y `develop`
 - validar aceptacion exclusiva de ramas `feature/*`
 - validar rechazo de Conventional Commits invalidos
+- validar que la revision de subjects en Pull Request use el `merge-base` para no arrastrar commits historicos ajenos al alcance real del PR

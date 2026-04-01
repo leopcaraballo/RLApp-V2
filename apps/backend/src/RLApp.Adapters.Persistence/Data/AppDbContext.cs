@@ -7,6 +7,7 @@ public class AppDbContext : DbContext
 {
     public DbSet<EventRecord> EventStore { get; set; } = null!;
     public DbSet<OutboxMessage> OutboxMessages { get; set; } = null!;
+    public DbSet<OutboxDeadLetterMessage> OutboxDeadLetterMessages { get; set; } = null!;
     public DbSet<StaffUserRecord> StaffUsers { get; set; } = null!;
     public DbSet<AuditLogRecord> AuditLogs { get; set; } = null!;
 
@@ -24,13 +25,14 @@ public class AppDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
-        
+
         // Apply configurations from assembly
         modelBuilder.ApplyConfiguration(new EventRecord.Configuration());
         modelBuilder.ApplyConfiguration(new OutboxMessage.Configuration());
+        modelBuilder.ApplyConfiguration(new OutboxDeadLetterMessage.Configuration());
         modelBuilder.ApplyConfiguration(new StaffUserRecord.Configuration());
         modelBuilder.ApplyConfiguration(new AuditLogRecord.Configuration());
-        
+
         // Read Models configuration
         ReadModelsConfiguration.Configure(modelBuilder);
     }

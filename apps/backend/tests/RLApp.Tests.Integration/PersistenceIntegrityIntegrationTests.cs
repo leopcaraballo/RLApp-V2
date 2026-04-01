@@ -27,7 +27,7 @@ public class PersistenceIntegrityIntegrationTests : IClassFixture<CustomWebAppli
         var queueId = "Q-PERSIST-001";
 
         var result = await mediator.Send(
-            new RegisterPatientArrivalCommand(queueId, "PAT-001", "Ana Perez", correlationId, "reception-1"));
+            new RegisterPatientArrivalCommand(queueId, "PAT-001", "Ana Perez", null, 1, null, correlationId, "reception-1"));
 
         result.Success.Should().BeTrue();
 
@@ -69,6 +69,9 @@ public class PersistenceIntegrityIntegrationTests : IClassFixture<CustomWebAppli
             queueId,
             "PAT-ROLLBACK-001",
             "Paciente Rollback",
+            null,
+            1,
+            null,
             "CORR-seed-rollback-001",
             "reception-1"));
 

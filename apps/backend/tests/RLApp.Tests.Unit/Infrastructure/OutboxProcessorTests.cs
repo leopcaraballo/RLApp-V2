@@ -77,6 +77,36 @@ public class OutboxProcessorTests
         Assert.Equal("publish-failed", message.Error);
     }
 
+    [Fact]
+    public async Task ProcessPendingMessagesAsync_WhenEventTypeIsUnknown_MovesMessageToDeadLetterStorage()
+    {
+        var dispatcher = Substitute.For<IOutboxMessageDispatcher>();
+
+        await using var provider = BuildServiceProvider("outbox-deadletter", dispatcher);
+        await SeedUnknownOutboxMessageAsync(provider);
+
+        var processor = new OutboxProcessor(
+            provider,
+            NullLogger<OutboxProcessor>.Instance,
+            Options.Create(new OutboxProcessorOptions { PollingIntervalMs = 500, BatchSize = 10 }),
+            Substitute.For<IOutboxProcessingSignal>());
+
+        var processedMessages = await processor.ProcessPendingMessagesAsync(CancellationToken.None);
+
+        await using var scope = provider.CreateAsyncScope();
+        var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var pendingOutboxMessages = await context.OutboxMessages.ToListAsync();
+        var deadLetterMessages = await context.OutboxDeadLetterMessages.ToListAsync();
+
+        Assert.Equal(1, processedMessages);
+        Assert.Empty(pendingOutboxMessages);
+        Assert.Single(deadLetterMessages);
+        Assert.Contains("Unknown event type UnknownOutboxEvent", deadLetterMessages[0].FailureReason);
+
+        await dispatcher.DidNotReceiveWithAnyArgs()
+            .DispatchAsync(default!, default!, default);
+    }
+
     private static ServiceProvider BuildServiceProvider(string databaseName, IOutboxMessageDispatcher dispatcher)
     {
         var services = new ServiceCollection();
@@ -109,6 +139,24 @@ public class OutboxProcessorTests
                 OccurredAt = baseTime.AddMilliseconds(index)
             });
         }
+
+        await context.SaveChangesAsync();
+    }
+
+    private static async Task SeedUnknownOutboxMessageAsync(ServiceProvider provider)
+    {
+        await using var scope = provider.CreateAsyncScope();
+        var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        context.OutboxMessages.Add(new OutboxMessage
+        {
+            Id = Guid.NewGuid(),
+            AggregateId = "queue-deadletter-1",
+            CorrelationId = "corr-deadletter-1",
+            Type = "UnknownOutboxEvent",
+            Payload = "{}",
+            OccurredAt = DateTime.UtcNow.AddSeconds(-1)
+        });
 
         await context.SaveChangesAsync();
     }

@@ -9,6 +9,7 @@ public static class OutboxProcessorTelemetry
     private static readonly Meter Meter = new(MeterName);
     private static readonly Counter<long> PublishedMessages = Meter.CreateCounter<long>("rlapp.outbox.messages.published");
     private static readonly Counter<long> FailedMessages = Meter.CreateCounter<long>("rlapp.outbox.messages.failed");
+    private static readonly Counter<long> DeadLetterMessages = Meter.CreateCounter<long>("rlapp.outbox.messages.deadletter");
     private static readonly Histogram<long> BacklogCount = Meter.CreateHistogram<long>("rlapp.outbox.backlog.count");
     private static readonly Histogram<double> PublishDurationMs = Meter.CreateHistogram<double>("rlapp.outbox.publish.duration.ms");
     private static readonly Histogram<double> PropagationDelayMs = Meter.CreateHistogram<double>("rlapp.outbox.propagation.delay.ms");
@@ -30,5 +31,10 @@ public static class OutboxProcessorTelemetry
     public static void RecordFailed(string eventType)
     {
         FailedMessages.Add(1, new KeyValuePair<string, object?>("event.type", eventType));
+    }
+
+    public static void RecordDeadLetter(string eventType)
+    {
+        DeadLetterMessages.Add(1, new KeyValuePair<string, object?>("event.type", eventType));
     }
 }

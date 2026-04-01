@@ -24,6 +24,7 @@ Definir persistencia append-only, versionado por agregado, outbox, publicacion a
 - La version del agregado debe proteger concurrencia optimista.
 - Outbox y persistencia de eventos deben compartir la misma transaccion logica.
 - Los consumidores deben procesar mensajes de forma idempotente.
+- Los mensajes de outbox con tipo desconocido o payload invalido deben moverse a almacenamiento dead-letter con causa y correlationId en vez de perderse silenciosamente.
 - El rebuild debe rehacer proyecciones desde el event store usando checkpoints persistidos.
 - La falla temporal de RabbitMQ no puede causar perdida de eventos.
 
@@ -41,4 +42,5 @@ Definir persistencia append-only, versionado por agregado, outbox, publicacion a
 
 - Append y load del event store deben respetar versionado por agregado.
 - Outbox debe publicar de forma confiable y sin perdida.
+- Los mensajes no recuperables del outbox deben quedar en cuarentena observable para analisis operativo.
 - Rebuild debe ser idempotente y recuperar proyecciones consistentes.
