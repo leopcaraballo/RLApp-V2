@@ -5,6 +5,8 @@ description: "Use when editing staff web UI, public display UI, realtime client,
 
 # Frontend Instructions
 
+**Estado del proyecto:** Fase 0 — Diagnóstico Ejecutivo completado (2026-04-01). Ver: /docs/project/02-as-is-audit/10-FASE-0-DIAGNOSTICO.md
+
 Frontend no define comportamiento; lo materializa desde `/docs/project`.
 
 Lee primero:

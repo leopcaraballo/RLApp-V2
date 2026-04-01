@@ -1,5 +1,7 @@
 # AI Operating Model Layer
 
+**Estado del proyecto:** Fase 0 — Diagnóstico Ejecutivo completado (2026-04-01). Ver: ../../docs/project/02-as-is-audit/10-FASE-0-DIAGNOSTICO.md
+
 Esta capa expone la arquitectura de consumo para agentes y sesiones asistidas.
 
 ## Canonical references

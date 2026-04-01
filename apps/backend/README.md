@@ -1,5 +1,7 @@
 # RLApp Backend
 
+**Estado del proyecto:** Fase 0 — Diagnóstico Ejecutivo completado (2026-04-01). Ver: ../../docs/project/02-as-is-audit/10-FASE-0-DIAGNOSTICO.md
+
 ## Architecture
 
 This backend implements **Hexagonal Architecture** (Ports & Adapters) as defined in [ADR-001](../../docs/project/04-adr/ADR-001-hexagonal-architecture.md).
@@ -68,12 +70,14 @@ apps/backend/
 ## Events
 
 Domain events follow [EVENT-CATALOG.md](../../docs/project/05-domain/08-EVENT-CATALOG.md):
+
 - EV-001 to EV-007: Queue events
 - EV-008 to EV-014: Consultation events
 
 ## Specifications
 
 See architecture specs:
+
 - [S-001](../../docs/project/11-specifications/S-001-staff-identity-and-access.md) - Staff Identity And Access
 - [S-002](../../docs/project/11-specifications/S-002-consulting-room-lifecycle.md) - Consulting Room Lifecycle
 - [S-003 to S-010](../../docs/project/11-specifications/) - Other specifications

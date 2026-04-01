@@ -6,6 +6,8 @@ excludeAgent: "code-review"
 
 # Delivery Orchestration Instructions
 
+**Estado del proyecto:** Fase 0 — Diagnóstico Ejecutivo completado (2026-04-01). Ver: /docs/project/02-as-is-audit/10-FASE-0-DIAGNOSTICO.md
+
 Aplica este flujo cuando la tarea cruza varias capas o requiere decidir si primero se actualiza documentacion, prompts, workflows o codigo.
 
 ## Secuencia obligatoria

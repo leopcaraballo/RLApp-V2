@@ -44,3 +44,7 @@ Este paquete documental define la base Enterprise para generar con IA un proyect
 - no documentar capacidades que no esten aprobadas en el alcance
 - no romper la cadena ADR -> Design -> Use Case -> Spec -> State/Event -> Test
 - no introducir decisiones de arquitectura fuera del catalogo de ADRs
+
+## Estado del proyecto (resumen)
+
+- Fase 0 — Diagnóstico Ejecutivo completado (2026-04-01). Ver: docs/project/02-as-is-audit/10-FASE-0-DIAGNOSTICO.md
