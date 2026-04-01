@@ -43,6 +43,8 @@ services:
       Messaging__Transport: ${MESSAGING_TRANSPORT:-InMemory}
       HealthChecks__RabbitMQ__Enabled: ${HEALTHCHECKS_RABBITMQ_ENABLED:-false}
       Database__ApplyMigrationsOnStartup: ${APPLY_MIGRATIONS_ON_STARTUP:-true}
+      OutboxProcessor__PollingIntervalMs: ${OUTBOX_POLLING_INTERVAL_MS:-500}
+      OutboxProcessor__BatchSize: ${OUTBOX_BATCH_SIZE:-50}
     depends_on:
       db:
         condition: service_healthy

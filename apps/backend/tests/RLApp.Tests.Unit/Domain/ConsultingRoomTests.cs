@@ -142,7 +142,7 @@ public class ConsultingRoomTests
         room.AssignPatient("p-1", "dr-1", CorrelationId);
         room.ClearUnraisedEvents();
 
-        room.CompleteAttention(CorrelationId);
+        room.CompleteAttention(null, null, CorrelationId);
 
         Assert.Null(room.CurrentPatientId);
         var events = room.GetUnraisedEvents();
@@ -154,7 +154,7 @@ public class ConsultingRoomTests
     public void CompleteAttention_NoCurrentPatient_ThrowsDomainException()
     {
         var room = CreateActiveRoom();
-        Assert.Throws<DomainException>(() => room.CompleteAttention(CorrelationId));
+        Assert.Throws<DomainException>(() => room.CompleteAttention(null, null, CorrelationId));
     }
 
     // -------------------------------------------------------------------------
@@ -168,7 +168,7 @@ public class ConsultingRoomTests
         room.AssignPatient("p-1", "dr-1", CorrelationId);
         room.ClearUnraisedEvents();
 
-        room.MarkPatientAbsent(CorrelationId);
+        room.MarkPatientAbsent(null, null, CorrelationId);
 
         Assert.Null(room.CurrentPatientId);
         var events = room.GetUnraisedEvents();
@@ -180,6 +180,6 @@ public class ConsultingRoomTests
     public void MarkPatientAbsent_NoCurrentPatient_ThrowsDomainException()
     {
         var room = CreateActiveRoom();
-        Assert.Throws<DomainException>(() => room.MarkPatientAbsent(CorrelationId));
+        Assert.Throws<DomainException>(() => room.MarkPatientAbsent(null, null, CorrelationId));
     }
 }

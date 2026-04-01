@@ -50,8 +50,7 @@ public class StaffUser : DomainEntity
     /// </summary>
     public void ChangeRole(StaffRole newRole, string? reason, string correlationId)
     {
-        // Enums are value types and cannot be null
-        if (!Enum.IsDefined(typeof(StaffRole), newRole))
+        if (!StaffRole.IsValid(newRole))
             throw new DomainException("Invalid staff role");
 
         Role = newRole;
