@@ -20,3 +20,7 @@
 - POST /api/waiting-room/claim-next
 - POST /api/waiting-room/call-patient
 - POST /api/waiting-room/complete-attention
+
+## Shared conflict rule
+
+- todo comando mutante basado en agregados event-sourced debe poder devolver `409` con `CONCURRENCY_CONFLICT` cuando la version persistida ya no coincide con el `expectedVersion` del aggregate rehidratado

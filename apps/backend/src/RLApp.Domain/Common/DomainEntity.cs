@@ -7,6 +7,7 @@ namespace RLApp.Domain.Common;
 public abstract class DomainEntity
 {
     public string Id { get; protected set; }
+    public int Version { get; private set; }
     protected List<DomainEvent> _unraisedEvents = new();
 
     protected DomainEntity(string id)
@@ -17,6 +18,14 @@ public abstract class DomainEntity
     public IReadOnlyList<DomainEvent> GetUnraisedEvents() => _unraisedEvents.AsReadOnly();
 
     public void ClearUnraisedEvents() => _unraisedEvents.Clear();
+
+    public void SetPersistedVersion(int version)
+    {
+        if (version < 0)
+            throw new ArgumentOutOfRangeException(nameof(version), "Persisted version cannot be negative");
+
+        Version = version;
+    }
 
     protected void RaiseDomainEvent(DomainEvent domainEvent)
     {

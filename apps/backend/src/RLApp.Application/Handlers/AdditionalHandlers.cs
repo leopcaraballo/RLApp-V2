@@ -84,7 +84,7 @@ public class DeactivateConsultingRoomHandler : IRequestHandler<DeactivateConsult
                 command.CorrelationId,
                 ex.Message,
                 cancellationToken);
-            return CommandResult.Failure(ex.Message, command.CorrelationId);
+            return CommandResult.Failure(ex, command.CorrelationId);
         }
         catch (Exception ex)
         {
@@ -197,7 +197,7 @@ public class MarkPaymentPendingHandler : IRequestHandler<MarkPaymentPendingComma
                 command.CorrelationId,
                 ex.Message,
                 cancellationToken);
-            return CommandResult.Failure(ex.Message, command.CorrelationId);
+            return CommandResult.Failure(ex, command.CorrelationId);
         }
         catch (Exception ex)
         {
@@ -299,7 +299,7 @@ public class MarkAbsenceAtCashierHandler : IRequestHandler<MarkAbsenceCommand, C
                 command.CorrelationId,
                 ex.Message,
                 cancellationToken);
-            return CommandResult.Failure(ex.Message, command.CorrelationId);
+            return CommandResult.Failure(ex, command.CorrelationId);
         }
         catch (Exception ex)
         {
@@ -397,7 +397,7 @@ public class MarkAbsenceAtConsultationHandler : IRequestHandler<MarkAbsenceAtCon
                 command.CorrelationId,
                 ex.Message,
                 cancellationToken);
-            return CommandResult.Failure(ex.Message, command.CorrelationId);
+            return CommandResult.Failure(ex, command.CorrelationId);
         }
         catch (Exception ex)
         {
@@ -465,7 +465,7 @@ public class RebuildProjectionsHandler : IRequestHandler<RebuildProjectionsComma
         }
         catch (DomainException ex)
         {
-            return CommandResult.Failure(ex.Message, command.CorrelationId);
+            return CommandResult.Failure(ex, command.CorrelationId);
         }
         catch (Exception ex)
         {

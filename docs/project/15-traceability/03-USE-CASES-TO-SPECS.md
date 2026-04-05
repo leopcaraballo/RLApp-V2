@@ -20,6 +20,7 @@
 | UC-016 Rebuild Projections | S-008 | S-009 | US-016 |
 | UC-017 Govern AI Operating System | S-010 | S-009 | US-017 |
 | UC-018 Reconstruct Patient Trajectory | S-011 | S-008, S-009 | US-012, US-018 |
+| UC-019 Protect Aggregate Writes With Optimistic Concurrency | S-008 | S-009 | US-019 |
 
 ## Notes
 

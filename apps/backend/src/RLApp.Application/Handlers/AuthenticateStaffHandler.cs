@@ -140,7 +140,7 @@ public class AuthenticateStaffHandler : IRequestHandler<AuthenticateStaffCommand
                 command.CorrelationId,
                 ex.Message,
                 cancellationToken);
-            return CommandResult<AuthenticationResultDto>.Failure(ex.Message, command.CorrelationId);
+            return CommandResult<AuthenticationResultDto>.Failure(ex, command.CorrelationId);
         }
         catch (Exception ex)
         {

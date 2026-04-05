@@ -90,7 +90,7 @@ public class ChangeStaffRoleHandler : IRequestHandler<ChangeStaffRoleCommand, Co
                 command.CorrelationId,
                 ex.Message,
                 cancellationToken);
-            return CommandResult.Failure(ex.Message, command.CorrelationId);
+            return CommandResult.Failure(ex, command.CorrelationId);
         }
         catch (Exception ex)
         {

@@ -29,7 +29,6 @@ public sealed class PatientTrajectoryRepository : IPatientTrajectoryRepository
     {
         var events = (await _eventStore.GetEventsByAggregateIdAsync(id, cancellationToken))
             .Where(IsTrajectoryEvent)
-            .OrderBy(@event => @event.OccurredAt)
             .ToList();
 
         if (events.Count == 0)
@@ -77,7 +76,8 @@ public sealed class PatientTrajectoryRepository : IPatientTrajectoryRepository
             return;
         }
 
-        await _eventStore.SaveBatchAsync(events, cancellationToken);
+        await _eventStore.SaveBatchAsync(events, trajectory.Version, cancellationToken);
+        trajectory.SetPersistedVersion(trajectory.Version + events.Count);
     }
 
     private static bool IsTrajectoryEvent(DomainEvent @event) => @event switch
@@ -92,7 +92,7 @@ public sealed class PatientTrajectoryRepository : IPatientTrajectoryRepository
 
     private static PatientTrajectory Replay(IEnumerable<DomainEvent> events)
     {
-        var orderedEvents = events.OrderBy(@event => @event.OccurredAt).ToList();
+        var orderedEvents = events.ToList();
         var openedEvent = orderedEvents.OfType<PatientTrajectoryOpened>().FirstOrDefault()
             ?? throw new DomainException("Trajectory stream is missing the opening event");
 
@@ -140,6 +140,7 @@ public sealed class PatientTrajectoryRepository : IPatientTrajectoryRepository
             }
         }
 
+        trajectory.SetPersistedVersion(orderedEvents.Count);
         trajectory.ClearUnraisedEvents();
         return trajectory;
     }

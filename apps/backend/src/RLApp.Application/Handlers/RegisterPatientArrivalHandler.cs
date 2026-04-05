@@ -113,7 +113,7 @@ public class RegisterPatientArrivalHandler : IRequestHandler<RegisterPatientArri
                 command.CorrelationId,
                 ex.Message,
                 cancellationToken);
-            return CommandResult<RegisterPatientResultDto>.Failure(ex.Message, command.CorrelationId);
+            return CommandResult<RegisterPatientResultDto>.Failure(ex, command.CorrelationId);
         }
         catch (Exception ex)
         {

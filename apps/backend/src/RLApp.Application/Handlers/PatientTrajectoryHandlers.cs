@@ -181,7 +181,7 @@ public sealed class RebuildPatientTrajectoriesHandler : IRequestHandler<RebuildP
                 ex.Message,
                 cancellationToken);
 
-            return CommandResult<RebuildPatientTrajectoriesResultDto>.Failure(ex.Message, command.CorrelationId);
+            return CommandResult<RebuildPatientTrajectoriesResultDto>.Failure(ex, command.CorrelationId);
         }
         catch (Exception ex)
         {

@@ -14,9 +14,13 @@ public abstract class RLAppControllerBase : ControllerBase
     {
         if (!result.Success)
         {
+            var errorPayload = new { Error = result.Message, Code = result.ErrorCode, result.CorrelationId };
+
+            if (result.IsConflict)
+                return Conflict(errorPayload);
             if (result.IsNotFound)
-                return NotFound(new { Error = result.Message, result.CorrelationId });
-            return BadRequest(new { Error = result.Message, result.CorrelationId });
+                return NotFound(errorPayload);
+            return BadRequest(errorPayload);
         }
 
         return Ok(result);
@@ -26,9 +30,13 @@ public abstract class RLAppControllerBase : ControllerBase
     {
         if (!result.Success)
         {
+            var errorPayload = new { Error = result.Message, Code = result.ErrorCode, result.CorrelationId };
+
+            if (result.IsConflict)
+                return Conflict(errorPayload);
             if (result.IsNotFound)
-                return NotFound(new { Error = result.Message, result.CorrelationId });
-            return BadRequest(new { Error = result.Message, result.CorrelationId });
+                return NotFound(errorPayload);
+            return BadRequest(errorPayload);
         }
 
         return Ok(result.Data);

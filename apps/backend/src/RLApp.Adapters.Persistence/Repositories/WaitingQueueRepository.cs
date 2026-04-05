@@ -40,7 +40,8 @@ public class WaitingQueueRepository : IWaitingQueueRepository
     {
         // Persist domain events to event store (event sourcing)
         var events = waitingQueue.GetUnraisedEvents();
-        await _eventStore.SaveBatchAsync(events, cancellationToken);
+        await _eventStore.SaveBatchAsync(events, waitingQueue.Version, cancellationToken);
+        waitingQueue.SetPersistedVersion(waitingQueue.Version + events.Count);
     }
 
     public async Task UpdateAsync(WaitingQueue waitingQueue, CancellationToken cancellationToken = default)
@@ -49,7 +50,8 @@ public class WaitingQueueRepository : IWaitingQueueRepository
         var events = waitingQueue.GetUnraisedEvents();
         if (events.Count > 0)
         {
-            await _eventStore.SaveBatchAsync(events, cancellationToken);
+            await _eventStore.SaveBatchAsync(events, waitingQueue.Version, cancellationToken);
+            waitingQueue.SetPersistedVersion(waitingQueue.Version + events.Count);
         }
     }
 
@@ -116,6 +118,7 @@ public class WaitingQueueRepository : IWaitingQueueRepository
             }
         }
 
+        queue.SetPersistedVersion(events.Count);
         queue.ClearUnraisedEvents();
         return queue;
     }
