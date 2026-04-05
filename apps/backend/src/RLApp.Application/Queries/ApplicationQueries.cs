@@ -1,5 +1,9 @@
 namespace RLApp.Application.Queries;
 
+using MediatR;
+using RLApp.Application.DTOs;
+using RLApp.Application.Handlers;
+
 /// <summary>
 /// Base query for all application queries.
 /// </summary>
@@ -44,5 +48,22 @@ public class GetOperationsDashboardQuery : Query
     {
         FromDate = fromDate;
         ToDate = toDate;
+    }
+}
+
+/// <summary>
+/// UC-018: Reconstruct Patient Trajectory
+/// Query to retrieve a persisted patient trajectory projection.
+/// Reference: S-011 Patient Trajectory Aggregate
+/// </summary>
+public class GetPatientTrajectoryQuery : IRequest<QueryResult<PatientTrajectoryDto>>
+{
+    public string TrajectoryId { get; }
+    public string CorrelationId { get; }
+
+    public GetPatientTrajectoryQuery(string trajectoryId, string correlationId)
+    {
+        TrajectoryId = trajectoryId;
+        CorrelationId = correlationId;
     }
 }

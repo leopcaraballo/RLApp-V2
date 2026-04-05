@@ -4,7 +4,7 @@
 
 ## Repository facts
 
-- El repositorio actual es docs-first: contiene documentacion canonica y workflows, pero aun no contiene backend, frontend ni proyectos ejecutables.
+- El repositorio actual sigue siendo docs-first: `/docs/project` mantiene la fuente canonica, mientras `apps/backend` y `apps/frontend` contienen implementaciones ejecutables que deben permanecer alineadas con esa documentacion.
 - `/.ai-entrypoint.md` existe como punto de arranque para la IA y solo enruta lectura hacia capas canonicas.
 - La capa operativa oficial de Copilot esta definida en `/docs/project/16-generation-pack/08-COPILOT-OPERATING-MODEL.md`.
 - Este repositorio usa un unico primitivo repo-wide: `.github/copilot-instructions.md`. No agregar `AGENTS.md` mientras esta estrategia siga vigente.
@@ -50,7 +50,7 @@ Antes de proponer cambios, leer siempre:
 
 ## Validation guidance
 
-- No intentes `dotnet build`, `dotnet test`, `npm`, `pnpm` o `yarn` mientras no exista un proyecto ejecutable real.
+- Usa `dotnet build`, `dotnet test`, `npm`, `pnpm` o `yarn` solo cuando el slice afectado ya exista como proyecto ejecutable real y la trazabilidad documental este cerrada.
 - Usa `ai/` solo para navegar operating model, contexto, orquestacion y guardrails; nunca como fuente primaria.
 - Valida cambios del execution layer contra `.github/workflows/ci.yml` y `.github/workflows/pr-quality-gate.yml`.
 - Usa `.github/instructions`, `.github/prompts`, `.github/agents` y `.github/skills` como capas complementarias, no como nuevas fuentes de verdad.

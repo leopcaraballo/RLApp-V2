@@ -13,6 +13,15 @@
 - EnConsulta -> Finalizado
 - LlamadoConsulta -> CanceladoPorAusencia
 
+## Trajectory transitions
+
+- TrayectoriaActiva -> TrayectoriaFinalizada
+- TrayectoriaActiva -> TrayectoriaCancelada
+
+## Trajectory note
+
+`PatientTrajectoryOpened` materializa la primera entrada en `ST-010 TrayectoriaActiva`.
+
 ## Rejection rule
 
 Cualquier transicion no listada debe rechazarse en dominio.

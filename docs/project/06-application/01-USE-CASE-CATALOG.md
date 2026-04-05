@@ -17,3 +17,4 @@
 - UC-015 View Operations Dashboard
 - UC-016 Rebuild Projections
 - UC-017 Govern AI Operating System
+- UC-018 Reconstruct Patient Trajectory

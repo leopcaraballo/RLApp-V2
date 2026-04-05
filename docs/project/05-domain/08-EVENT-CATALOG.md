@@ -16,9 +16,15 @@
 - EV-012 PatientAttentionCompleted
 - EV-013 PatientAbsentAtConsultation
 - EV-014 PatientCancelledByAbsence
+- EV-015 PatientTrajectoryOpened
+- EV-016 PatientTrajectoryStageRecorded
+- EV-017 PatientTrajectoryCompleted
+- EV-018 PatientTrajectoryCancelled
+- EV-019 PatientTrajectoryRebuilt
 
 ## Event guarantees
 
 - todos los eventos son append-only
 - todos los eventos deben incluir metadata versionada
 - toda proyeccion debe ser idempotente ante reproceso
+- los eventos de trayectoria nuevos deben conservar `trajectoryId` estable

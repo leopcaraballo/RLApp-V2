@@ -17,6 +17,7 @@ public class AppDbContext : DbContext
     public DbSet<NextTurnView> NextTurns { get; set; } = null!;
     public DbSet<RecentHistoryView> RecentHistories { get; set; } = null!;
     public DbSet<OperationsDashboardView> OperationsDashboards { get; set; } = null!;
+    public DbSet<PatientTrajectoryView> PatientTrajectories { get; set; } = null!;
 
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
     {

@@ -1,6 +1,6 @@
 # RLApp Backend
 
-**Estado del proyecto:** Fase 0 — Diagnóstico Ejecutivo completado (2026-04-01). Ver: ../../docs/project/02-as-is-audit/10-FASE-0-DIAGNOSTICO.md
+**Estado del proyecto:** Fase 2 — TrayectoriaPaciente implementada y validada en Docker local (2026-04-05). Ver: ../../docs/project/02-as-is-audit/16-FASE-2-CIERRE.md
 
 ## Architecture
 
@@ -8,7 +8,7 @@ This backend implements **Hexagonal Architecture** (Ports & Adapters) as defined
 
 ## Layer Structure
 
-```
+```text
 apps/backend/
 ├── src/
 │   ├── RLApp.Domain/              # Core domain logic (pure, no dependencies)
@@ -105,6 +105,24 @@ dotnet test RLApp.slnx
 
 - OpenAPI source of truth: [docs/api/openapi.yaml](./docs/api/openapi.yaml)
 - Critical API audit and frontend/QA guide: [docs/api/API-AUDIT-AND-GUIDE.md](./docs/api/API-AUDIT-AND-GUIDE.md)
+
+## Docker local
+
+Perfil operativo validado:
+
+```bash
+docker compose --profile backend --profile frontend up --build
+```
+
+Usuarios seeded para el perfil local:
+
+- `superadmin` / `SuperAdmin@2026Dev!` (`Supervisor`)
+- `support` / `Support@2026Dev!` (`Support`)
+
+Slice Fase 2 disponible en runtime:
+
+- `GET /api/patient-trajectories/{trajectoryId}`
+- `POST /api/patient-trajectories/rebuild`
 
 ## Running
 

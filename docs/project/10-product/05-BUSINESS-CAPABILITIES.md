@@ -6,3 +6,4 @@
 - operacion de consulta
 - visualizacion publica
 - auditoria y monitoreo
+- trazabilidad longitudinal del paciente

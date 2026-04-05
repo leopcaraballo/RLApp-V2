@@ -1,6 +1,6 @@
 # RLApp Frontend
 
-**Estado del proyecto:** Fase 0 — Diagnóstico Ejecutivo completado (2026-04-01). Ver: ../../docs/project/02-as-is-audit/10-FASE-0-DIAGNOSTICO.md
+**Estado del proyecto:** Fase 2 — TrayectoriaPaciente operativa en frontend y Docker local. Ver: ../../docs/project/02-as-is-audit/16-FASE-2-CIERRE.md
 
 Frontend operativo en Next.js 16 alineado al contrato HTTP real del backend actual.
 
@@ -10,6 +10,7 @@ Frontend operativo en Next.js 16 alineado al contrato HTTP real del backend actu
   - `/login`
   - `/`
   - `/reception`
+  - `/trajectory`
   - `/waiting-room`
   - `/cashier`
   - `/medical`
@@ -32,9 +33,20 @@ Generación de tipos:
 npm run generate:api-types
 ```
 
-## Hallazgo importante
+## Docker local
 
-Intentar levantar Swagger/OpenAPI directamente desde el backend en runtime hoy falla porque la API no arranca por un requisito de licencia de MassTransit. Por eso este frontend usa como contrato el `openapi.yaml` auditado del backend, no el documento publicado por runtime.
+El flujo de referencia para validar la app completa sigue siendo Docker Compose:
+
+```bash
+docker compose --profile backend --profile frontend up --build
+```
+
+Usuarios seeded para el perfil local:
+
+- `superadmin` / `SuperAdmin@2026Dev!` (`Supervisor`)
+- `support` / `Support@2026Dev!` (`Support`)
+
+El frontend sigue usando como contrato auditado `../backend/docs/api/openapi.yaml`, aunque el backend también arranca correctamente en el compose local.
 
 ## Variables de entorno
 
@@ -84,6 +96,7 @@ src/
 ## Limitaciones reales del backend reflejadas en la UI
 
 - No existen endpoints GET de negocio para listar recursos o ver detalle persistido.
+- La consulta de trayectoria existe, pero requiere conocer `trajectoryId`; no hay búsqueda por `patientId` ni `queueId`.
 - Varios campos requeridos por DTO siguen siendo ignorados por los handlers backend.
 - `queueId` es inconsistente: a veces va en body y a veces en query.
 - El login recibe `identifier`, pero en la práctica autentica por `username`.

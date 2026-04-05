@@ -262,6 +262,51 @@ namespace RLApp.Adapters.Persistence.Data.Migrations
                     b.ToTable("OutboxMessages", (string)null);
                 });
 
+            modelBuilder.Entity("RLApp.Adapters.Persistence.Data.Models.PatientTrajectoryView", b =>
+                {
+                    b.Property<string>("TrajectoryId")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("ClosedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CorrelationIdsJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("CurrentState")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("OpenedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("PatientId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("QueueId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("StagesJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("TrajectoryId");
+
+                    b.HasIndex("PatientId");
+
+                    b.HasIndex("QueueId");
+
+                    b.HasIndex("PatientId", "QueueId", "CurrentState");
+
+                    b.ToTable("v_patient_trajectory", (string)null);
+                });
+
             modelBuilder.Entity("RLApp.Adapters.Persistence.Data.Models.QueueStateView", b =>
                 {
                     b.Property<string>("QueueId")
