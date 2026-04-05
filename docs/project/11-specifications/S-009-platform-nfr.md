@@ -7,7 +7,7 @@ Definir restricciones transversales de disponibilidad, RPO, RTO, performance, ob
 ## Traceability
 
 - User stories: aplica a todas las historias implementadas del sistema
-- Use cases: aplica a `UC-001` a `UC-017`
+- Use cases: aplica a `UC-001` a `UC-018`
 - Tests: `TDD-S-009`, `SEC-TEST-001`, `SEC-TEST-002`, `SEC-TEST-003`, `SEC-TEST-004`, `RES-TEST-001`, `RES-TEST-002`, `RES-TEST-003`, `RES-TEST-004`
 
 ## Scope
@@ -21,8 +21,8 @@ Definir restricciones transversales de disponibilidad, RPO, RTO, performance, ob
 ## Required behavior
 
 - La plataforma debe exponer health checks para API, base de datos, broker, projection lag y canal realtime.
-- Debe existir logging estructurado con `correlationId`, `queueId`, `turnId`, rol y resultado.
-- El tracing debe conectar request, evento, publicacion y proyeccion.
+- Debe existir logging estructurado con `correlationId`, `trajectoryId`, `queueId`, `turnId`, rol y resultado.
+- El tracing debe conectar request, trayectoria, evento, publicacion y proyeccion.
 - Deben existir metricas para tiempos de espera, throughput, ausencias y lag de proyecciones.
 - Backup y restore deben estar definidos y verificables.
 - Los secretos deben permanecer fuera del repositorio y gestionarse por entorno.

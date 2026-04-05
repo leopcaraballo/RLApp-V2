@@ -30,7 +30,12 @@ public class EventStoreRepository : IEventStore
         [nameof(PatientCalled)] = typeof(PatientCalled),
         [nameof(PatientAttentionCompleted)] = typeof(PatientAttentionCompleted),
         [nameof(PatientAbsentAtConsultation)] = typeof(PatientAbsentAtConsultation),
-        [nameof(PatientCancelledByAbsence)] = typeof(PatientCancelledByAbsence)
+        [nameof(PatientCancelledByAbsence)] = typeof(PatientCancelledByAbsence),
+        [nameof(PatientTrajectoryOpened)] = typeof(PatientTrajectoryOpened),
+        [nameof(PatientTrajectoryStageRecorded)] = typeof(PatientTrajectoryStageRecorded),
+        [nameof(PatientTrajectoryCompleted)] = typeof(PatientTrajectoryCompleted),
+        [nameof(PatientTrajectoryCancelled)] = typeof(PatientTrajectoryCancelled),
+        [nameof(PatientTrajectoryRebuilt)] = typeof(PatientTrajectoryRebuilt)
     };
 
     private readonly AppDbContext _context;
@@ -104,6 +109,27 @@ public class EventStoreRepository : IEventStore
             var @event = DeserializeEvent(record);
             if (@event != null)
                 events.Add(@event);
+        }
+
+        return events;
+    }
+
+    public async Task<IList<DomainEvent>> GetAllAsync(CancellationToken cancellationToken = default)
+    {
+        var records = await _context.EventStore
+            .AsNoTracking()
+            .OrderBy(e => e.OccurredAt)
+            .ToListAsync(cancellationToken);
+
+        var events = new List<DomainEvent>();
+
+        foreach (var record in records)
+        {
+            var @event = DeserializeEvent(record);
+            if (@event != null)
+            {
+                events.Add(@event);
+            }
         }
 
         return events;

@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using RLApp.Application.Services;
 using RLApp.Domain.Events;
 using RLApp.Ports.Outbound;
 
@@ -7,13 +8,16 @@ namespace RLApp.Infrastructure.BackgroundServices;
 public sealed class LocalOutboxMessageDispatcher : IOutboxMessageDispatcher
 {
     private readonly IProjectionStore _projectionStore;
+    private readonly PatientTrajectoryProjectionWriter _trajectoryProjectionWriter;
     private readonly ILogger<LocalOutboxMessageDispatcher> _logger;
 
     public LocalOutboxMessageDispatcher(
         IProjectionStore projectionStore,
+        PatientTrajectoryProjectionWriter trajectoryProjectionWriter,
         ILogger<LocalOutboxMessageDispatcher> logger)
     {
         _projectionStore = projectionStore;
+        _trajectoryProjectionWriter = trajectoryProjectionWriter;
         _logger = logger;
     }
 
@@ -58,6 +62,26 @@ public sealed class LocalOutboxMessageDispatcher : IOutboxMessageDispatcher
                 {
                     { "Status", "Absent" }
                 }, cancellationToken);
+                break;
+
+            case PatientTrajectoryOpened ev:
+                await _trajectoryProjectionWriter.RefreshAsync(ev.AggregateId, cancellationToken);
+                break;
+
+            case PatientTrajectoryStageRecorded ev:
+                await _trajectoryProjectionWriter.RefreshAsync(ev.AggregateId, cancellationToken);
+                break;
+
+            case PatientTrajectoryCompleted ev:
+                await _trajectoryProjectionWriter.RefreshAsync(ev.AggregateId, cancellationToken);
+                break;
+
+            case PatientTrajectoryCancelled ev:
+                await _trajectoryProjectionWriter.RefreshAsync(ev.AggregateId, cancellationToken);
+                break;
+
+            case PatientTrajectoryRebuilt ev:
+                await _trajectoryProjectionWriter.RefreshAsync(ev.AggregateId, cancellationToken);
                 break;
 
             default:

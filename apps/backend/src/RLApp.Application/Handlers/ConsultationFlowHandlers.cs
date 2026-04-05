@@ -3,6 +3,7 @@ namespace RLApp.Application.Handlers;
 using Commands;
 using DTOs;
 using MediatR;
+using RLApp.Application.Services;
 using RLApp.Domain.Aggregates;
 using RLApp.Domain.Common;
 using RLApp.Ports.Inbound;
@@ -245,19 +246,22 @@ public class FinishConsultationHandler : IRequestHandler<FinishConsultationComma
     private readonly IEventPublisher _eventPublisher;
     private readonly IAuditStore _auditStore;
     private readonly IPersistenceSession _persistenceSession;
+    private readonly PatientTrajectoryOrchestrator _trajectoryOrchestrator;
 
     public FinishConsultationHandler(
         IWaitingQueueRepository queueRepository,
         IConsultingRoomRepository roomRepository,
         IEventPublisher eventPublisher,
         IAuditStore auditStore,
-        IPersistenceSession persistenceSession)
+        IPersistenceSession persistenceSession,
+        PatientTrajectoryOrchestrator trajectoryOrchestrator)
     {
         _queueRepository = queueRepository;
         _roomRepository = roomRepository;
         _eventPublisher = eventPublisher;
         _auditStore = auditStore;
         _persistenceSession = persistenceSession;
+        _trajectoryOrchestrator = trajectoryOrchestrator;
     }
 
     public async Task<CommandResult> Handle(FinishConsultationCommand command, CancellationToken cancellationToken)
@@ -287,10 +291,10 @@ public class FinishConsultationHandler : IRequestHandler<FinishConsultationComma
             }
 
             queue.CompletePatientAttention(
-                command.PatientId, 
-                command.RoomId, 
-                command.TurnId, 
-                command.Outcome, 
+                command.PatientId,
+                command.RoomId,
+                command.TurnId,
+                command.Outcome,
                 command.CorrelationId);
             await _queueRepository.UpdateAsync(queue, cancellationToken);
 
@@ -298,7 +302,11 @@ public class FinishConsultationHandler : IRequestHandler<FinishConsultationComma
             room.CompleteAttention(command.TurnId, command.Outcome, command.CorrelationId);
             await _roomRepository.UpdateAsync(room, cancellationToken);
 
-            await _eventPublisher.PublishBatchAsync(queue.GetUnraisedEvents(), cancellationToken);
+            var queueEvents = queue.GetUnraisedEvents();
+            var completionEvent = queueEvents.OfType<RLApp.Domain.Events.PatientAttentionCompleted>().Last();
+            await _trajectoryOrchestrator.TrackCompletionAsync(targetQueueId, completionEvent, cancellationToken);
+
+            await _eventPublisher.PublishBatchAsync(queueEvents, cancellationToken);
             await _eventPublisher.PublishBatchAsync(room.GetUnraisedEvents(), cancellationToken);
             await HandlerPersistence.CommitSuccessAsync(
                 _persistenceSession,

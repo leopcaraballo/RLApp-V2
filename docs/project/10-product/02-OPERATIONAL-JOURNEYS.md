@@ -5,3 +5,4 @@
 - doctor llama y atiende
 - display refleja estado visible
 - supervisor audita y monitorea
+- support reconstruye trayectoria unica del paciente

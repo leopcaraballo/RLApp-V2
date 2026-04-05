@@ -1,5 +1,9 @@
 # Use Case Map
 
+## Waiting Room Core
+
+- UC-018 Reconstruct Patient Trajectory
+
 ## Reception
 
 - UC-005 Register Patient Arrival

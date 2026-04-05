@@ -75,6 +75,8 @@ builder.Services.AddAuthorization(options =>
         policy.RequireAuthenticatedUser().RequireRole("Doctor", "Supervisor"));
     options.AddPolicy(AuthorizationPolicies.SupervisorOnly, policy =>
         policy.RequireAuthenticatedUser().RequireRole("Supervisor"));
+    options.AddPolicy(AuthorizationPolicies.SupportOnly, policy =>
+        policy.RequireAuthenticatedUser().RequireRole("Support"));
     options.AddPolicy(AuthorizationPolicies.SupportOrSupervisor, policy =>
         policy.RequireAuthenticatedUser().RequireRole("Support", "Supervisor"));
 });

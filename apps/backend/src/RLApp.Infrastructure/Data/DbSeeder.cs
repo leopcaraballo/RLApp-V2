@@ -33,6 +33,11 @@ public class DbSeeder
     /// - Password: SuperAdmin@2026Dev!
     /// - Role: Supervisor (all permissions)
     ///
+    /// Default Support Credentials (Development Only):
+    /// - Username: support
+    /// - Password: Support@2026Dev!
+    /// - Role: Support (controlled rebuild and diagnostic workflows)
+    ///
     /// WARNING: Change these credentials immediately in production!
     /// </summary>
     public async Task SeedAsync()
@@ -43,6 +48,7 @@ public class DbSeeder
 
             // Always ensure default superadmin has the correct password hash
             await SeedDefaultSuperadmin();
+            await SeedDefaultSupport();
             await _context.SaveChangesAsync();
 
             _logger.LogInformation("Database seed operation completed successfully.");
@@ -59,36 +65,63 @@ public class DbSeeder
     /// Always refreshes the password hash to ensure it matches the development credentials.
     /// </summary>
     private async Task SeedDefaultSuperadmin()
+        => await SeedDefaultUser(
+            superadminId: "staff-superadmin",
+            username: "superadmin",
+            email: "superadmin@rlapp.local",
+            password: "SuperAdmin@2026Dev!",
+            role: "Supervisor",
+            logLabel: "superadmin");
+
+    /// <summary>
+    /// Creates or updates the default support user for rebuild and diagnostics workflows.
+    /// Always refreshes the password hash to ensure it matches the development credentials.
+    /// </summary>
+    private async Task SeedDefaultSupport()
+        => await SeedDefaultUser(
+            superadminId: "staff-support-01",
+            username: "support",
+            email: "support@rlapp.local",
+            password: "Support@2026Dev!",
+            role: "Support",
+            logLabel: "support");
+
+    private async Task SeedDefaultUser(
+        string superadminId,
+        string username,
+        string email,
+        string password,
+        string role,
+        string logLabel)
     {
-        const string defaultPassword = "SuperAdmin@2026Dev!";
-        const string devUsername = "superadmin";
-        const string superadminId = "staff-superadmin";
+        var hashedPassword = _passwordHashService.HashPassword(password);
 
-        var hashedPassword = _passwordHashService.HashPassword(defaultPassword);
-
-        // Check if superadmin exists
+        // Check if the default user exists
         var existingAdmin = await _context.StaffUsers
             .FirstOrDefaultAsync(s => s.Id == superadminId);
 
         if (existingAdmin != null)
         {
-            // Update existing admin's credentials
+            // Update existing default user's credentials
             existingAdmin.PasswordHash = hashedPassword;
             existingAdmin.IsActive = true;
+            existingAdmin.Username = username;
+            existingAdmin.Email = email;
+            existingAdmin.Role = role;
             existingAdmin.UpdatedAt = DateTime.UtcNow;
             _context.StaffUsers.Update(existingAdmin);
-            _logger.LogInformation("Updated existing superadmin user with new credentials");
+            _logger.LogInformation("Updated existing default {LogLabel} user with new credentials", logLabel);
             return;
         }
 
-        // Create new superadmin
+        // Create new default user
         var superadmin = new StaffUserRecord
         {
             Id = superadminId,
-            Username = devUsername,
-            Email = "superadmin@rlapp.local",
+            Username = username,
+            Email = email,
             PasswordHash = hashedPassword,
-            Role = "Supervisor", // Supervisor role has full access per authorization policies
+            Role = role,
             IsActive = true,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = null
@@ -97,8 +130,9 @@ public class DbSeeder
         _context.StaffUsers.Add(superadmin);
 
         _logger.LogInformation(
-            "Seeded default superadmin user. Username: {Username}, Email: {Email}, Role: {Role}",
-            devUsername,
+            "Seeded default {LogLabel} user. Username: {Username}, Email: {Email}, Role: {Role}",
+            logLabel,
+            username,
             superadmin.Email,
             superadmin.Role);
     }

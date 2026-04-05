@@ -11,8 +11,7 @@ export type CallNextAtCashierRequest = components['schemas']['CallNextAtCashierR
 export type ValidatePaymentRequest = components['schemas']['ValidatePaymentRequest'];
 export type MarkPaymentPendingRequest = components['schemas']['MarkPaymentPendingRequest'];
 export type CashierMarkAbsentRequest = components['schemas']['CashierMarkAbsentRequest'];
-export type ActivateConsultingRoomRequest =
-  components['schemas']['ActivateConsultingRoomRequest'];
+export type ActivateConsultingRoomRequest = components['schemas']['ActivateConsultingRoomRequest'];
 export type DeactivateConsultingRoomRequest =
   components['schemas']['DeactivateConsultingRoomRequest'];
 export type FinishConsultationRequest = components['schemas']['FinishConsultationRequest'];
@@ -21,16 +20,23 @@ export type AuthenticationResult = components['schemas']['AuthenticationResult']
 export type CommandResult = components['schemas']['CommandResult'];
 export type PatientCallResult = components['schemas']['PatientCallResult'];
 export type ClaimedPatientResult = components['schemas']['ClaimedPatientResult'];
-export type RegisterPatientResult = components['schemas']['RegisterPatientResult'];
 export type InlineCommandError = components['schemas']['InlineCommandError'];
 export type ValidationProblemDetails = components['schemas']['ValidationProblemDetails'];
 export type ProblemDetails = components['schemas']['ProblemDetails'];
 export type HealthDetail = components['schemas']['HealthDetail'];
 export type HealthStatusResponse = components['schemas']['HealthStatusResponse'];
+export type PatientTrajectoryResponse = components['schemas']['PatientTrajectoryResponse'];
+export type PatientTrajectoryStageEntry = components['schemas']['TrajectoryStageEntry'];
+export type RebuildPatientTrajectoriesRequest =
+  components['schemas']['RebuildPatientTrajectoriesRequest'];
+export type RebuildPatientTrajectoriesResult =
+  components['schemas']['RebuildPatientTrajectoriesResult'];
+export type TrajectoryOperationError = components['schemas']['TrajectoryOperationError'];
 
 export type ApiEnvelopeError =
   | InlineCommandError
   | ValidationProblemDetails
   | ProblemDetails
+  | TrajectoryOperationError
+  | { error: string; correlationId?: string }
   | { message: string };
-

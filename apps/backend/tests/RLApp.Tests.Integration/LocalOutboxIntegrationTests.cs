@@ -62,7 +62,7 @@ public class LocalOutboxIntegrationTests : IClassFixture<LocalOutboxWebApplicati
                 .OrderBy(message => message.OccurredAt)
                 .ToListAsync();
 
-            if (projection is not null && outboxMessages.Count == 2 && outboxMessages.All(message => message.ProcessedAt is not null))
+            if (projection is not null && outboxMessages.Count == 4 && outboxMessages.All(message => message.ProcessedAt is not null))
             {
                 break;
             }
@@ -76,8 +76,15 @@ public class LocalOutboxIntegrationTests : IClassFixture<LocalOutboxWebApplicati
         projection.Status.Should().Be("Waiting");
 
         outboxMessages.Should().NotBeNull();
-        outboxMessages!.Should().HaveCount(2);
+        outboxMessages!.Should().HaveCount(4);
         outboxMessages.Should().OnlyContain(message => message.ProcessedAt != null);
+        outboxMessages.Select(message => message.Type).Should().BeEquivalentTo(new[]
+        {
+            "WaitingQueueCreated",
+            "PatientTrajectoryOpened",
+            "PatientTrajectoryStageRecorded",
+            "PatientCheckedIn"
+        });
     }
 
     [Fact]

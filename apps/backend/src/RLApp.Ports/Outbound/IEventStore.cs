@@ -12,4 +12,5 @@ public interface IEventStore
     Task SaveBatchAsync(IEnumerable<DomainEvent> domainEvents, CancellationToken cancellationToken = default);
     Task<IList<DomainEvent>> GetEventsByAggregateIdAsync(string aggregateId, CancellationToken cancellationToken = default);
     Task<IList<DomainEvent>> GetEventsByDateRangeAsync(DateTime from, DateTime to, CancellationToken cancellationToken = default);
+    Task<IList<DomainEvent>> GetAllAsync(CancellationToken cancellationToken = default);
 }

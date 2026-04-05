@@ -5,3 +5,4 @@
 - unknown or invalid outbox messages are quarantined to dead-letter storage
 - local outbox fallback materializes projections when external messaging is disabled
 - projection rebuild idempotency
+- trajectory projection rebuild reuses the same idempotent replay contract

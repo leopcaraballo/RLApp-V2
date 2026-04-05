@@ -3,6 +3,7 @@ namespace RLApp.Application.Handlers;
 using Commands;
 using DTOs;
 using MediatR;
+using RLApp.Application.Services;
 using RLApp.Domain.Common;
 using RLApp.Ports.Inbound;
 using RLApp.Ports.Outbound;
@@ -227,17 +228,20 @@ public class MarkAbsenceAtCashierHandler : IRequestHandler<MarkAbsenceCommand, C
     private readonly IEventPublisher _eventPublisher;
     private readonly IAuditStore _auditStore;
     private readonly IPersistenceSession _persistenceSession;
+    private readonly PatientTrajectoryOrchestrator _trajectoryOrchestrator;
 
     public MarkAbsenceAtCashierHandler(
         IWaitingQueueRepository queueRepository,
         IEventPublisher eventPublisher,
         IAuditStore auditStore,
-        IPersistenceSession persistenceSession)
+        IPersistenceSession persistenceSession,
+        PatientTrajectoryOrchestrator trajectoryOrchestrator)
     {
         _queueRepository = queueRepository;
         _eventPublisher = eventPublisher;
         _auditStore = auditStore;
         _persistenceSession = persistenceSession;
+        _trajectoryOrchestrator = trajectoryOrchestrator;
     }
 
     public async Task<CommandResult> Handle(MarkAbsenceCommand command, CancellationToken cancellationToken)
@@ -250,6 +254,8 @@ public class MarkAbsenceAtCashierHandler : IRequestHandler<MarkAbsenceCommand, C
             await _queueRepository.UpdateAsync(queue, cancellationToken);
 
             var events = queue.GetUnraisedEvents();
+            var cashierAbsenceEvent = events.OfType<RLApp.Domain.Events.PatientAbsentAtCashier>().Last();
+            await _trajectoryOrchestrator.TrackCashierAbsenceAsync(command.QueueId, cashierAbsenceEvent, cancellationToken);
             await _eventPublisher.PublishBatchAsync(events, cancellationToken);
             await HandlerPersistence.CommitSuccessAsync(
                 _persistenceSession,
@@ -325,19 +331,22 @@ public class MarkAbsenceAtConsultationHandler : IRequestHandler<MarkAbsenceAtCon
     private readonly IEventPublisher _eventPublisher;
     private readonly IAuditStore _auditStore;
     private readonly IPersistenceSession _persistenceSession;
+    private readonly PatientTrajectoryOrchestrator _trajectoryOrchestrator;
 
     public MarkAbsenceAtConsultationHandler(
         IWaitingQueueRepository queueRepository,
         IConsultingRoomRepository roomRepository,
         IEventPublisher eventPublisher,
         IAuditStore auditStore,
-        IPersistenceSession persistenceSession)
+        IPersistenceSession persistenceSession,
+        PatientTrajectoryOrchestrator trajectoryOrchestrator)
     {
         _queueRepository = queueRepository;
         _roomRepository = roomRepository;
         _eventPublisher = eventPublisher;
         _auditStore = auditStore;
         _persistenceSession = persistenceSession;
+        _trajectoryOrchestrator = trajectoryOrchestrator;
     }
 
     public async Task<CommandResult> Handle(MarkAbsenceAtConsultationCommand command, CancellationToken cancellationToken)
@@ -353,7 +362,11 @@ public class MarkAbsenceAtConsultationHandler : IRequestHandler<MarkAbsenceAtCon
             room.MarkPatientAbsent(command.TurnId, command.Reason, command.CorrelationId);
             await _roomRepository.UpdateAsync(room, cancellationToken);
 
-            await _eventPublisher.PublishBatchAsync(queue.GetUnraisedEvents(), cancellationToken);
+            var queueEvents = queue.GetUnraisedEvents();
+            var consultationAbsenceEvent = queueEvents.OfType<RLApp.Domain.Events.PatientAbsentAtConsultation>().Last();
+            await _trajectoryOrchestrator.TrackConsultationAbsenceAsync(command.QueueId, consultationAbsenceEvent, cancellationToken);
+
+            await _eventPublisher.PublishBatchAsync(queueEvents, cancellationToken);
             await _eventPublisher.PublishBatchAsync(room.GetUnraisedEvents(), cancellationToken);
             await HandlerPersistence.CommitSuccessAsync(
                 _persistenceSession,

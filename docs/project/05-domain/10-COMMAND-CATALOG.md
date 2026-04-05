@@ -13,3 +13,8 @@
 - CallPatient
 - CompleteAttention
 - MarkAbsentAtConsultation
+- OpenPatientTrajectory
+- RecordPatientTrajectoryStage
+- CompletePatientTrajectory
+- CancelPatientTrajectory
+- RebuildPatientTrajectories

@@ -16,6 +16,32 @@ function buildHeaders(initHeaders?: HeadersInit): Headers {
   return new Headers(initHeaders);
 }
 
+function readPayloadMessage(payload: unknown, status: number): string {
+  if (typeof payload === 'object' && payload !== null) {
+    if ('message' in payload && typeof payload.message === 'string') {
+      return payload.message;
+    }
+
+    if ('error' in payload && typeof payload.error === 'string') {
+      return payload.error;
+    }
+
+    if ('code' in payload && typeof payload.code === 'string') {
+      return payload.code;
+    }
+
+    if ('detail' in payload && typeof payload.detail === 'string') {
+      return payload.detail;
+    }
+
+    if ('title' in payload && typeof payload.title === 'string') {
+      return payload.title;
+    }
+  }
+
+  return `Request failed with status ${status}`;
+}
+
 export async function httpRequest<TResponse>(
   input: RequestInfo | URL,
   init: RequestInit & { json?: unknown } = {}
@@ -42,10 +68,7 @@ export async function httpRequest<TResponse>(
     : ((await response.text()) as unknown as TResponse);
 
   if (!response.ok) {
-    const fallbackMessage =
-      typeof payload === 'object' && payload !== null && 'message' in payload
-        ? String(payload.message)
-        : `Request failed with status ${response.status}`;
+    const fallbackMessage = readPayloadMessage(payload, response.status);
 
     throw new ApiError(response.status, fallbackMessage, payload as ApiEnvelopeError);
   }

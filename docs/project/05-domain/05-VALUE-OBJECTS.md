@@ -5,5 +5,6 @@
 - Priority
 - ConsultationType
 - CorrelationId
+- TrajectoryId
 - IdempotencyKey
 - Role

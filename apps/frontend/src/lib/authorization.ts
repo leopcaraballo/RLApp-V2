@@ -10,6 +10,7 @@ export interface NavigationItem {
 const routeAccess = new Map<string, StaffRole[]>([
   ['/', ['Receptionist', 'Cashier', 'Doctor', 'Supervisor', 'Support']],
   ['/health', ['Receptionist', 'Cashier', 'Doctor', 'Supervisor', 'Support']],
+  ['/trajectory', ['Supervisor', 'Support']],
   ['/reception', ['Receptionist', 'Supervisor']],
   ['/waiting-room', ['Receptionist', 'Doctor', 'Supervisor']],
   ['/cashier', ['Cashier', 'Supervisor']],
@@ -29,6 +30,12 @@ export const navigationItems: NavigationItem[] = [
     label: 'Reception',
     description: 'Registro inicial y alias operativo de llegada.',
     roles: ['Receptionist', 'Supervisor'],
+  },
+  {
+    href: '/trajectory',
+    label: 'Trajectory',
+    description: 'Consulta longitudinal y rebuild controlado para soporte.',
+    roles: ['Supervisor', 'Support'],
   },
   {
     href: '/waiting-room',

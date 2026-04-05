@@ -11,6 +11,7 @@ using RLApp.Adapters.Persistence.Data;
 using RLApp.Adapters.Persistence.Publishers;
 using RLApp.Adapters.Persistence.Repositories;
 using RLApp.Application.Commands;
+using RLApp.Application.Services;
 using RLApp.Ports.Inbound;
 using RLApp.Ports.Outbound;
 using Polly;
@@ -54,6 +55,9 @@ public static class DependencyInjection
         services.AddScoped<IEventPublisher, OutboxEventPublisher>(); // Pushes to the outbox via EF Core
         services.AddScoped<IProjectionStore, ProjectionStoreRepository>(); // Read model projections
         services.AddScoped<IPersistenceSession, EfPersistenceSession>();
+        services.AddScoped<IPatientTrajectoryRepository, PatientTrajectoryRepository>();
+        services.AddScoped<PatientTrajectoryOrchestrator>();
+        services.AddScoped<PatientTrajectoryProjectionWriter>();
 
         // Register aggregate repositories
         services.AddScoped<IConsultingRoomRepository, ConsultingRoomRepository>();
@@ -90,6 +94,7 @@ public static class DependencyInjection
                 x.AddConsumer<RLApp.Adapters.Messaging.Consumers.WaitingRoomMonitorConsumer>();
                 x.AddConsumer<RLApp.Adapters.Messaging.Consumers.DashboardConsumer>();
                 x.AddConsumer<RLApp.Adapters.Messaging.Consumers.QueueStateConsumer>();
+                x.AddConsumer<RLApp.Adapters.Messaging.Consumers.PatientTrajectoryConsumer>();
 
                 // Register Sagas
                 x.AddSagaStateMachine<RLApp.Adapters.Messaging.Sagas.ConsultationSaga, RLApp.Adapters.Messaging.Sagas.ConsultationState>()

@@ -58,6 +58,18 @@ export function LoginForm() {
           </p>
         </div>
 
+        <div className="auth-grid">
+          <StatusBadge tone="info">Docker local users</StatusBadge>
+          <ul>
+            <li>
+              Supervisor: <code>superadmin</code> / <code>SuperAdmin@2026Dev!</code>
+            </li>
+            <li>
+              Support: <code>support</code> / <code>Support@2026Dev!</code>
+            </li>
+          </ul>
+        </div>
+
         <form
           className="form-grid"
           onSubmit={form.handleSubmit(async (values) => {

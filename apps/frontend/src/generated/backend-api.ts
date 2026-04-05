@@ -351,6 +351,56 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/patient-trajectories/{trajectoryId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Consultar trayectoria materializada
+         * @description Devuelve la trayectoria longitudinal persistida para un `trajectoryId` conocido.
+         *
+         *     Hallazgos importantes:
+         *     - Requiere política `SupportOrSupervisor`.
+         *     - No existe endpoint de búsqueda por `patientId`; el cliente debe conocer `trajectoryId`.
+         *     - La respuesta sale directamente desde la proyección persistente y no usa envelope de query.
+         */
+        get: operations["getPatientTrajectory"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/patient-trajectories/rebuild": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ejecutar rebuild controlado de trayectorias
+         * @description Reprocesa eventos históricos para materializar o reconciliar trayectorias longitudinales.
+         *
+         *     Hallazgos importantes:
+         *     - Requiere política `SupportOnly`.
+         *     - `X-Correlation-Id` e `X-Idempotency-Key` son obligatorios.
+         *     - `dryRun=true` valida alcance y conteos sin materializar cambios.
+         */
+        post: operations["rebuildPatientTrajectories"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -502,16 +552,12 @@ export interface components {
             notes?: string | null;
         };
         CallPatientRequest: {
-            /** @example Q-2026-03-19-MAIN */
-            queueId: string;
             /** @example PAT-0045 */
             patientId: string;
             /** @example ROOM-01 */
             roomId: string;
         };
         ClaimNextPatientRequest: {
-            /** @example Q-2026-03-19-MAIN */
-            queueId: string;
             /** @example ROOM-01 */
             roomId: string;
         };
@@ -661,15 +707,85 @@ export interface components {
         CommandResult: {
             /** @example true */
             success: boolean;
-            /** @example Operation completed successfully */
-            message: string;
-            /** @example CORR-001 */
+        };
+        TrajectoryOperationError: {
+            /** @example TRAJECTORY_NOT_FOUND */
+            code: string;
+            /** @example CORR-trj-404 */
+            correlationId?: string | null;
+        };
+        TrajectoryStageEntry: {
+            /**
+             * Format: date-time
+             * @example 2026-04-01T09:10:00Z
+             */
+            occurredAt: string;
+            /** @example Recepcion */
+            stage: string;
+            /** @example PatientCheckedIn */
+            sourceEvent: string;
+            /** @example EnEsperaTaquilla */
+            sourceState?: string | null;
+            /** @example corr-checkin */
             correlationId: string;
+        };
+        PatientTrajectoryResponse: {
+            /** @example TRJ-Q-2026-03-19-MAIN-PAT-0045-20260401091000000 */
+            trajectoryId: string;
+            /** @example PAT-0045 */
+            patientId: string;
+            /** @example Q-2026-03-19-MAIN */
+            queueId: string;
+            /** @example TrayectoriaFinalizada */
+            currentState: string;
+            /**
+             * Format: date-time
+             * @example 2026-04-01T09:10:00Z
+             */
+            openedAt: string;
+            /**
+             * Format: date-time
+             * @example 2026-04-01T09:42:00Z
+             */
+            closedAt?: string | null;
+            correlationIds: string[];
+            stages: components["schemas"]["TrajectoryStageEntry"][];
+        };
+        RebuildPatientTrajectoriesRequest: {
+            /** @example Q-2026-03-19-MAIN */
+            queueId?: string | null;
+            /** @example PAT-0045 */
+            patientId?: string | null;
+            /** @example true */
+            dryRun: boolean;
+        };
+        RebuildPatientTrajectoriesResult: {
+            /** @example TRJ-REBUILD-01f7dce2d3af48a2a4cc3d0cbf73eb1d */
+            jobId: string;
+            /**
+             * Format: date-time
+             * @example 2026-04-01T10:05:00Z
+             */
+            acceptedAt: string;
+            /** @example queue:Q-2026-03-19-MAIN|patient:PAT-0045 */
+            scope: string;
+            /** @example false */
+            dryRun: boolean;
+            /** @example Accepted */
+            status: string;
+            /** @example 3 */
+            eventsProcessed: number;
+            /** @example 1 */
+            trajectoriesProcessed: number;
+            /** @example Operation completed successfully */
+            message?: string;
+            /** @example CORR-001 */
+            correlationId?: string;
             /**
              * Format: date-time
              * @example 2026-03-19T14:00:00Z
              */
-            executedAt: string;
+            executedAt?: string;
         };
         PatientCallResult: {
             /** @example PAT-0045 */
@@ -683,10 +799,6 @@ export interface components {
             queuePosition: number;
         };
         ClaimedPatientResult: {
-            /** @example Q-2026-03-19-MAIN */
-            queueId: string;
-            /** @example TURN-Q-001-PAT-0045 */
-            turnId: string;
             /** @example PAT-0045 */
             patientId: string;
             /** @example ROOM-01 */
@@ -696,23 +808,6 @@ export interface components {
              * @example 2026-03-19T14:18:00Z
              */
             claimedAt: string;
-        };
-        RegisterPatientResult: {
-            /** @example true */
-            success: boolean;
-            /** @example Operation completed successfully */
-            message: string;
-            /** @example Q-2026-03-19-MAIN */
-            queueId: string;
-            /** @example TURN-Q-001-PAT-0045 */
-            turnId: string;
-            /** @example CORR-001 */
-            correlationId: string;
-            /**
-             * Format: date-time
-             * @example 2026-03-19T14:00:00Z
-             */
-            executedAt: string;
         };
         InlineCommandError: {
             /**
@@ -1323,6 +1418,100 @@ export interface operations {
             400: components["responses"]["BadRequestCommandOrValidation"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            500: components["responses"]["InternalServerError"];
+        };
+    };
+    getPatientTrajectory: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Identificador de trazabilidad opcional. Si no se envía, el controller genera uno. */
+                "X-Correlation-Id"?: components["parameters"]["CorrelationIdHeaderOptional"];
+            };
+            path: {
+                /** @description Identificador canónico de la trayectoria. */
+                trajectoryId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Trayectoria encontrada. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PatientTrajectoryResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description No existe proyección persistida para el `trajectoryId` solicitado. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrajectoryOperationError"];
+                };
+            };
+            500: components["responses"]["InternalServerError"];
+        };
+    };
+    rebuildPatientTrajectories: {
+        parameters: {
+            query?: never;
+            header: {
+                /**
+                 * @description Identificador de trazabilidad. El controller lo espera de forma obligatoria en este endpoint.
+                 *     No existe una política uniforme de validación; la obligatoriedad depende de cómo el action method fue declarado.
+                 */
+                "X-Correlation-Id": components["parameters"]["CorrelationIdHeaderRequired"];
+                /**
+                 * @description Header declarado por el contrato mutante y recibido por el controller.
+                 *     Hallazgo crítico: actualmente no existe persistencia ni replay real de idempotencia; el valor se ignora en la lógica de aplicación.
+                 */
+                "X-Idempotency-Key": components["parameters"]["IdempotencyKeyHeaderDeclaredRequired"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RebuildPatientTrajectoriesRequest"];
+            };
+        };
+        responses: {
+            /** @description Rebuild aceptado o simulado correctamente. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RebuildPatientTrajectoriesResult"];
+                };
+            };
+            /** @description Alcance inválido o error de validación ASP.NET. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrajectoryOperationError"] | components["schemas"]["ValidationProblemDetails"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description Ya existe un rebuild corriendo para el mismo alcance e idempotency key. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrajectoryOperationError"];
+                };
+            };
             500: components["responses"]["InternalServerError"];
         };
     };
