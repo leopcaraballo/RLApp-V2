@@ -80,7 +80,7 @@ public class ActivateConsultingRoomHandler : IRequestHandler<ActivateConsultingR
                 command.CorrelationId,
                 ex.Message,
                 cancellationToken);
-            return CommandResult.Failure(ex.Message, command.CorrelationId);
+            return CommandResult.Failure(ex, command.CorrelationId);
         }
         catch (Exception ex)
         {
@@ -193,7 +193,7 @@ public class CallNextAtCashierHandler : IRequestHandler<CallNextAtCashierCommand
                 command.CorrelationId,
                 ex.Message,
                 cancellationToken);
-            return CommandResult<PatientCallResultDto>.Failure(ex.Message, command.CorrelationId);
+            return CommandResult<PatientCallResultDto>.Failure(ex, command.CorrelationId);
         }
         catch (Exception ex)
         {
@@ -321,7 +321,7 @@ public class ValidatePaymentHandler : IRequestHandler<ValidatePaymentCommand, Co
                 command.CorrelationId,
                 ex.Message,
                 cancellationToken);
-            return CommandResult.Failure(ex.Message, command.CorrelationId);
+            return CommandResult.Failure(ex, command.CorrelationId);
         }
         catch (Exception ex)
         {

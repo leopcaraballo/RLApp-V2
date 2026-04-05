@@ -3,6 +3,7 @@
 ## Waiting Room Core
 
 - UC-018 Reconstruct Patient Trajectory
+- UC-019 Protect Aggregate Writes With Optimistic Concurrency
 
 ## Reception
 

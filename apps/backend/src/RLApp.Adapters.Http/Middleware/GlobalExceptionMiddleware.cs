@@ -40,12 +40,15 @@ public class GlobalExceptionMiddleware
     {
         _logger.LogError(exception, "Unhandled exception while processing request {Path}", context.Request.Path);
 
-        var (statusCode, title, detail) = exception switch
+        var (statusCode, title, detail, code) = exception switch
         {
-            DomainException => ((int)HttpStatusCode.BadRequest, "Domain validation failed.", exception.Message),
-            KeyNotFoundException => ((int)HttpStatusCode.NotFound, "Resource not found.", exception.Message),
-            UnauthorizedAccessException => ((int)HttpStatusCode.Forbidden, "Access denied.", "You are not allowed to perform this operation."),
-            _ => ((int)HttpStatusCode.InternalServerError, "An unexpected error occurred.", _environment.IsDevelopment() ? exception.Message : "The server could not process the request.")
+            DomainException domainException when domainException.IsConflict
+                => ((int)HttpStatusCode.Conflict, "Optimistic concurrency conflict.", domainException.Message, domainException.Code),
+            DomainException domainException
+                => ((int)HttpStatusCode.BadRequest, "Domain validation failed.", domainException.Message, domainException.Code),
+            KeyNotFoundException => ((int)HttpStatusCode.NotFound, "Resource not found.", exception.Message, null),
+            UnauthorizedAccessException => ((int)HttpStatusCode.Forbidden, "Access denied.", "You are not allowed to perform this operation.", null),
+            _ => ((int)HttpStatusCode.InternalServerError, "An unexpected error occurred.", _environment.IsDevelopment() ? exception.Message : "The server could not process the request.", null)
         };
 
         context.Response.ContentType = "application/problem+json";
@@ -60,6 +63,11 @@ public class GlobalExceptionMiddleware
         };
 
         problem.Extensions["traceId"] = context.TraceIdentifier;
+        if (!string.IsNullOrWhiteSpace(code))
+        {
+            problem.Extensions["code"] = code;
+        }
+
         if (context.Request.Headers.TryGetValue("X-Correlation-Id", out var correlationId))
         {
             problem.Extensions["correlationId"] = correlationId.ToString();

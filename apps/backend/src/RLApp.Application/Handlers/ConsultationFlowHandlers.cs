@@ -112,7 +112,7 @@ public class ClaimNextPatientHandler : IRequestHandler<ClaimNextPatientCommand, 
                 command.CorrelationId,
                 ex.Message,
                 cancellationToken);
-            return CommandResult<ClaimedPatientResultDto>.Failure(ex.Message, command.CorrelationId);
+            return CommandResult<ClaimedPatientResultDto>.Failure(ex, command.CorrelationId);
         }
         catch (Exception ex)
         {
@@ -214,7 +214,7 @@ public class CallPatientToConsultationHandler : IRequestHandler<CallPatientComma
                 command.CorrelationId,
                 ex.Message,
                 cancellationToken);
-            return CommandResult.Failure(ex.Message, command.CorrelationId);
+            return CommandResult.Failure(ex, command.CorrelationId);
         }
         catch (Exception ex)
         {
@@ -337,7 +337,7 @@ public class FinishConsultationHandler : IRequestHandler<FinishConsultationComma
                 command.CorrelationId,
                 ex.Message,
                 cancellationToken);
-            return CommandResult.Failure(ex.Message, command.CorrelationId);
+            return CommandResult.Failure(ex, command.CorrelationId);
         }
         catch (Exception ex)
         {

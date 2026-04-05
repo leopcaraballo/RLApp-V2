@@ -18,3 +18,4 @@
 - UC-016 Rebuild Projections
 - UC-017 Govern AI Operating System
 - UC-018 Reconstruct Patient Trajectory
+- UC-019 Protect Aggregate Writes With Optimistic Concurrency

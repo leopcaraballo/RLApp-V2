@@ -13,6 +13,8 @@ Proveer una vista maestra de la estructura documental y de la dependencia entre 
   - 02-as-is-audit/14-FASE-1-CIERRE.md: Fase 1 — cierre tecnico, evidencia y decision sobre LISTEN/NOTIFY
   - 02-as-is-audit/15-FASE-2-KICKOFF.md: Fase 2 — inicio documental del agregado TrayectoriaPaciente y replay controlado
   - 02-as-is-audit/16-FASE-2-CIERRE.md: Fase 2 — cierre tecnico, evidencia Docker-first y consola operativa de trayectoria
+  - 02-as-is-audit/17-FASE-3-KICKOFF.md: Fase 3 — inicio documental de concurrencia optimista en EventStore
+  - 02-as-is-audit/18-FASE-3-CIERRE.md: Fase 3 — cierre tecnico de concurrencia optimista, evidencia backend y validacion Docker-first
 - 03-target-architecture: arquitectura objetivo del proyecto nuevo
 - 04-adr: decisiones formales
 - 05-domain: modelo de dominio, estados y eventos
