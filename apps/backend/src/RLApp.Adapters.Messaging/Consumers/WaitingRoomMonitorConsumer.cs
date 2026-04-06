@@ -26,12 +26,19 @@ public class WaitingRoomMonitorConsumer :
     public async Task Consume(ConsumeContext<PatientCheckedIn> context)
     {
         var ev = context.Message;
+        var turnId = $"{ev.AggregateId}-{ev.PatientId}";
         var data = new Dictionary<string, object>
         {
+            { "QueueId", ev.AggregateId },
+            { "PatientId", ev.PatientId },
+            { "TurnId", turnId },
             { "PatientName", ev.PatientName },
+            { "TicketNumber", turnId },
+            { "CheckedInAt", ev.OccurredAt },
+            { "UpdatedAt", ev.OccurredAt },
             { "Status", "Waiting" }
         };
-        await UpsertMonitorAsync(context, ev.PatientId, data, "Waiting");
+        await UpsertMonitorAsync(context, turnId, data, "Waiting");
     }
 
     public async Task Consume(ConsumeContext<PatientCalled> context)
@@ -39,6 +46,8 @@ public class WaitingRoomMonitorConsumer :
         var ev = context.Message;
         var data = new Dictionary<string, object>
         {
+            { "PatientId", ev.PatientId },
+            { "UpdatedAt", ev.OccurredAt },
             { "Status", "Called" },
             { "RoomAssigned", ev.RoomId }
         };
@@ -50,6 +59,8 @@ public class WaitingRoomMonitorConsumer :
         var ev = context.Message;
         var data = new Dictionary<string, object>
         {
+            { "PatientId", ev.PatientId },
+            { "UpdatedAt", ev.OccurredAt },
             { "Status", "InConsultation" },
             { "RoomAssigned", ev.RoomId }
         };
@@ -63,6 +74,9 @@ public class WaitingRoomMonitorConsumer :
         // For now, update to Completed
         var data = new Dictionary<string, object>
         {
+            { "PatientId", ev.PatientId },
+            { "TurnId", ev.TurnId ?? $"{ev.AggregateId}-{ev.PatientId}" },
+            { "UpdatedAt", ev.OccurredAt },
             { "Status", "Completed" }
         };
         await UpsertMonitorAsync(context, ev.PatientId, data, "Completed");
@@ -76,6 +90,9 @@ public class WaitingRoomMonitorConsumer :
         var ev = context.Message;
         var data = new Dictionary<string, object>
         {
+            { "PatientId", ev.PatientId },
+            { "TurnId", ev.TurnId ?? $"{ev.AggregateId}-{ev.PatientId}" },
+            { "UpdatedAt", ev.OccurredAt },
             { "Status", "Absent" }
         };
         await UpsertMonitorAsync(context, ev.PatientId, data, "Absent");

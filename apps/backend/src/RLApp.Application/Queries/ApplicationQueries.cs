@@ -86,3 +86,25 @@ public sealed class DiscoverPatientTrajectoriesQuery : IRequest<QueryResult<Pati
         CorrelationId = correlationId;
     }
 }
+
+public sealed class GetWaitingRoomMonitorSnapshotQuery : IRequest<QueryResult<WaitingRoomMonitorDto>>
+{
+    public string QueueId { get; }
+    public string CorrelationId { get; }
+
+    public GetWaitingRoomMonitorSnapshotQuery(string queueId, string correlationId)
+    {
+        QueueId = queueId;
+        CorrelationId = correlationId;
+    }
+}
+
+public sealed class GetOperationalDashboardSnapshotQuery : IRequest<QueryResult<OperationsDashboardSnapshotDto>>
+{
+    public string CorrelationId { get; }
+
+    public GetOperationalDashboardSnapshotQuery(string correlationId)
+    {
+        CorrelationId = correlationId;
+    }
+}

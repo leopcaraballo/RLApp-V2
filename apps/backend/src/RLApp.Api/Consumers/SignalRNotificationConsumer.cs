@@ -39,8 +39,14 @@ public class SignalRNotificationConsumer :
         var ev = context.Message;
         await PublishAsync(context, clients => clients.All, "all", "PatientCheckedIn", new
         {
+            ev.EventType,
+            ev.AggregateId,
+            ev.CorrelationId,
+            ev.TrajectoryId,
+            ev.OccurredAt,
             ev.PatientId,
             ev.PatientName,
+            QueueId = ev.AggregateId,
             Status = "Waiting"
         });
     }
@@ -50,8 +56,14 @@ public class SignalRNotificationConsumer :
         var ev = context.Message;
         await PublishAsync(context, clients => clients.All, "all", "PatientCalled", new
         {
+            ev.EventType,
+            ev.AggregateId,
+            ev.CorrelationId,
+            ev.TrajectoryId,
+            ev.OccurredAt,
             ev.PatientId,
             ev.RoomId,
+            QueueId = ev.AggregateId,
             Status = "Called"
         });
     }
@@ -62,8 +74,14 @@ public class SignalRNotificationConsumer :
         var deliveryScope = $"queue-{ev.AggregateId}";
         await PublishAsync(context, clients => clients.Group(deliveryScope), deliveryScope, "PatientAtConsultation", new
         {
+            ev.EventType,
+            ev.AggregateId,
+            ev.CorrelationId,
+            ev.TrajectoryId,
+            ev.OccurredAt,
             ev.PatientId,
             ev.RoomId,
+            QueueId = ev.AggregateId,
             Status = "InConsultation"
         });
     }
@@ -73,7 +91,13 @@ public class SignalRNotificationConsumer :
         var ev = context.Message;
         await PublishAsync(context, clients => clients.All, "all", "PatientAttentionCompleted", new
         {
+            ev.EventType,
+            ev.AggregateId,
+            ev.CorrelationId,
+            ev.TrajectoryId,
+            ev.OccurredAt,
             ev.PatientId,
+            QueueId = ev.AggregateId,
             Status = "Completed"
         });
     }

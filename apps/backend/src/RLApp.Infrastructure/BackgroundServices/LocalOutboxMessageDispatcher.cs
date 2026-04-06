@@ -26,17 +26,25 @@ public sealed class LocalOutboxMessageDispatcher : IOutboxMessageDispatcher
         switch (eventPayload)
         {
             case PatientCheckedIn ev:
-                await _projectionStore.UpsertAsync(ev.PatientId, "WaitingRoomMonitor", new Dictionary<string, object>
+                var turnId = $"{ev.AggregateId}-{ev.PatientId}";
+                await _projectionStore.UpsertAsync(turnId, "WaitingRoomMonitor", new Dictionary<string, object>
                 {
+                    { "QueueId", ev.AggregateId },
+                    { "PatientId", ev.PatientId },
+                    { "TurnId", turnId },
                     { "PatientName", ev.PatientName },
+                    { "TicketNumber", turnId },
+                    { "CheckedInAt", ev.OccurredAt },
+                    { "UpdatedAt", ev.OccurredAt },
                     { "Status", "Waiting" },
-                    { "TicketNumber", ev.PatientId }
                 }, cancellationToken);
                 break;
 
             case PatientCalled ev:
                 await _projectionStore.UpsertAsync(ev.PatientId, "WaitingRoomMonitor", new Dictionary<string, object>
                 {
+                    { "PatientId", ev.PatientId },
+                    { "UpdatedAt", ev.OccurredAt },
                     { "Status", "Called" },
                     { "RoomAssigned", ev.RoomId }
                 }, cancellationToken);
@@ -45,6 +53,8 @@ public sealed class LocalOutboxMessageDispatcher : IOutboxMessageDispatcher
             case PatientClaimedForAttention ev:
                 await _projectionStore.UpsertAsync(ev.PatientId, "WaitingRoomMonitor", new Dictionary<string, object>
                 {
+                    { "PatientId", ev.PatientId },
+                    { "UpdatedAt", ev.OccurredAt },
                     { "Status", "InConsultation" },
                     { "RoomAssigned", ev.RoomId }
                 }, cancellationToken);
@@ -53,6 +63,9 @@ public sealed class LocalOutboxMessageDispatcher : IOutboxMessageDispatcher
             case PatientAttentionCompleted ev:
                 await _projectionStore.UpsertAsync(ev.PatientId, "WaitingRoomMonitor", new Dictionary<string, object>
                 {
+                    { "PatientId", ev.PatientId },
+                    { "TurnId", ev.TurnId ?? $"{ev.AggregateId}-{ev.PatientId}" },
+                    { "UpdatedAt", ev.OccurredAt },
                     { "Status", "Completed" }
                 }, cancellationToken);
                 break;
@@ -60,6 +73,9 @@ public sealed class LocalOutboxMessageDispatcher : IOutboxMessageDispatcher
             case PatientAbsentAtConsultation ev:
                 await _projectionStore.UpsertAsync(ev.PatientId, "WaitingRoomMonitor", new Dictionary<string, object>
                 {
+                    { "PatientId", ev.PatientId },
+                    { "TurnId", ev.TurnId ?? $"{ev.AggregateId}-{ev.PatientId}" },
+                    { "UpdatedAt", ev.OccurredAt },
                     { "Status", "Absent" }
                 }, cancellationToken);
                 break;

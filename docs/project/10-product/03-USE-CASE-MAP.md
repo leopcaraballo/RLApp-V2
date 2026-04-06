@@ -29,6 +29,7 @@
 
 - UC-015 View Operations Dashboard
 - UC-016 Rebuild Projections
+- UC-021 Consume Synchronized Operational Views
 
 ## AI Governance
 

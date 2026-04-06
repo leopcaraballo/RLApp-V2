@@ -6,3 +6,4 @@
 - display refleja estado visible
 - supervisor audita y monitorea
 - support reconstruye trayectoria unica del paciente
+- staff resincroniza monitor, dashboard y trayectoria desde el BFF sin recibir el token raw del backend

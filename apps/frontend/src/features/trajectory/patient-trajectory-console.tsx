@@ -2,6 +2,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation } from '@tanstack/react-query';
+import { useEffectEvent, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { ActionFormCard } from '@/components/operations/action-form-card';
@@ -10,6 +11,7 @@ import { ContractAlert } from '@/components/shared/contract-alert';
 import { SectionIntro } from '@/components/shared/section-intro';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { useOperationJournal } from '@/hooks/use-operation-journal';
+import { useOperationalRealtime } from '@/hooks/use-operational-realtime';
 import { ApiError } from '@/services/http-client';
 import { rlappApi } from '@/services/rlapp-api';
 import type {
@@ -286,6 +288,7 @@ function RebuildResult({ result }: { result: RebuildPatientTrajectoriesResult })
 }
 
 export function PatientTrajectoryConsole({ session }: { session: SessionUser }) {
+  const [activeTrajectory, setActiveTrajectory] = useState<PatientTrajectoryResponse | null>(null);
   const discoveryForm = useForm<DiscoveryFormValues>({
     resolver: zodResolver(discoverySchema),
     defaultValues: {
@@ -333,6 +336,7 @@ export function PatientTrajectoryConsole({ session }: { session: SessionUser }) 
   const queryMutation = useMutation({
     mutationFn: ({ trajectoryId }: QueryFormValues) => rlappApi.getPatientTrajectory(trajectoryId),
     onSuccess(result) {
+      setActiveTrajectory(result);
       const lastCorrelationId = result.correlationIds[result.correlationIds.length - 1];
 
       pushEntry({
@@ -367,13 +371,38 @@ export function PatientTrajectoryConsole({ session }: { session: SessionUser }) 
     await queryMutation.mutateAsync({ trajectoryId });
   }
 
+  const refreshActiveTrajectory = useEffectEvent(async () => {
+    if (!activeTrajectory) {
+      return;
+    }
+
+    try {
+      const refreshedTrajectory = await rlappApi.getPatientTrajectory(
+        activeTrajectory.trajectoryId
+      );
+      setActiveTrajectory(refreshedTrajectory);
+    } catch {
+      // Ignore silent refresh failures and keep the last confirmed snapshot visible.
+    }
+  });
+
+  useOperationalRealtime({
+    role: session.role,
+    enabled: Boolean(activeTrajectory),
+    trajectoryId: activeTrajectory?.trajectoryId,
+    queueId: activeTrajectory?.queueId,
+    onTrajectoryInvalidation: () => {
+      void refreshActiveTrajectory();
+    },
+  });
+
   return (
     <>
       <SectionIntro
         badge={session.role}
         eyebrow="Support diagnostics"
         title="Patient trajectory console"
-        description="Docker local now exposes trajectory discovery, audited trajectory query and controlled rebuild flow without leaving the operational console."
+        description="Docker local now exposes trajectory discovery, audited trajectory query and controlled rebuild flow with silent resync when the active trajectory receives a realtime invalidation."
       />
 
       <div className="grid grid--two">
@@ -579,8 +608,8 @@ export function PatientTrajectoryConsole({ session }: { session: SessionUser }) 
         )}
       </div>
 
-      {queryMutation.data ? (
-        <TrajectorySummary trajectory={queryMutation.data} />
+      {activeTrajectory ? (
+        <TrajectorySummary trajectory={activeTrajectory} />
       ) : (
         <section className="panel">
           <div className="panel__header">

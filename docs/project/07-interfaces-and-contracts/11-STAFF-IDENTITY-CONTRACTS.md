@@ -14,7 +14,7 @@
 
 ### Login purpose
 
-Autenticar a un usuario interno y devolver sus capacidades operativas iniciales.
+Autenticar a un cliente confiable de staff y devolver sus capacidades operativas iniciales.
 
 ### Login method and path
 
@@ -38,7 +38,7 @@ Autenticar a un usuario interno y devolver sus capacidades operativas iniciales.
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
-| `accessToken` | `string` | Yes | Token Bearer para operaciones autenticadas. |
+| `accessToken` | `string` | Yes | Token Bearer para operaciones autenticadas entre backend y componentes confiables. |
 | `tokenType` | `string` | Yes | Valor esperado: `Bearer`. |
 | `expiresInSeconds` | `integer` | Yes | TTL del token en segundos. |
 | `role` | `string(enum: StaffRole)` | Yes | Rol operativo resuelto tras autenticacion. |
@@ -77,6 +77,96 @@ Autenticar a un usuario interno y devolver sus capacidades operativas iniciales.
   "correlationId": "CORR-login-001"
 }
 ```
+
+## Staff web session login
+
+### Session login purpose
+
+Autenticar al staff desde el frontend web y sellar una sesion BFF segura sin exponer `accessToken` al navegador.
+
+### Session login method and path
+
+- `POST /api/session/login`
+
+### Session login authorization and headers
+
+| Header | Required | Notes |
+| --- | --- | --- |
+| `Authorization` | No | La autenticacion se resuelve contra el backend desde el BFF. |
+| `X-Correlation-Id` | No | Si no llega, el frontend puede generarlo. |
+
+### Session login request schema
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `identifier` | `string` | Yes | Igual al contrato backend de login. |
+| `password` | `string` | Yes | Credencial secreta del usuario. |
+
+### Session login response schema
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `session.staffId` | `string` | Yes | Identificador del usuario autenticado. |
+| `session.username` | `string` | Yes | Nombre visible del actor autenticado. |
+| `session.email` | `string` | Yes | Email operativo disponible para UI. |
+| `session.role` | `string(enum: StaffRole)` | Yes | Rol operativo aprobado. |
+| `session.authenticatedAt` | `string(date-time)` | Yes | Momento de autenticacion web. |
+| `session.expiresAt` | `string(date-time)` | Yes | Expiracion efectiva de la sesion web. |
+| `warnings` | `array[string]` | Yes | Advertencias no bloqueantes para UI o soporte. |
+
+### Session login rules
+
+- la respuesta debe incluir `Set-Cookie: rlapp_session` con cookie firmada `httpOnly`
+- `accessToken` no puede aparecer en el payload de respuesta ni en APIs de sesion consumidas por el browser
+
+### Session login example response
+
+```json
+{
+  "session": {
+    "staffId": "SUP-001",
+    "username": "supervisor.main",
+    "email": "supervisor.main@rlapp.local",
+    "role": "Supervisor",
+    "authenticatedAt": "2026-04-06T09:10:00Z",
+    "expiresAt": "2026-04-06T10:10:00Z"
+  },
+  "warnings": []
+}
+```
+
+## Staff web session summary
+
+### Session summary purpose
+
+Devolver al browser el contexto minimo de sesion ya autenticada sin exponer credenciales reutilizables.
+
+### Session summary method and path
+
+- `GET /api/session/me`
+
+### Session summary authorization and headers
+
+| Header | Required | Notes |
+| --- | --- | --- |
+| `Cookie` | Yes | Debe incluir `rlapp_session` valida. |
+| `Authorization` | No | El browser no debe enviar Bearer token. |
+
+### Session summary response schema
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `staffId` | `string` | No | Presente cuando existe sesion valida. |
+| `username` | `string` | No | Presente cuando existe sesion valida. |
+| `email` | `string` | No | Presente cuando existe sesion valida. |
+| `role` | `string(enum: StaffRole)` | No | Presente cuando existe sesion valida. |
+| `authenticatedAt` | `string(date-time)` | No | Presente cuando existe sesion valida. |
+| `expiresAt` | `string(date-time)` | No | Presente cuando existe sesion valida. |
+
+### Session summary rules
+
+- cuando no existe sesion valida responde `200` con `null`
+- el payload nunca incluye `accessToken`, `refreshToken` ni secretos equivalentes
 
 ## Register staff user
 
@@ -213,3 +303,5 @@ Cambiar el estado operativo de un usuario interno con razon auditable.
 - `Authorization` obligatorio en todas las operaciones salvo login.
 - `X-Correlation-Id` obligatorio en alta, cambio de rol y cambio de estado.
 - Operaciones de gestion de usuarios limitadas a supervisor.
+- el frontend web de staff usa `rlapp_session` firmada `httpOnly`; el browser no recibe Bearer token del backend
+- los endpoints de sesion del frontend deben devolver solo resumen de sesion y metadatos no sensibles

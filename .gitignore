@@ -6,6 +6,10 @@
 node_modules/
 **/node_modules/*
 
+# Local SDK and package caches
+**/.dotnet/
+**/.nuget/
+
 # Editor state
 .vscode/
 
@@ -14,10 +18,16 @@ node_modules/
 **/.turbo/
 coverage/
 test-results/
+**/*.tsbuildinfo
 
 # Backend build outputs
 **/bin/
 **/obj/
+**/bin\\*/
+**/obj\\*/
+**/TestResults/
+*.trx
+*.coverage
 
 # Logs
 *.log
