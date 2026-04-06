@@ -4,6 +4,8 @@ description: "Use when implementing or reviewing authentication, authorization, 
 
 # Security Instructions
 
+**Estado del proyecto:** Fase 0 — Diagnóstico Ejecutivo completado (2026-04-01). Ver: /docs/project/02-as-is-audit/10-FASE-0-DIAGNOSTICO.md
+
 La seguridad esta definida por `/docs/project/08-security` y por la arquitectura objetivo.
 
 ## Leer antes de tocar seguridad

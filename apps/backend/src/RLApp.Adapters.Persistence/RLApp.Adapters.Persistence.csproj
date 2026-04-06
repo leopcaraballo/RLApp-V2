@@ -1,6 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
+    <ProjectReference Include="..\RLApp.Adapters.Messaging\RLApp.Adapters.Messaging.csproj" />
     <ProjectReference Include="..\RLApp.Ports\RLApp.Ports.csproj" />
     <ProjectReference Include="..\RLApp.Domain\RLApp.Domain.csproj" />
   </ItemGroup>

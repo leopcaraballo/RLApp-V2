@@ -22,6 +22,65 @@ namespace RLApp.Adapters.Persistence.Data.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("RLApp.Adapters.Messaging.Sagas.ConsultationState", b =>
+                {
+                    b.Property<Guid>("CorrelationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("CalledAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CurrentState")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("LastCorrelationId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<DateTime?>("LastUpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("PatientId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("QueueId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("RoomId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<DateTime?>("StartedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("TimeoutTokenId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("TrajectoryId")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.HasKey("CorrelationId");
+
+                    b.HasIndex("LastCorrelationId")
+                        .HasDatabaseName("IX_ConsultationSagaStates_LastCorrelationId");
+
+                    b.HasIndex("PatientId");
+
+                    b.HasIndex("TrajectoryId")
+                        .HasDatabaseName("IX_ConsultationSagaStates_TrajectoryId");
+
+                    b.ToTable("ConsultationSagaStates", (string)null);
+                });
+
             modelBuilder.Entity("RLApp.Adapters.Persistence.Data.Models.AuditLogRecord", b =>
                 {
                     b.Property<Guid>("Id")
@@ -109,11 +168,18 @@ namespace RLApp.Adapters.Persistence.Data.Migrations
                         .IsRequired()
                         .HasColumnType("jsonb");
 
+                    b.Property<int>("SequenceNumber")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CorrelationId");
 
                     b.HasIndex("AggregateId", "OccurredAt");
+
+                    b.HasIndex("AggregateId", "SequenceNumber")
+                        .IsUnique()
+                        .HasDatabaseName("IX_EventStore_AggregateId_SequenceNumber");
 
                     b.HasIndex("EventType", "OccurredAt");
 
@@ -162,6 +228,52 @@ namespace RLApp.Adapters.Persistence.Data.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("v_operations_dashboard", (string)null);
+                });
+
+            modelBuilder.Entity("RLApp.Adapters.Persistence.Data.Models.OutboxDeadLetterMessage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AggregateId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("CorrelationId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<DateTime>("FailedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("FailureReason")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("OccurredAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Payload")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CorrelationId");
+
+                    b.HasIndex("FailedAt");
+
+                    b.HasIndex("AggregateId", "FailedAt");
+
+                    b.ToTable("OutboxDeadLetterMessages", (string)null);
                 });
 
             modelBuilder.Entity("RLApp.Adapters.Persistence.Data.Models.OutboxMessage", b =>
@@ -214,6 +326,51 @@ namespace RLApp.Adapters.Persistence.Data.Migrations
                     b.HasIndex("AggregateId", "OccurredAt");
 
                     b.ToTable("OutboxMessages", (string)null);
+                });
+
+            modelBuilder.Entity("RLApp.Adapters.Persistence.Data.Models.PatientTrajectoryView", b =>
+                {
+                    b.Property<string>("TrajectoryId")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("ClosedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CorrelationIdsJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("CurrentState")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("OpenedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("PatientId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("QueueId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("StagesJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("TrajectoryId");
+
+                    b.HasIndex("PatientId");
+
+                    b.HasIndex("QueueId");
+
+                    b.HasIndex("PatientId", "QueueId", "CurrentState");
+
+                    b.ToTable("v_patient_trajectory", (string)null);
                 });
 
             modelBuilder.Entity("RLApp.Adapters.Persistence.Data.Models.QueueStateView", b =>

@@ -1,0 +1,160 @@
+asyncapi: 2.6.0
+info:
+  title: RLApp Waiting Room Async Contracts
+  version: 0.1.0
+  description: |
+    Machine-readable async contract for the consultation saga correlation slice.
+    This artifact reflects the publish payload currently emitted by the backend
+    outbox for EV-011, EV-012 and EV-013.
+
+    The canonical target model in docs/project still tracks richer metadata such
+    as eventId, aggregateVersion and schemaVersion. Those fields are not yet
+    serialized in the current runtime payload and remain outside this executable
+    slice.
+defaultContentType: application/json
+servers:
+  rabbitmq:
+    url: amqp://localhost:5672
+    protocol: amqp
+    description: RabbitMQ transport used when Messaging:Transport=RabbitMQ.
+channels:
+  PatientCalled:
+    description: |
+      EV-011 emitted when a doctor calls a patient to consultation.
+      ConsultationSaga and WaitingRoom projections consume this event.
+    publish:
+      operationId: publishPatientCalled
+      summary: Publish consultation call event.
+      message:
+        $ref: "#/components/messages/PatientCalledMessage"
+    subscribe:
+      operationId: consumePatientCalled
+      summary: Consume consultation call event in saga and projections.
+      message:
+        $ref: "#/components/messages/PatientCalledMessage"
+  PatientAttentionCompleted:
+    description: |
+      EV-012 emitted when consultation attention finishes.
+      ConsultationSaga and waiting room projections consume this event.
+    publish:
+      operationId: publishPatientAttentionCompleted
+      summary: Publish consultation completion event.
+      message:
+        $ref: "#/components/messages/PatientAttentionCompletedMessage"
+    subscribe:
+      operationId: consumePatientAttentionCompleted
+      summary: Consume consultation completion event in saga and projections.
+      message:
+        $ref: "#/components/messages/PatientAttentionCompletedMessage"
+  PatientAbsentAtConsultation:
+    description: |
+      EV-013 emitted when a called patient is cancelled by consultation absence.
+      ConsultationSaga and waiting room projections consume this event.
+    publish:
+      operationId: publishPatientAbsentAtConsultation
+      summary: Publish consultation absence event.
+      message:
+        $ref: "#/components/messages/PatientAbsentAtConsultationMessage"
+    subscribe:
+      operationId: consumePatientAbsentAtConsultation
+      summary: Consume consultation absence event in saga and projections.
+      message:
+        $ref: "#/components/messages/PatientAbsentAtConsultationMessage"
+components:
+  messages:
+    PatientCalledMessage:
+      name: PatientCalled
+      title: EV-011 PatientCalled
+      summary: Consultation call event correlated by trajectoryId when available.
+      payload:
+        $ref: "#/components/schemas/PatientCalled"
+    PatientAttentionCompletedMessage:
+      name: PatientAttentionCompleted
+      title: EV-012 PatientAttentionCompleted
+      summary: Consultation completion event correlated by trajectoryId when available.
+      payload:
+        $ref: "#/components/schemas/PatientAttentionCompleted"
+    PatientAbsentAtConsultationMessage:
+      name: PatientAbsentAtConsultation
+      title: EV-013 PatientAbsentAtConsultation
+      summary: Consultation absence event correlated by trajectoryId when available.
+      payload:
+        $ref: "#/components/schemas/PatientAbsentAtConsultation"
+  schemas:
+    DomainEventBase:
+      type: object
+      additionalProperties: false
+      required:
+        - eventType
+        - occurredAt
+        - correlationId
+        - aggregateId
+      properties:
+        eventType:
+          type: string
+          description: CLR-aligned event type emitted by the runtime payload.
+        occurredAt:
+          type: string
+          format: date-time
+          description: UTC timestamp of the domain event occurrence.
+        correlationId:
+          type: string
+          description: Operational correlation for the triggering command chain.
+        aggregateId:
+          type: string
+          description: Aggregate identifier persisted in the event store and outbox.
+        trajectoryId:
+          type: string
+          nullable: true
+          description: |
+            Longitudinal trajectory identifier. Live Fase 4 emissions should carry
+            this value. Historical replay payloads can omit it and rely on the
+            deterministic bridge defined in S-012.
+    PatientCalled:
+      allOf:
+        - $ref: "#/components/schemas/DomainEventBase"
+        - type: object
+          additionalProperties: false
+          required:
+            - patientId
+            - roomId
+          properties:
+            patientId:
+              type: string
+            roomId:
+              type: string
+    PatientAttentionCompleted:
+      allOf:
+        - $ref: "#/components/schemas/DomainEventBase"
+        - type: object
+          additionalProperties: false
+          required:
+            - patientId
+            - roomId
+          properties:
+            patientId:
+              type: string
+            roomId:
+              type: string
+            turnId:
+              type: string
+              nullable: true
+            outcome:
+              type: string
+              nullable: true
+    PatientAbsentAtConsultation:
+      allOf:
+        - $ref: "#/components/schemas/DomainEventBase"
+        - type: object
+          additionalProperties: false
+          required:
+            - patientId
+          properties:
+            patientId:
+              type: string
+            turnId:
+              type: string
+              nullable: true
+            reason:
+              type: string
+              nullable: true

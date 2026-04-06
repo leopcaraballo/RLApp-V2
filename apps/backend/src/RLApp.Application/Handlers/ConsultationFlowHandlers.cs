@@ -3,6 +3,7 @@ namespace RLApp.Application.Handlers;
 using Commands;
 using DTOs;
 using MediatR;
+using RLApp.Application.Services;
 using RLApp.Domain.Aggregates;
 using RLApp.Domain.Common;
 using RLApp.Ports.Inbound;
@@ -111,7 +112,7 @@ public class ClaimNextPatientHandler : IRequestHandler<ClaimNextPatientCommand, 
                 command.CorrelationId,
                 ex.Message,
                 cancellationToken);
-            return CommandResult<ClaimedPatientResultDto>.Failure(ex.Message, command.CorrelationId);
+            return CommandResult<ClaimedPatientResultDto>.Failure(ex, command.CorrelationId);
         }
         catch (Exception ex)
         {
@@ -142,17 +143,20 @@ public class CallPatientToConsultationHandler : IRequestHandler<CallPatientComma
     private readonly IEventPublisher _eventPublisher;
     private readonly IAuditStore _auditStore;
     private readonly IPersistenceSession _persistenceSession;
+    private readonly PatientTrajectoryCorrelationResolver _trajectoryCorrelationResolver;
 
     public CallPatientToConsultationHandler(
         IWaitingQueueRepository queueRepository,
         IEventPublisher eventPublisher,
         IAuditStore auditStore,
-        IPersistenceSession persistenceSession)
+        IPersistenceSession persistenceSession,
+        PatientTrajectoryCorrelationResolver trajectoryCorrelationResolver)
     {
         _queueRepository = queueRepository;
         _eventPublisher = eventPublisher;
         _auditStore = auditStore;
         _persistenceSession = persistenceSession;
+        _trajectoryCorrelationResolver = trajectoryCorrelationResolver;
     }
 
     public async Task<CommandResult> Handle(CallPatientCommand command, CancellationToken cancellationToken)
@@ -181,7 +185,12 @@ public class CallPatientToConsultationHandler : IRequestHandler<CallPatientComma
                 return CommandResult.Failure("Queue not found", command.CorrelationId);
             }
 
-            queue.CallPatient(command.PatientId, command.RoomId, command.CorrelationId);
+            var trajectoryId = await _trajectoryCorrelationResolver.ResolveRequiredAsync(
+                command.PatientId,
+                targetQueueId,
+                cancellationToken);
+
+            queue.CallPatient(command.PatientId, command.RoomId, command.CorrelationId, trajectoryId);
             await _queueRepository.UpdateAsync(queue, cancellationToken);
 
             var events = queue.GetUnraisedEvents();
@@ -213,7 +222,7 @@ public class CallPatientToConsultationHandler : IRequestHandler<CallPatientComma
                 command.CorrelationId,
                 ex.Message,
                 cancellationToken);
-            return CommandResult.Failure(ex.Message, command.CorrelationId);
+            return CommandResult.Failure(ex, command.CorrelationId);
         }
         catch (Exception ex)
         {
@@ -245,19 +254,25 @@ public class FinishConsultationHandler : IRequestHandler<FinishConsultationComma
     private readonly IEventPublisher _eventPublisher;
     private readonly IAuditStore _auditStore;
     private readonly IPersistenceSession _persistenceSession;
+    private readonly PatientTrajectoryOrchestrator _trajectoryOrchestrator;
+    private readonly PatientTrajectoryCorrelationResolver _trajectoryCorrelationResolver;
 
     public FinishConsultationHandler(
         IWaitingQueueRepository queueRepository,
         IConsultingRoomRepository roomRepository,
         IEventPublisher eventPublisher,
         IAuditStore auditStore,
-        IPersistenceSession persistenceSession)
+        IPersistenceSession persistenceSession,
+        PatientTrajectoryOrchestrator trajectoryOrchestrator,
+        PatientTrajectoryCorrelationResolver trajectoryCorrelationResolver)
     {
         _queueRepository = queueRepository;
         _roomRepository = roomRepository;
         _eventPublisher = eventPublisher;
         _auditStore = auditStore;
         _persistenceSession = persistenceSession;
+        _trajectoryOrchestrator = trajectoryOrchestrator;
+        _trajectoryCorrelationResolver = trajectoryCorrelationResolver;
     }
 
     public async Task<CommandResult> Handle(FinishConsultationCommand command, CancellationToken cancellationToken)
@@ -286,19 +301,29 @@ public class FinishConsultationHandler : IRequestHandler<FinishConsultationComma
                 return CommandResult.Failure("Queue not found", command.CorrelationId);
             }
 
+            var trajectoryId = await _trajectoryCorrelationResolver.ResolveRequiredAsync(
+                command.PatientId,
+                targetQueueId,
+                cancellationToken);
+
             queue.CompletePatientAttention(
-                command.PatientId, 
-                command.RoomId, 
-                command.TurnId, 
-                command.Outcome, 
-                command.CorrelationId);
+                command.PatientId,
+                command.RoomId,
+                command.TurnId,
+                command.Outcome,
+                command.CorrelationId,
+                trajectoryId);
             await _queueRepository.UpdateAsync(queue, cancellationToken);
 
             var room = await _roomRepository.GetByIdAsync(command.RoomId, cancellationToken);
-            room.CompleteAttention(command.TurnId, command.Outcome, command.CorrelationId);
+            room.CompleteAttention(command.TurnId, command.Outcome, command.CorrelationId, trajectoryId);
             await _roomRepository.UpdateAsync(room, cancellationToken);
 
-            await _eventPublisher.PublishBatchAsync(queue.GetUnraisedEvents(), cancellationToken);
+            var queueEvents = queue.GetUnraisedEvents();
+            var completionEvent = queueEvents.OfType<RLApp.Domain.Events.PatientAttentionCompleted>().Last();
+            await _trajectoryOrchestrator.TrackCompletionAsync(targetQueueId, completionEvent, cancellationToken);
+
+            await _eventPublisher.PublishBatchAsync(queueEvents, cancellationToken);
             await _eventPublisher.PublishBatchAsync(room.GetUnraisedEvents(), cancellationToken);
             await HandlerPersistence.CommitSuccessAsync(
                 _persistenceSession,
@@ -329,7 +354,7 @@ public class FinishConsultationHandler : IRequestHandler<FinishConsultationComma
                 command.CorrelationId,
                 ex.Message,
                 cancellationToken);
-            return CommandResult.Failure(ex.Message, command.CorrelationId);
+            return CommandResult.Failure(ex, command.CorrelationId);
         }
         catch (Exception ex)
         {

@@ -77,11 +77,12 @@ public class PatientCalled : DomainEvent
     [JsonPropertyName("roomId")]
     public string RoomId { get; set; } = string.Empty;
 
-    public PatientCalled(string aggregateId, string patientId, string roomId, string correlationId)
+    public PatientCalled(string aggregateId, string patientId, string roomId, string correlationId, string? trajectoryId)
         : base(nameof(PatientCalled), aggregateId, correlationId)
     {
         PatientId = patientId;
         RoomId = roomId;
+        TrajectoryId = trajectoryId;
     }
 
     protected PatientCalled() { }
@@ -106,18 +107,20 @@ public class PatientAttentionCompleted : DomainEvent
     public string? Outcome { get; set; }
 
     public PatientAttentionCompleted(
-        string aggregateId, 
-        string patientId, 
-        string roomId, 
-        string? turnId, 
-        string? outcome, 
-        string correlationId)
+        string aggregateId,
+        string patientId,
+        string roomId,
+        string? turnId,
+        string? outcome,
+        string correlationId,
+        string? trajectoryId)
         : base(nameof(PatientAttentionCompleted), aggregateId, correlationId)
     {
         PatientId = patientId;
         RoomId = roomId;
         TurnId = turnId;
         Outcome = outcome;
+        TrajectoryId = trajectoryId;
     }
 
     protected PatientAttentionCompleted() { }
@@ -138,12 +141,13 @@ public class PatientAbsentAtConsultation : DomainEvent
     [JsonPropertyName("reason")]
     public string? Reason { get; set; }
 
-    public PatientAbsentAtConsultation(string aggregateId, string patientId, string? turnId, string? reason, string correlationId)
+    public PatientAbsentAtConsultation(string aggregateId, string patientId, string? turnId, string? reason, string correlationId, string? trajectoryId)
         : base(nameof(PatientAbsentAtConsultation), aggregateId, correlationId)
     {
         PatientId = patientId;
         TurnId = turnId;
         Reason = reason;
+        TrajectoryId = trajectoryId;
     }
 
     protected PatientAbsentAtConsultation() { }

@@ -16,8 +16,11 @@ import type {
   LoginRequest,
   MarkPaymentPendingRequest,
   MedicalMarkAbsentRequest,
+  PatientTrajectoryResponse,
   PatientCallResult,
   ReceptionRegisterRequest,
+  RebuildPatientTrajectoriesRequest,
+  RebuildPatientTrajectoriesResult,
   ValidatePaymentRequest,
 } from '@/types/api';
 import type { LoginResponseEnvelope, SessionUser } from '@/types/session';
@@ -64,6 +67,24 @@ export const rlappApi = {
 
   getLiveness(): Promise<HealthStatusResponse> {
     return httpRequest<HealthStatusResponse>(buildPath('/health/live'));
+  },
+
+  getPatientTrajectory(trajectoryId: string): Promise<PatientTrajectoryResponse> {
+    return httpRequest<PatientTrajectoryResponse>(
+      buildPath(`/patient-trajectories/${encodeURIComponent(trajectoryId)}`)
+    );
+  },
+
+  rebuildPatientTrajectories(
+    payload: RebuildPatientTrajectoriesRequest
+  ): Promise<RebuildPatientTrajectoriesResult> {
+    return httpRequest<RebuildPatientTrajectoriesResult>(
+      buildPath('/patient-trajectories/rebuild'),
+      {
+        method: 'POST',
+        json: payload,
+      }
+    );
   },
 
   changeRole(payload: ChangeRoleRequest): Promise<CommandResult> {

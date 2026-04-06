@@ -11,6 +11,7 @@ using RLApp.Domain.Events;
 public class ConsultingRoomTests
 {
     private const string CorrelationId = "corr-test";
+    private const string TrajectoryId = "TRJ-Q-1-P-1-20260405090000000";
 
     private static ConsultingRoom CreateActiveRoom(string id = "room-1", string name = "Consulting Room A")
     {
@@ -142,19 +143,20 @@ public class ConsultingRoomTests
         room.AssignPatient("p-1", "dr-1", CorrelationId);
         room.ClearUnraisedEvents();
 
-        room.CompleteAttention(CorrelationId);
+        room.CompleteAttention(null, null, CorrelationId, TrajectoryId);
 
         Assert.Null(room.CurrentPatientId);
         var events = room.GetUnraisedEvents();
         Assert.Single(events);
-        Assert.IsType<PatientAttentionCompleted>(events[0]);
+        var @event = Assert.IsType<PatientAttentionCompleted>(events[0]);
+        Assert.Equal(TrajectoryId, @event.TrajectoryId);
     }
 
     [Fact]
     public void CompleteAttention_NoCurrentPatient_ThrowsDomainException()
     {
         var room = CreateActiveRoom();
-        Assert.Throws<DomainException>(() => room.CompleteAttention(CorrelationId));
+        Assert.Throws<DomainException>(() => room.CompleteAttention(null, null, CorrelationId, TrajectoryId));
     }
 
     // -------------------------------------------------------------------------
@@ -168,18 +170,19 @@ public class ConsultingRoomTests
         room.AssignPatient("p-1", "dr-1", CorrelationId);
         room.ClearUnraisedEvents();
 
-        room.MarkPatientAbsent(CorrelationId);
+        room.MarkPatientAbsent(null, null, CorrelationId, TrajectoryId);
 
         Assert.Null(room.CurrentPatientId);
         var events = room.GetUnraisedEvents();
         Assert.Single(events);
-        Assert.IsType<PatientAbsentAtConsultation>(events[0]);
+        var @event = Assert.IsType<PatientAbsentAtConsultation>(events[0]);
+        Assert.Equal(TrajectoryId, @event.TrajectoryId);
     }
 
     [Fact]
     public void MarkPatientAbsent_NoCurrentPatient_ThrowsDomainException()
     {
         var room = CreateActiveRoom();
-        Assert.Throws<DomainException>(() => room.MarkPatientAbsent(CorrelationId));
+        Assert.Throws<DomainException>(() => room.MarkPatientAbsent(null, null, CorrelationId, TrajectoryId));
     }
 }

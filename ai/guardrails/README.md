@@ -1,5 +1,7 @@
 # AI Guardrails Layer
 
+**Estado del proyecto:** Fase 0 — Diagnóstico Ejecutivo completado (2026-04-01). Ver: ../../docs/project/02-as-is-audit/10-FASE-0-DIAGNOSTICO.md
+
 Esta capa centraliza la vista operativa de enforcement.
 
 ## Guardrails sources

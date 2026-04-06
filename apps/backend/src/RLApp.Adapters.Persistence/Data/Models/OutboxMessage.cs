@@ -27,7 +27,7 @@ public class OutboxMessage
             builder.Property(e => e.Payload).HasColumnType("jsonb").IsRequired();
             builder.Property(e => e.ProcessedAt).IsRequired(false);
             builder.Property(e => e.AttemptCount).HasDefaultValue(0);
-            
+
             builder.HasIndex(e => e.ProcessedAt);
             builder.HasIndex(e => e.OccurredAt);
             builder.HasIndex(e => e.CorrelationId);

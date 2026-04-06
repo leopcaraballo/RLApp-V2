@@ -7,5 +7,6 @@ public static class AuthorizationPolicies
     public const string CashierOperations = nameof(CashierOperations);
     public const string DoctorOperations = nameof(DoctorOperations);
     public const string SupervisorOnly = nameof(SupervisorOnly);
+    public const string SupportOnly = nameof(SupportOnly);
     public const string SupportOrSupervisor = nameof(SupportOrSupervisor);
 }

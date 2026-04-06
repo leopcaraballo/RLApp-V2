@@ -19,6 +19,9 @@
 | UC-015 View Operations Dashboard | S-007 | S-009 | US-011, US-012 |
 | UC-016 Rebuild Projections | S-008 | S-009 | US-016 |
 | UC-017 Govern AI Operating System | S-010 | S-009 | US-017 |
+| UC-018 Reconstruct Patient Trajectory | S-011 | S-008, S-009 | US-012, US-018 |
+| UC-019 Protect Aggregate Writes With Optimistic Concurrency | S-008 | S-009 | US-019 |
+| UC-020 Correlate Sagas With Patient Trajectory | S-012 | S-007, S-009, S-011 | US-020 |
 
 ## Notes
 

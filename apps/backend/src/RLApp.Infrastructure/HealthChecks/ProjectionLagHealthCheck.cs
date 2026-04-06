@@ -9,7 +9,7 @@ using RLApp.Adapters.Persistence.Data;
 namespace RLApp.Infrastructure.HealthChecks;
 
 /// <summary>
-/// Health check that validates projection lag by comparing latest event 
+/// Health check that validates projection lag by comparing latest event
 /// timestamp with the latest projection update timestamp.
 /// </summary>
 public class ProjectionLagHealthCheck : IHealthCheck
@@ -54,17 +54,30 @@ public class ProjectionLagHealthCheck : IHealthCheck
 
             if (latestUpdate == DateTime.MinValue)
             {
-                return HealthCheckResult.Degraded("Projections have not been updated yet.");
+                var initialMaterializationLag = DateTime.UtcNow - latestEventAt.Value;
+
+                if (initialMaterializationLag > TimeSpan.FromSeconds(120))
+                {
+                    return HealthCheckResult.Unhealthy(
+                        $"Projections have not been materialized and latest event age is {initialMaterializationLag.TotalSeconds:F0} seconds.");
+                }
+
+                return HealthCheckResult.Degraded(
+                    $"Projections have not been updated yet. Latest event age is {initialMaterializationLag.TotalSeconds:F0} seconds.");
             }
 
             var lag = latestEventAt.Value - latestUpdate;
+            if (lag < TimeSpan.Zero)
+            {
+                lag = TimeSpan.Zero;
+            }
 
-            if (lag > TimeSpan.FromSeconds(30))
+            if (lag > TimeSpan.FromSeconds(120))
             {
                 return HealthCheckResult.Unhealthy($"Projection lag is significantly high: {lag.TotalSeconds:F0} seconds.");
             }
 
-            if (lag > TimeSpan.FromSeconds(10))
+            if (lag > TimeSpan.FromSeconds(30))
             {
                 return HealthCheckResult.Degraded($"Projection lag is moderate: {lag.TotalSeconds:F0} seconds.");
             }

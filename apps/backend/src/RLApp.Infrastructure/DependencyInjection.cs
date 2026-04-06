@@ -2,14 +2,16 @@ using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using RLApp.Adapters.Persistence.Persistence;
 using RLApp.Infrastructure.BackgroundServices;
 using RLApp.Infrastructure.Data;
 using RLApp.Infrastructure.Security;
 using RLApp.Adapters.Persistence.Data;
 using RLApp.Adapters.Persistence.Publishers;
-using RLApp.Adapters.Persistence.Persistence;
 using RLApp.Adapters.Persistence.Repositories;
 using RLApp.Application.Commands;
+using RLApp.Application.Services;
 using RLApp.Ports.Inbound;
 using RLApp.Ports.Outbound;
 using Polly;
@@ -25,7 +27,8 @@ public static class DependencyInjection
     public static IServiceCollection AddInfrastructureServices(this IServiceCollection services, IConfiguration configuration, Action<IBusRegistrationConfigurator>? extraMassTransitConfig = null)
     {
         // MediatR registration picking up Application Assembly
-        services.AddMediatR(cfg => {
+        services.AddMediatR(cfg =>
+        {
             cfg.RegisterServicesFromAssembly(typeof(Command).Assembly);
         });
 
@@ -38,11 +41,25 @@ public static class DependencyInjection
         services.AddDbContext<AppDbContext>(options =>
             options.UseNpgsql(configuration.GetConnectionString("Postgres")));
 
+        services
+            .AddOptions<OutboxProcessorOptions>()
+            .Bind(configuration.GetSection(OutboxProcessorOptions.SectionName))
+            .Validate(options => options.PollingIntervalMs >= 100 && options.PollingIntervalMs <= 5000,
+                "OutboxProcessor:PollingIntervalMs must be between 100 and 5000.")
+            .Validate(options => options.BatchSize >= 1 && options.BatchSize <= 500,
+                "OutboxProcessor:BatchSize must be between 1 and 500.")
+            .ValidateOnStart();
+
         // Register adapters for interfaces
+        services.AddSingleton<IOutboxProcessingSignal, OutboxProcessingSignal>();
         services.AddScoped<IEventStore, EventStoreRepository>();
         services.AddScoped<IEventPublisher, OutboxEventPublisher>(); // Pushes to the outbox via EF Core
         services.AddScoped<IProjectionStore, ProjectionStoreRepository>(); // Read model projections
         services.AddScoped<IPersistenceSession, EfPersistenceSession>();
+        services.AddScoped<IPatientTrajectoryRepository, PatientTrajectoryRepository>();
+        services.AddScoped<PatientTrajectoryCorrelationResolver>();
+        services.AddScoped<PatientTrajectoryOrchestrator>();
+        services.AddScoped<PatientTrajectoryProjectionWriter>();
 
         // Register aggregate repositories
         services.AddScoped<IConsultingRoomRepository, ConsultingRoomRepository>();
@@ -71,16 +88,23 @@ public static class DependencyInjection
 
         if (messagingEnabled)
         {
+            services.AddScoped<IOutboxMessageDispatcher, MassTransitOutboxMessageDispatcher>();
+
             services.AddMassTransit(x =>
             {
                 // Register Core Consumers
                 x.AddConsumer<RLApp.Adapters.Messaging.Consumers.WaitingRoomMonitorConsumer>();
                 x.AddConsumer<RLApp.Adapters.Messaging.Consumers.DashboardConsumer>();
                 x.AddConsumer<RLApp.Adapters.Messaging.Consumers.QueueStateConsumer>();
+                x.AddConsumer<RLApp.Adapters.Messaging.Consumers.PatientTrajectoryConsumer>();
 
                 // Register Sagas
                 x.AddSagaStateMachine<RLApp.Adapters.Messaging.Sagas.ConsultationSaga, RLApp.Adapters.Messaging.Sagas.ConsultationState>()
-                    .InMemoryRepository();
+                    .EntityFrameworkRepository(repository =>
+                    {
+                        repository.ExistingDbContext<AppDbContext>();
+                        repository.UsePostgres();
+                    });
 
                 // Apply extra config (e.g. from API layer)
                 extraMassTransitConfig?.Invoke(x);
@@ -106,6 +130,10 @@ public static class DependencyInjection
                     });
                 }
             });
+        }
+        else
+        {
+            services.AddScoped<IOutboxMessageDispatcher, LocalOutboxMessageDispatcher>();
         }
 
         // Add SignalR
@@ -141,10 +169,7 @@ public static class DependencyInjection
         });
 
         // Configure the Outbox Background Service
-        if (messagingEnabled)
-        {
-            services.AddHostedService<OutboxProcessor>();
-        }
+        services.AddHostedService<OutboxProcessor>();
 
         return services;
     }

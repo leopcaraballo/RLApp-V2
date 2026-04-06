@@ -3,6 +3,7 @@ namespace RLApp.Application.Handlers;
 using Commands;
 using DTOs;
 using MediatR;
+using RLApp.Application.Services;
 using RLApp.Domain.Aggregates;
 using RLApp.Domain.Common;
 using RLApp.Ports.Inbound;
@@ -79,7 +80,7 @@ public class ActivateConsultingRoomHandler : IRequestHandler<ActivateConsultingR
                 command.CorrelationId,
                 ex.Message,
                 cancellationToken);
-            return CommandResult.Failure(ex.Message, command.CorrelationId);
+            return CommandResult.Failure(ex, command.CorrelationId);
         }
         catch (Exception ex)
         {
@@ -192,7 +193,7 @@ public class CallNextAtCashierHandler : IRequestHandler<CallNextAtCashierCommand
                 command.CorrelationId,
                 ex.Message,
                 cancellationToken);
-            return CommandResult<PatientCallResultDto>.Failure(ex.Message, command.CorrelationId);
+            return CommandResult<PatientCallResultDto>.Failure(ex, command.CorrelationId);
         }
         catch (Exception ex)
         {
@@ -223,17 +224,20 @@ public class ValidatePaymentHandler : IRequestHandler<ValidatePaymentCommand, Co
     private readonly IEventPublisher _eventPublisher;
     private readonly IAuditStore _auditStore;
     private readonly IPersistenceSession _persistenceSession;
+    private readonly PatientTrajectoryOrchestrator _trajectoryOrchestrator;
 
     public ValidatePaymentHandler(
         IWaitingQueueRepository queueRepository,
         IEventPublisher eventPublisher,
         IAuditStore auditStore,
-        IPersistenceSession persistenceSession)
+        IPersistenceSession persistenceSession,
+        PatientTrajectoryOrchestrator trajectoryOrchestrator)
     {
         _queueRepository = queueRepository;
         _eventPublisher = eventPublisher;
         _auditStore = auditStore;
         _persistenceSession = persistenceSession;
+        _trajectoryOrchestrator = trajectoryOrchestrator;
     }
 
     public async Task<CommandResult> Handle(ValidatePaymentCommand command, CancellationToken cancellationToken)
@@ -279,14 +283,16 @@ public class ValidatePaymentHandler : IRequestHandler<ValidatePaymentCommand, Co
             }
 
             queue.MarkPaymentValidated(
-                command.PatientId, 
-                command.Amount, 
-                command.TurnId, 
-                command.PaymentReference, 
+                command.PatientId,
+                command.Amount,
+                command.TurnId,
+                command.PaymentReference,
                 command.CorrelationId);
             await _queueRepository.UpdateAsync(queue, cancellationToken);
 
             var events = queue.GetUnraisedEvents();
+            var paymentValidatedEvent = events.OfType<RLApp.Domain.Events.PatientPaymentValidated>().Last();
+            await _trajectoryOrchestrator.TrackPaymentValidatedAsync(targetQueueId, paymentValidatedEvent, cancellationToken);
             await _eventPublisher.PublishBatchAsync(events, cancellationToken);
             await HandlerPersistence.CommitSuccessAsync(
                 _persistenceSession,
@@ -315,7 +321,7 @@ public class ValidatePaymentHandler : IRequestHandler<ValidatePaymentCommand, Co
                 command.CorrelationId,
                 ex.Message,
                 cancellationToken);
-            return CommandResult.Failure(ex.Message, command.CorrelationId);
+            return CommandResult.Failure(ex, command.CorrelationId);
         }
         catch (Exception ex)
         {

@@ -4,6 +4,8 @@ description: "Use when designing, writing, or reviewing tests, coverage, quality
 
 # Testing Instructions
 
+**Estado del proyecto:** Fase 0 — Diagnóstico Ejecutivo completado (2026-04-01). Ver: /docs/project/02-as-is-audit/10-FASE-0-DIAGNOSTICO.md
+
 Toda prueba debe nacer desde `/docs/project`, no desde supuestos del codigo.
 
 ## Leer antes de probar

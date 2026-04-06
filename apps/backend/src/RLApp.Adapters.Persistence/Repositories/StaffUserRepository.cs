@@ -82,7 +82,7 @@ public class StaffUserRepository : IStaffUserRepository
     {
         var record = await _context.StaffUsers
             .FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
-        
+
         if (record != null)
         {
             _context.StaffUsers.Remove(record);
@@ -96,19 +96,19 @@ public class StaffUserRepository : IStaffUserRepository
             typeof(StaffUser),
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
             null,
-            new object[] { 
-                record.Id, 
-                record.Username, 
-                Email.Create(record.Email), 
-                record.PasswordHash, 
-                StaffRole.Create(record.Role) 
+            new object[] {
+                record.Id,
+                record.Username,
+                Email.Create(record.Email),
+                record.PasswordHash,
+                StaffRole.Create(record.Role)
             },
             null
         )!;
 
         // Set private properties if needed (IsActive, CreatedAt, UpdatedAt)
         var type = typeof(StaffUser);
-        
+
         type.GetProperty("IsActive")?.SetValue(staffUser, record.IsActive);
         type.GetProperty("CreatedAt")?.SetValue(staffUser, record.CreatedAt);
         type.GetProperty("UpdatedAt")?.SetValue(staffUser, record.UpdatedAt);

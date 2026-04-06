@@ -11,6 +11,7 @@ using RLApp.Domain.Events;
 public class WaitingQueueTests
 {
     private const string CorrelationId = "corr-test";
+    private const string TrajectoryId = "TRJ-Q-1-P-1-20260405090000000";
 
     private static WaitingQueue CreateOpenQueue(string id = "q-1", string name = "Queue A")
     {
@@ -89,7 +90,7 @@ public class WaitingQueueTests
     public void CheckInPatient_ValidPatient_AddsToQueueAndRaisesEvent()
     {
         var queue = CreateOpenQueue();
-        queue.CheckInPatient("p-1", "Alice", CorrelationId);
+        queue.CheckInPatient("p-1", "Alice", null, 1, null, CorrelationId);
 
         Assert.Equal(1, queue.GetQueueSize());
         var events = queue.GetUnraisedEvents();
@@ -101,16 +102,16 @@ public class WaitingQueueTests
     public void CheckInPatient_QueueClosed_ThrowsDomainException()
     {
         var queue = WaitingQueue.Create("q-1", "Queue A", CorrelationId);
-        Assert.Throws<DomainException>(() => queue.CheckInPatient("p-1", "Alice", CorrelationId));
+        Assert.Throws<DomainException>(() => queue.CheckInPatient("p-1", "Alice", null, 1, null, CorrelationId));
     }
 
     [Fact]
     public void CheckInPatient_DuplicatePatient_ThrowsDomainException()
     {
         var queue = CreateOpenQueue();
-        queue.CheckInPatient("p-1", "Alice", CorrelationId);
+        queue.CheckInPatient("p-1", "Alice", null, 1, null, CorrelationId);
 
-        Assert.Throws<DomainException>(() => queue.CheckInPatient("p-1", "Alice", CorrelationId));
+        Assert.Throws<DomainException>(() => queue.CheckInPatient("p-1", "Alice", null, 1, null, CorrelationId));
     }
 
     // -------------------------------------------------------------------------
@@ -121,8 +122,8 @@ public class WaitingQueueTests
     public void GetNextPatient_WithPatients_ReturnsFirstPatient()
     {
         var queue = CreateOpenQueue();
-        queue.CheckInPatient("p-1", "Alice", CorrelationId);
-        queue.CheckInPatient("p-2", "Bob", CorrelationId);
+        queue.CheckInPatient("p-1", "Alice", null, 1, null, CorrelationId);
+        queue.CheckInPatient("p-2", "Bob", null, 1, null, CorrelationId);
 
         Assert.Equal("p-1", queue.GetNextPatient());
     }
@@ -142,22 +143,23 @@ public class WaitingQueueTests
     public void MarkPatientAbsent_ExistingPatient_RemovesFromQueue()
     {
         var queue = CreateOpenQueue();
-        queue.CheckInPatient("p-1", "Alice", CorrelationId);
+        queue.CheckInPatient("p-1", "Alice", null, 1, null, CorrelationId);
         queue.ClearUnraisedEvents();
 
-        queue.MarkPatientAbsent("p-1", CorrelationId);
+        queue.MarkPatientAbsent("p-1", null, null, CorrelationId, TrajectoryId);
 
         Assert.Equal(0, queue.GetQueueSize());
         var events = queue.GetUnraisedEvents();
         Assert.Single(events);
-        Assert.IsType<PatientAbsentAtConsultation>(events[0]);
+        var @event = Assert.IsType<PatientAbsentAtConsultation>(events[0]);
+        Assert.Equal(TrajectoryId, @event.TrajectoryId);
     }
 
     [Fact]
     public void MarkPatientAbsent_UnknownPatient_ThrowsDomainException()
     {
         var queue = CreateOpenQueue();
-        Assert.Throws<DomainException>(() => queue.MarkPatientAbsent("unknown", CorrelationId));
+        Assert.Throws<DomainException>(() => queue.MarkPatientAbsent("unknown", null, null, CorrelationId, TrajectoryId));
     }
 
     // -------------------------------------------------------------------------
@@ -168,14 +170,30 @@ public class WaitingQueueTests
     public void CompletePatientAttention_ExistingPatient_RemovesFromQueue()
     {
         var queue = CreateOpenQueue();
-        queue.CheckInPatient("p-1", "Alice", CorrelationId);
+        queue.CheckInPatient("p-1", "Alice", null, 1, null, CorrelationId);
         queue.ClearUnraisedEvents();
 
-        queue.CompletePatientAttention("p-1", "room-1", CorrelationId);
+        queue.CompletePatientAttention("p-1", "room-1", null, null, CorrelationId, TrajectoryId);
 
         Assert.Equal(0, queue.GetQueueSize());
         var events = queue.GetUnraisedEvents();
         Assert.Single(events);
-        Assert.IsType<PatientAttentionCompleted>(events[0]);
+        var @event = Assert.IsType<PatientAttentionCompleted>(events[0]);
+        Assert.Equal(TrajectoryId, @event.TrajectoryId);
+    }
+
+    [Fact]
+    public void CallPatient_ExistingPatient_RaisesEventWithTrajectoryId()
+    {
+        var queue = CreateOpenQueue();
+        queue.CheckInPatient("p-1", "Alice", null, 1, null, CorrelationId);
+        queue.ClearUnraisedEvents();
+
+        queue.CallPatient("p-1", "room-1", CorrelationId, TrajectoryId);
+
+        var events = queue.GetUnraisedEvents();
+        Assert.Single(events);
+        var @event = Assert.IsType<PatientCalled>(events[0]);
+        Assert.Equal(TrajectoryId, @event.TrajectoryId);
     }
 }

@@ -31,6 +31,8 @@ tags:
     description: Flujo operativo de caja.
   - name: Medical
     description: Operaciones de consultorios y cierre de consulta.
+  - name: PatientTrajectory
+    description: Consulta protegida y rebuild controlado de trayectorias longitudinales.
   - name: Health
     description: Endpoints de salud y readiness.
 paths:
@@ -48,13 +50,13 @@ paths:
       operationId: loginStaff
       security: []
       parameters:
-        - $ref: '#/components/parameters/CorrelationIdHeaderOptional'
+        - $ref: "#/components/parameters/CorrelationIdHeaderOptional"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/LoginRequest'
+              $ref: "#/components/schemas/LoginRequest"
             examples:
               validLogin:
                 summary: Login válido
@@ -62,12 +64,12 @@ paths:
                   identifier: admin
                   password: Password123!
       responses:
-        '200':
+        "200":
           description: Usuario autenticado correctamente.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuthenticationResult'
+                $ref: "#/components/schemas/AuthenticationResult"
               examples:
                 success:
                   summary: Respuesta exitosa real
@@ -79,17 +81,17 @@ paths:
                     accessToken: eyJhbGciOi...
                     tokenType: Bearer
                     expiresInSeconds: 3600
-                    authenticatedAt: '2026-03-19T14:00:00Z'
+                    authenticatedAt: "2026-03-19T14:00:00Z"
                     correlationId: CORR-login-001
                     capabilities: []
-        '400':
+        "400":
           description: Credenciales inválidas o error de validación.
           content:
             application/json:
               schema:
                 oneOf:
-                  - $ref: '#/components/schemas/InlineCommandError'
-                  - $ref: '#/components/schemas/ValidationProblemDetails'
+                  - $ref: "#/components/schemas/InlineCommandError"
+                  - $ref: "#/components/schemas/ValidationProblemDetails"
               examples:
                 invalidCredentials:
                   summary: Credenciales inválidas
@@ -106,8 +108,8 @@ paths:
                     errors:
                       password:
                         - The Password field is required.
-        '500':
-          $ref: '#/components/responses/InternalServerError'
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /api/staff/users/change-role:
     post:
       tags:
@@ -122,14 +124,14 @@ paths:
         - La respuesta real es un `CommandResult` genérico y no el `ChangeRoleResponse` definido en `Adapters.Http/Responses`.
       operationId: changeStaffRole
       parameters:
-        - $ref: '#/components/parameters/CorrelationIdHeaderRequired'
-        - $ref: '#/components/parameters/IdempotencyKeyHeaderDeclaredRequired'
+        - $ref: "#/components/parameters/CorrelationIdHeaderRequired"
+        - $ref: "#/components/parameters/IdempotencyKeyHeaderDeclaredRequired"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ChangeRoleRequest'
+              $ref: "#/components/schemas/ChangeRoleRequest"
             examples:
               validRoleChange:
                 value:
@@ -137,27 +139,27 @@ paths:
                   newRole: Supervisor
                   reason: Cobertura temporal del turno
       responses:
-        '200':
+        "200":
           description: Rol cambiado correctamente.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CommandResult'
+                $ref: "#/components/schemas/CommandResult"
               examples:
                 success:
                   value:
                     success: true
                     message: Role changed to Supervisor
                     correlationId: CORR-role-001
-                    executedAt: '2026-03-19T14:05:00Z'
-        '400':
-          $ref: '#/components/responses/BadRequestCommandOrValidation'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
+                    executedAt: "2026-03-19T14:05:00Z"
+        "400":
+          $ref: "#/components/responses/BadRequestCommandOrValidation"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /api/reception/register:
     post:
       tags:
@@ -173,14 +175,14 @@ paths:
         - La respuesta no devuelve `queueId` ni `turnId`; devuelve un `CommandResult` genérico.
       operationId: receptionRegisterPatient
       parameters:
-        - $ref: '#/components/parameters/CorrelationIdHeaderRequired'
-        - $ref: '#/components/parameters/IdempotencyKeyHeaderDeclaredRequired'
+        - $ref: "#/components/parameters/CorrelationIdHeaderRequired"
+        - $ref: "#/components/parameters/IdempotencyKeyHeaderDeclaredRequired"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ReceptionRegisterRequest'
+              $ref: "#/components/schemas/ReceptionRegisterRequest"
             examples:
               validRegister:
                 value:
@@ -191,27 +193,27 @@ paths:
                   priority: Standard
                   notes: Primera vez en el día
       responses:
-        '200':
+        "200":
           description: Llegada registrada.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CommandResult'
+                $ref: "#/components/schemas/CommandResult"
               examples:
                 success:
                   value:
                     success: true
                     message: Patient checked in successfully
                     correlationId: CORR-rec-001
-                    executedAt: '2026-03-19T14:10:00Z'
-        '400':
-          $ref: '#/components/responses/BadRequestCommandOrValidation'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
+                    executedAt: "2026-03-19T14:10:00Z"
+        "400":
+          $ref: "#/components/responses/BadRequestCommandOrValidation"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /api/waiting-room/check-in:
     post:
       tags:
@@ -227,14 +229,14 @@ paths:
         - La respuesta implementada es un `CommandResult` genérico, no el contrato rico descrito en la documentación TO-BE.
       operationId: checkInPatient
       parameters:
-        - $ref: '#/components/parameters/CorrelationIdHeaderRequired'
-        - $ref: '#/components/parameters/IdempotencyKeyHeaderDeclaredRequired'
+        - $ref: "#/components/parameters/CorrelationIdHeaderRequired"
+        - $ref: "#/components/parameters/IdempotencyKeyHeaderDeclaredRequired"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CheckInRequest'
+              $ref: "#/components/schemas/CheckInRequest"
             examples:
               validCheckIn:
                 value:
@@ -245,27 +247,27 @@ paths:
                   consultationType: GeneralMedicine
                   priority: Standard
       responses:
-        '200':
+        "200":
           description: Check-in procesado.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CommandResult'
+                $ref: "#/components/schemas/CommandResult"
               examples:
                 success:
                   value:
                     success: true
                     message: Patient checked in successfully
                     correlationId: CORR-checkin-001
-                    executedAt: '2026-03-19T14:12:00Z'
-        '400':
-          $ref: '#/components/responses/BadRequestCommandOrValidation'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
+                    executedAt: "2026-03-19T14:12:00Z"
+        "400":
+          $ref: "#/components/responses/BadRequestCommandOrValidation"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /api/waiting-room/call-patient:
     post:
       tags:
@@ -281,41 +283,41 @@ paths:
         - Si falta `queueId`, el controller devuelve un error inline 400 propio.
       operationId: callPatientToConsultation
       parameters:
-        - $ref: '#/components/parameters/QueueIdQueryRequired'
-        - $ref: '#/components/parameters/CorrelationIdHeaderOptional'
+        - $ref: "#/components/parameters/QueueIdQueryRequired"
+        - $ref: "#/components/parameters/CorrelationIdHeaderOptional"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CallPatientRequest'
+              $ref: "#/components/schemas/CallPatientRequest"
             examples:
               validCall:
                 value:
                   patientId: PAT-0045
                   roomId: ROOM-01
       responses:
-        '200':
+        "200":
           description: Paciente llamado a consulta.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CommandResult'
+                $ref: "#/components/schemas/CommandResult"
               examples:
                 success:
                   value:
                     success: true
                     message: Patient called to consultation
                     correlationId: CORR-call-001
-                    executedAt: '2026-03-19T14:20:00Z'
-        '400':
-          $ref: '#/components/responses/BadRequestCommandOrValidation'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
+                    executedAt: "2026-03-19T14:20:00Z"
+        "400":
+          $ref: "#/components/responses/BadRequestCommandOrValidation"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /api/waiting-room/claim-next:
     post:
       tags:
@@ -330,39 +332,39 @@ paths:
         - La respuesta real contiene `patientId`, `roomId` y `claimedAt`; no devuelve `turnId`, `turnNumber` ni `claimStatus`.
       operationId: claimNextPatient
       parameters:
-        - $ref: '#/components/parameters/QueueIdQueryRequired'
-        - $ref: '#/components/parameters/CorrelationIdHeaderOptional'
+        - $ref: "#/components/parameters/QueueIdQueryRequired"
+        - $ref: "#/components/parameters/CorrelationIdHeaderOptional"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ClaimNextPatientRequest'
+              $ref: "#/components/schemas/ClaimNextPatientRequest"
             examples:
               validClaim:
                 value:
                   roomId: ROOM-01
       responses:
-        '200':
+        "200":
           description: Paciente reclamado correctamente.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ClaimedPatientResult'
+                $ref: "#/components/schemas/ClaimedPatientResult"
               examples:
                 success:
                   value:
                     patientId: PAT-0045
                     roomId: ROOM-01
-                    claimedAt: '2026-03-19T14:18:00Z'
-        '400':
-          $ref: '#/components/responses/BadRequestCommandOrValidation'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
+                    claimedAt: "2026-03-19T14:18:00Z"
+        "400":
+          $ref: "#/components/responses/BadRequestCommandOrValidation"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /api/cashier/call-next:
     post:
       tags:
@@ -377,40 +379,40 @@ paths:
         - La respuesta real devuelve `patientId`, `calledAt` y `queuePosition`; no devuelve `turnId`, `turnNumber` ni `cashierStationId`.
       operationId: callNextAtCashier
       parameters:
-        - $ref: '#/components/parameters/CorrelationIdHeaderRequired'
-        - $ref: '#/components/parameters/IdempotencyKeyHeaderDeclaredRequired'
+        - $ref: "#/components/parameters/CorrelationIdHeaderRequired"
+        - $ref: "#/components/parameters/IdempotencyKeyHeaderDeclaredRequired"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CallNextAtCashierRequest'
+              $ref: "#/components/schemas/CallNextAtCashierRequest"
             examples:
               validCallNext:
                 value:
                   queueId: Q-2026-03-19-MAIN
                   cashierStationId: CASH-01
       responses:
-        '200':
+        "200":
           description: Paciente llamado a caja.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PatientCallResult'
+                $ref: "#/components/schemas/PatientCallResult"
               examples:
                 success:
                   value:
                     patientId: PAT-0045
-                    calledAt: '2026-03-19T14:15:00Z'
+                    calledAt: "2026-03-19T14:15:00Z"
                     queuePosition: 1
-        '400':
-          $ref: '#/components/responses/BadRequestCommandOrValidation'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
+        "400":
+          $ref: "#/components/responses/BadRequestCommandOrValidation"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /api/cashier/validate-payment:
     post:
       tags:
@@ -425,13 +427,13 @@ paths:
         - El flujo opera por `queueId` + `patientId`.
       operationId: validatePayment
       parameters:
-        - $ref: '#/components/parameters/CorrelationIdHeaderOptional'
+        - $ref: "#/components/parameters/CorrelationIdHeaderOptional"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ValidatePaymentRequest'
+              $ref: "#/components/schemas/ValidatePaymentRequest"
             examples:
               validPayment:
                 value:
@@ -441,38 +443,38 @@ paths:
                   paymentReference: PAY-20260319-0001
                   validatedAmount: 85.5
       responses:
-        '200':
+        "200":
           description: Pago validado.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CommandResult'
+                $ref: "#/components/schemas/CommandResult"
               examples:
                 success:
                   value:
                     success: true
                     message: Payment validated successfully
                     correlationId: CORR-pay-001
-                    executedAt: '2026-03-19T14:25:00Z'
-        '400':
+                    executedAt: "2026-03-19T14:25:00Z"
+        "400":
           description: Error de negocio o validación.
           content:
             application/json:
               schema:
                 oneOf:
-                  - $ref: '#/components/schemas/InlineCommandError'
-                  - $ref: '#/components/schemas/ValidationProblemDetails'
+                  - $ref: "#/components/schemas/InlineCommandError"
+                  - $ref: "#/components/schemas/ValidationProblemDetails"
               examples:
                 invalidAmount:
                   value:
                     error: Invalid payment amount
                     correlationId: CORR-pay-001
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /api/cashier/mark-payment-pending:
     post:
       tags:
@@ -486,13 +488,13 @@ paths:
         - `turnId`, `reason` y `attemptNumber` son obligatorios en el request DTO, pero hoy no se usan en el handler.
       operationId: markPaymentPending
       parameters:
-        - $ref: '#/components/parameters/CorrelationIdHeaderOptional'
+        - $ref: "#/components/parameters/CorrelationIdHeaderOptional"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/MarkPaymentPendingRequest'
+              $ref: "#/components/schemas/MarkPaymentPendingRequest"
             examples:
               pendingPayment:
                 value:
@@ -502,27 +504,27 @@ paths:
                   reason: Datáfono temporalmente caído
                   attemptNumber: 1
       responses:
-        '200':
+        "200":
           description: Pago marcado como pendiente.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CommandResult'
+                $ref: "#/components/schemas/CommandResult"
               examples:
                 success:
                   value:
                     success: true
                     message: Payment marked as pending for patient PAT-0045
                     correlationId: CORR-pending-001
-                    executedAt: '2026-03-19T14:28:00Z'
-        '400':
-          $ref: '#/components/responses/BadRequestCommandOrValidation'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
+                    executedAt: "2026-03-19T14:28:00Z"
+        "400":
+          $ref: "#/components/responses/BadRequestCommandOrValidation"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /api/cashier/mark-absent:
     post:
       tags:
@@ -537,13 +539,13 @@ paths:
         - El handler inyecta internamente `ROOM-CASHIER` como identificador de ubicación.
       operationId: markAbsentAtCashier
       parameters:
-        - $ref: '#/components/parameters/CorrelationIdHeaderOptional'
+        - $ref: "#/components/parameters/CorrelationIdHeaderOptional"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CashierMarkAbsentRequest'
+              $ref: "#/components/schemas/CashierMarkAbsentRequest"
             examples:
               absentAtCashier:
                 value:
@@ -552,27 +554,27 @@ paths:
                   patientId: PAT-0045
                   reason: No respondió al llamado
       responses:
-        '200':
+        "200":
           description: Ausencia registrada.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CommandResult'
+                $ref: "#/components/schemas/CommandResult"
               examples:
                 success:
                   value:
                     success: true
                     message: Patient PAT-0045 marked as absent
                     correlationId: CORR-absent-cash-001
-                    executedAt: '2026-03-19T14:30:00Z'
-        '400':
-          $ref: '#/components/responses/BadRequestCommandOrValidation'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
+                    executedAt: "2026-03-19T14:30:00Z"
+        "400":
+          $ref: "#/components/responses/BadRequestCommandOrValidation"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /api/medical/consulting-room/activate:
     post:
       tags:
@@ -584,40 +586,40 @@ paths:
         Requiere política `SupervisorOnly`.
       operationId: activateConsultingRoom
       parameters:
-        - $ref: '#/components/parameters/CorrelationIdHeaderRequired'
+        - $ref: "#/components/parameters/CorrelationIdHeaderRequired"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ActivateConsultingRoomRequest'
+              $ref: "#/components/schemas/ActivateConsultingRoomRequest"
             examples:
               activateRoom:
                 value:
                   roomId: ROOM-01
                   roomName: Consultorio 1
       responses:
-        '200':
+        "200":
           description: Consultorio activado.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CommandResult'
+                $ref: "#/components/schemas/CommandResult"
               examples:
                 success:
                   value:
                     success: true
                     message: Consulting room Consultorio 1 activated
                     correlationId: CORR-room-activate-001
-                    executedAt: '2026-03-19T14:35:00Z'
-        '400':
-          $ref: '#/components/responses/BadRequestCommandOrValidation'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
+                    executedAt: "2026-03-19T14:35:00Z"
+        "400":
+          $ref: "#/components/responses/BadRequestCommandOrValidation"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /api/medical/consulting-room/deactivate:
     post:
       tags:
@@ -631,39 +633,39 @@ paths:
         - Si el consultorio no existe, el handler responde 400 con mensaje de negocio en lugar de 404.
       operationId: deactivateConsultingRoom
       parameters:
-        - $ref: '#/components/parameters/CorrelationIdHeaderRequired'
+        - $ref: "#/components/parameters/CorrelationIdHeaderRequired"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/DeactivateConsultingRoomRequest'
+              $ref: "#/components/schemas/DeactivateConsultingRoomRequest"
             examples:
               deactivateRoom:
                 value:
                   roomId: ROOM-01
       responses:
-        '200':
+        "200":
           description: Consultorio desactivado.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CommandResult'
+                $ref: "#/components/schemas/CommandResult"
               examples:
                 success:
                   value:
                     success: true
                     message: Consulting room ROOM-01 deactivated
                     correlationId: CORR-room-deactivate-001
-                    executedAt: '2026-03-19T18:00:00Z'
-        '400':
-          $ref: '#/components/responses/BadRequestCommandOrValidation'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
+                    executedAt: "2026-03-19T18:00:00Z"
+        "400":
+          $ref: "#/components/responses/BadRequestCommandOrValidation"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /api/medical/finish-consultation:
     post:
       tags:
@@ -678,13 +680,13 @@ paths:
         - La respuesta real es un `CommandResult` simple, no incluye `finishedAt` ni confirmación de liberación del consultorio.
       operationId: finishConsultation
       parameters:
-        - $ref: '#/components/parameters/CorrelationIdHeaderOptional'
+        - $ref: "#/components/parameters/CorrelationIdHeaderOptional"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/FinishConsultationRequest'
+              $ref: "#/components/schemas/FinishConsultationRequest"
             examples:
               finishConsultation:
                 value:
@@ -694,27 +696,27 @@ paths:
                   consultingRoomId: ROOM-01
                   outcome: completed
       responses:
-        '200':
+        "200":
           description: Consulta finalizada.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CommandResult'
+                $ref: "#/components/schemas/CommandResult"
               examples:
                 success:
                   value:
                     success: true
                     message: Consultation completed
                     correlationId: CORR-finish-001
-                    executedAt: '2026-03-19T14:45:00Z'
-        '400':
-          $ref: '#/components/responses/BadRequestCommandOrValidation'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
+                    executedAt: "2026-03-19T14:45:00Z"
+        "400":
+          $ref: "#/components/responses/BadRequestCommandOrValidation"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /api/medical/mark-absent:
     post:
       tags:
@@ -729,13 +731,13 @@ paths:
         - La respuesta real es un `CommandResult` simple; no devuelve `policyOutcome`.
       operationId: markAbsentAtConsultation
       parameters:
-        - $ref: '#/components/parameters/CorrelationIdHeaderOptional'
+        - $ref: "#/components/parameters/CorrelationIdHeaderOptional"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/MedicalMarkAbsentRequest'
+              $ref: "#/components/schemas/MedicalMarkAbsentRequest"
             examples:
               absentAtConsultation:
                 value:
@@ -745,27 +747,186 @@ paths:
                   consultingRoomId: ROOM-01
                   reason: No ingresó al consultorio
       responses:
-        '200':
+        "200":
           description: Ausencia registrada.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CommandResult'
+                $ref: "#/components/schemas/CommandResult"
               examples:
                 success:
                   value:
                     success: true
                     message: Patient PAT-0052 marked as absent at consultation
                     correlationId: CORR-med-absent-001
-                    executedAt: '2026-03-19T14:48:00Z'
-        '400':
-          $ref: '#/components/responses/BadRequestCommandOrValidation'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
+                    executedAt: "2026-03-19T14:48:00Z"
+        "400":
+          $ref: "#/components/responses/BadRequestCommandOrValidation"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+  /api/patient-trajectories/{trajectoryId}:
+    get:
+      tags:
+        - PatientTrajectory
+      summary: Consultar trayectoria materializada
+      description: |
+        Devuelve la trayectoria longitudinal persistida para un `trajectoryId` conocido.
+
+        Hallazgos importantes:
+        - Requiere política `SupportOrSupervisor`.
+        - No existe endpoint de búsqueda por `patientId`; el cliente debe conocer `trajectoryId`.
+        - La respuesta sale directamente desde la proyección persistente y no usa envelope de query.
+      operationId: getPatientTrajectory
+      parameters:
+        - name: trajectoryId
+          in: path
+          required: true
+          description: Identificador canónico de la trayectoria.
+          schema:
+            type: string
+            example: TRJ-Q-2026-03-19-MAIN-PAT-0045-20260401091000000
+        - $ref: "#/components/parameters/CorrelationIdHeaderOptional"
+      responses:
+        "200":
+          description: Trayectoria encontrada.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PatientTrajectoryResponse"
+              examples:
+                completedTrajectory:
+                  value:
+                    trajectoryId: TRJ-Q-2026-03-19-MAIN-PAT-0045-20260401091000000
+                    patientId: PAT-0045
+                    queueId: Q-2026-03-19-MAIN
+                    currentState: TrayectoriaFinalizada
+                    openedAt: "2026-04-01T09:10:00Z"
+                    closedAt: "2026-04-01T09:42:00Z"
+                    correlationIds:
+                      - corr-checkin
+                      - corr-payment
+                      - corr-complete
+                    stages:
+                      - occurredAt: "2026-04-01T09:10:00Z"
+                        stage: Recepcion
+                        sourceEvent: PatientCheckedIn
+                        sourceState: EnEsperaTaquilla
+                        correlationId: corr-checkin
+                      - occurredAt: "2026-04-01T09:22:00Z"
+                        stage: Caja
+                        sourceEvent: PatientPaymentValidated
+                        sourceState: EnEsperaConsulta
+                        correlationId: corr-payment
+                      - occurredAt: "2026-04-01T09:42:00Z"
+                        stage: Consulta
+                        sourceEvent: PatientAttentionCompleted
+                        sourceState: Finalizado
+                        correlationId: corr-complete
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: No existe proyección persistida para el `trajectoryId` solicitado.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TrajectoryOperationError"
+              examples:
+                missingTrajectory:
+                  value:
+                    code: TRAJECTORY_NOT_FOUND
+                    correlationId: CORR-trj-404
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+  /api/patient-trajectories/rebuild:
+    post:
+      tags:
+        - PatientTrajectory
+      summary: Ejecutar rebuild controlado de trayectorias
+      description: |
+        Reprocesa eventos históricos para materializar o reconciliar trayectorias longitudinales.
+
+        Hallazgos importantes:
+        - Requiere política `SupportOnly`.
+        - `X-Correlation-Id` e `X-Idempotency-Key` son obligatorios.
+        - `dryRun=true` valida alcance y conteos sin materializar cambios.
+      operationId: rebuildPatientTrajectories
+      parameters:
+        - $ref: "#/components/parameters/CorrelationIdHeaderRequired"
+        - $ref: "#/components/parameters/IdempotencyKeyHeaderDeclaredRequired"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RebuildPatientTrajectoriesRequest"
+            examples:
+              scopedDryRun:
+                value:
+                  queueId: Q-2026-03-19-MAIN
+                  patientId: PAT-0045
+                  dryRun: true
+      responses:
+        "200":
+          description: Rebuild aceptado o simulado correctamente.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RebuildPatientTrajectoriesResult"
+              examples:
+                accepted:
+                  value:
+                    jobId: TRJ-REBUILD-01f7dce2d3af48a2a4cc3d0cbf73eb1d
+                    acceptedAt: "2026-04-01T10:05:00Z"
+                    scope: queue:Q-2026-03-19-MAIN|patient:PAT-0045
+                    dryRun: false
+                    status: Accepted
+                    eventsProcessed: 3
+                    trajectoriesProcessed: 1
+                dryRun:
+                  value:
+                    jobId: TRJ-REBUILD-6d04fd9cf6bc4cf0abdc6c5fbd7fd4dc
+                    acceptedAt: "2026-04-01T10:05:00Z"
+                    scope: all
+                    dryRun: true
+                    status: Completed
+                    eventsProcessed: 3
+                    trajectoriesProcessed: 1
+        "400":
+          description: Alcance inválido o error de validación ASP.NET.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/TrajectoryOperationError"
+                  - $ref: "#/components/schemas/ValidationProblemDetails"
+              examples:
+                invalidScope:
+                  value:
+                    code: TRAJECTORY_REBUILD_SCOPE_INVALID
+                    correlationId: CORR-trj-400
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          description: Ya existe un rebuild corriendo para el mismo alcance e idempotency key.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TrajectoryOperationError"
+              examples:
+                alreadyRunning:
+                  value:
+                    code: TRAJECTORY_REBUILD_ALREADY_RUNNING
+                    correlationId: CORR-trj-409
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /health:
     get:
       tags:
@@ -780,12 +941,12 @@ paths:
       operationId: getHealth
       security: []
       responses:
-        '200':
+        "200":
           description: El servicio está saludable.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/HealthStatusResponse'
+                $ref: "#/components/schemas/HealthStatusResponse"
               examples:
                 healthy:
                   value:
@@ -797,12 +958,12 @@ paths:
                       - key: Self
                         status: Healthy
                         description: null
-        '503':
+        "503":
           description: El servicio o alguna dependencia crítica no está lista.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/HealthStatusResponse'
+                $ref: "#/components/schemas/HealthStatusResponse"
               examples:
                 unhealthy:
                   value:
@@ -821,18 +982,18 @@ paths:
       operationId: getReadiness
       security: []
       responses:
-        '200':
+        "200":
           description: Dependencias listas.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/HealthStatusResponse'
-        '503':
+                $ref: "#/components/schemas/HealthStatusResponse"
+        "503":
           description: Dependencias no listas.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/HealthStatusResponse'
+                $ref: "#/components/schemas/HealthStatusResponse"
   /health/live:
     get:
       tags:
@@ -844,18 +1005,18 @@ paths:
       operationId: getLiveness
       security: []
       responses:
-        '200':
+        "200":
           description: Proceso vivo.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/HealthStatusResponse'
-        '503':
+                $ref: "#/components/schemas/HealthStatusResponse"
+        "503":
           description: El proceso reporta fallo de liveness.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/HealthStatusResponse'
+                $ref: "#/components/schemas/HealthStatusResponse"
 components:
   securitySchemes:
     bearerAuth:
@@ -916,8 +1077,8 @@ components:
         application/json:
           schema:
             oneOf:
-              - $ref: '#/components/schemas/InlineCommandError'
-              - $ref: '#/components/schemas/ValidationProblemDetails'
+              - $ref: "#/components/schemas/InlineCommandError"
+              - $ref: "#/components/schemas/ValidationProblemDetails"
           examples:
             commandFailure:
               value:
@@ -945,7 +1106,7 @@ components:
       content:
         application/problem+json:
           schema:
-            $ref: '#/components/schemas/ProblemDetails'
+            $ref: "#/components/schemas/ProblemDetails"
           examples:
             unexpectedError:
               value:
@@ -993,7 +1154,7 @@ components:
           type: string
           example: staff-cashier-01
         newRole:
-          $ref: '#/components/schemas/StaffRole'
+          $ref: "#/components/schemas/StaffRole"
         reason:
           type: string
           description: Campo requerido en el request, pero actualmente ignorado por el handler.
@@ -1269,7 +1430,7 @@ components:
           format: email
           example: admin@clinic.local
         role:
-          $ref: '#/components/schemas/StaffRole'
+          $ref: "#/components/schemas/StaffRole"
         accessToken:
           type: string
           example: eyJhbGciOi...
@@ -1282,7 +1443,7 @@ components:
         authenticatedAt:
           type: string
           format: date-time
-          example: '2026-03-19T14:00:00Z'
+          example: "2026-03-19T14:00:00Z"
         correlationId:
           type: string
           example: CORR-login-001
@@ -1303,6 +1464,132 @@ components:
         success:
           type: boolean
           example: true
+    TrajectoryOperationError:
+      type: object
+      required:
+        - code
+      properties:
+        code:
+          type: string
+          example: TRAJECTORY_NOT_FOUND
+        correlationId:
+          type: string
+          nullable: true
+          example: CORR-trj-404
+    TrajectoryStageEntry:
+      type: object
+      required:
+        - occurredAt
+        - stage
+        - sourceEvent
+        - correlationId
+      properties:
+        occurredAt:
+          type: string
+          format: date-time
+          example: "2026-04-01T09:10:00Z"
+        stage:
+          type: string
+          example: Recepcion
+        sourceEvent:
+          type: string
+          example: PatientCheckedIn
+        sourceState:
+          type: string
+          nullable: true
+          example: EnEsperaTaquilla
+        correlationId:
+          type: string
+          example: corr-checkin
+    PatientTrajectoryResponse:
+      type: object
+      required:
+        - trajectoryId
+        - patientId
+        - queueId
+        - currentState
+        - openedAt
+        - correlationIds
+        - stages
+      properties:
+        trajectoryId:
+          type: string
+          example: TRJ-Q-2026-03-19-MAIN-PAT-0045-20260401091000000
+        patientId:
+          type: string
+          example: PAT-0045
+        queueId:
+          type: string
+          example: Q-2026-03-19-MAIN
+        currentState:
+          type: string
+          example: TrayectoriaFinalizada
+        openedAt:
+          type: string
+          format: date-time
+          example: "2026-04-01T09:10:00Z"
+        closedAt:
+          type: string
+          format: date-time
+          nullable: true
+          example: "2026-04-01T09:42:00Z"
+        correlationIds:
+          type: array
+          items:
+            type: string
+        stages:
+          type: array
+          items:
+            $ref: "#/components/schemas/TrajectoryStageEntry"
+    RebuildPatientTrajectoriesRequest:
+      type: object
+      required:
+        - dryRun
+      properties:
+        queueId:
+          type: string
+          nullable: true
+          example: Q-2026-03-19-MAIN
+        patientId:
+          type: string
+          nullable: true
+          example: PAT-0045
+        dryRun:
+          type: boolean
+          example: true
+    RebuildPatientTrajectoriesResult:
+      type: object
+      required:
+        - jobId
+        - acceptedAt
+        - scope
+        - dryRun
+        - status
+        - eventsProcessed
+        - trajectoriesProcessed
+      properties:
+        jobId:
+          type: string
+          example: TRJ-REBUILD-01f7dce2d3af48a2a4cc3d0cbf73eb1d
+        acceptedAt:
+          type: string
+          format: date-time
+          example: "2026-04-01T10:05:00Z"
+        scope:
+          type: string
+          example: queue:Q-2026-03-19-MAIN|patient:PAT-0045
+        dryRun:
+          type: boolean
+          example: false
+        status:
+          type: string
+          example: Accepted
+        eventsProcessed:
+          type: integer
+          example: 3
+        trajectoriesProcessed:
+          type: integer
+          example: 1
         message:
           type: string
           example: Operation completed successfully
@@ -1312,7 +1599,7 @@ components:
         executedAt:
           type: string
           format: date-time
-          example: '2026-03-19T14:00:00Z'
+          example: "2026-03-19T14:00:00Z"
     PatientCallResult:
       type: object
       required:
@@ -1326,7 +1613,7 @@ components:
         calledAt:
           type: string
           format: date-time
-          example: '2026-03-19T14:15:00Z'
+          example: "2026-03-19T14:15:00Z"
         queuePosition:
           type: integer
           example: 1
@@ -1346,7 +1633,7 @@ components:
         claimedAt:
           type: string
           format: date-time
-          example: '2026-03-19T14:18:00Z'
+          example: "2026-03-19T14:18:00Z"
     InlineCommandError:
       type: object
       required:
@@ -1448,6 +1735,6 @@ components:
         details:
           type: array
           items:
-            $ref: '#/components/schemas/HealthDetail'
+            $ref: "#/components/schemas/HealthDetail"
 security:
   - bearerAuth: []

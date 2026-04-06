@@ -1,5 +1,23 @@
 **/.env
 **/.env.*
 !**/.env.example
+
+# Dependencies
 node_modules/
 **/node_modules/*
+
+# Editor state
+.vscode/
+
+# Frontend build outputs and caches
+**/.next/
+**/.turbo/
+coverage/
+test-results/
+
+# Backend build outputs
+**/bin/
+**/obj/
+
+# Logs
+*.log

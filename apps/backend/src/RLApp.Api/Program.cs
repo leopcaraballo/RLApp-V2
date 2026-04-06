@@ -2,10 +2,12 @@ using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using RLApp.Adapters.Messaging.Observability;
 using RLApp.Adapters.Http.Middleware;
 using RLApp.Adapters.Http.Security;
 using RLApp.Adapters.Persistence.Data;
 using RLApp.Infrastructure;
+using RLApp.Infrastructure.BackgroundServices;
 using RLApp.Infrastructure.Data;
 using RLApp.Api.Hubs;
 using RLApp.Api.Consumers;
@@ -25,14 +27,17 @@ builder.Services.AddOpenTelemetry()
         .AddAspNetCoreInstrumentation()
         .AddEntityFrameworkCoreInstrumentation()
         .AddSource("MassTransit")
+        .AddSource(MessageFlowTelemetry.ActivitySourceName)
         .AddConsoleExporter())
     .WithMetrics(metrics => metrics
         .AddAspNetCoreInstrumentation()
         .AddRuntimeInstrumentation()
+        .AddMeter(OutboxProcessorTelemetry.MeterName)
         .AddPrometheusExporter());
 
 // Configure Hexagonal Architecture dependencies with SignalR consumers
-builder.Services.AddInfrastructureServices(builder.Configuration, x => {
+builder.Services.AddInfrastructureServices(builder.Configuration, x =>
+{
     x.AddConsumer<SignalRNotificationConsumer>();
 });
 
@@ -73,6 +78,8 @@ builder.Services.AddAuthorization(options =>
         policy.RequireAuthenticatedUser().RequireRole("Doctor", "Supervisor"));
     options.AddPolicy(AuthorizationPolicies.SupervisorOnly, policy =>
         policy.RequireAuthenticatedUser().RequireRole("Supervisor"));
+    options.AddPolicy(AuthorizationPolicies.SupportOnly, policy =>
+        policy.RequireAuthenticatedUser().RequireRole("Support"));
     options.AddPolicy(AuthorizationPolicies.SupportOrSupervisor, policy =>
         policy.RequireAuthenticatedUser().RequireRole("Support", "Supervisor"));
 });

@@ -10,6 +10,8 @@ using RLApp.Domain.ValueObjects;
 /// </summary>
 public class StaffUserTests
 {
+    private const string CorrelationId = "corr-test";
+
     private static StaffUser BuildStaffUser(
         string id = "staff-1",
         string username = "jdoe",
@@ -62,7 +64,7 @@ public class StaffUserTests
     public void ChangeRole_ToNewRole_UpdatesRole()
     {
         var user = BuildStaffUser(role: StaffRole.Doctor);
-        user.ChangeRole(StaffRole.Supervisor);
+        user.ChangeRole(StaffRole.Supervisor, null, CorrelationId);
 
         Assert.Equal(StaffRole.Supervisor, user.Role);
         Assert.NotNull(user.UpdatedAt);

@@ -46,12 +46,12 @@ public class CashierController : RLAppControllerBase
         var activeCorrelationId = correlationId ?? Guid.NewGuid().ToString();
 
         var command = new ValidatePaymentCommand(
-            request.QueueId, 
-            request.PatientId, 
-            request.ValidatedAmount, 
+            request.QueueId,
+            request.PatientId,
+            request.ValidatedAmount,
             request.TurnId,
             request.PaymentReference,
-            activeCorrelationId, 
+            activeCorrelationId,
             CurrentUserId);
         var result = await _mediator.Send(command, cancellationToken);
         return FromCommandResult(result);
@@ -85,12 +85,12 @@ public class CashierController : RLAppControllerBase
         var activeCorrelationId = correlationId ?? Guid.NewGuid().ToString();
 
         var command = new MarkAbsenceCommand(
-            request.QueueId, 
-            request.PatientId, 
+            request.QueueId,
+            request.PatientId,
             "ROOM-CASHIER", // Default RoomId for cashier
             request.TurnId,
             request.Reason,
-            activeCorrelationId, 
+            activeCorrelationId,
             CurrentUserId);
         var result = await _mediator.Send(command, cancellationToken);
         return FromCommandResult(result);

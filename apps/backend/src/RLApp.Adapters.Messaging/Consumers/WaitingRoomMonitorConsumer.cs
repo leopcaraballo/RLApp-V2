@@ -1,10 +1,13 @@
 using MassTransit;
+using Microsoft.Extensions.Logging;
+using RLApp.Adapters.Messaging.Observability;
+using RLApp.Domain.Common;
 using RLApp.Domain.Events;
 using RLApp.Ports.Outbound;
 
 namespace RLApp.Adapters.Messaging.Consumers;
 
-public class WaitingRoomMonitorConsumer : 
+public class WaitingRoomMonitorConsumer :
     IConsumer<PatientCheckedIn>,
     IConsumer<PatientCalled>,
     IConsumer<PatientClaimedForAttention>,
@@ -12,10 +15,12 @@ public class WaitingRoomMonitorConsumer :
     IConsumer<PatientAbsentAtConsultation>
 {
     private readonly IProjectionStore _projectionStore;
+    private readonly ILogger<WaitingRoomMonitorConsumer> _logger;
 
-    public WaitingRoomMonitorConsumer(IProjectionStore projectionStore)
+    public WaitingRoomMonitorConsumer(IProjectionStore projectionStore, ILogger<WaitingRoomMonitorConsumer> logger)
     {
         _projectionStore = projectionStore;
+        _logger = logger;
     }
 
     public async Task Consume(ConsumeContext<PatientCheckedIn> context)
@@ -26,7 +31,7 @@ public class WaitingRoomMonitorConsumer :
             { "PatientName", ev.PatientName },
             { "Status", "Waiting" }
         };
-        await _projectionStore.UpsertAsync(ev.PatientId, "WaitingRoomMonitor", data);
+        await UpsertMonitorAsync(context, ev.PatientId, data, "Waiting");
     }
 
     public async Task Consume(ConsumeContext<PatientCalled> context)
@@ -37,7 +42,7 @@ public class WaitingRoomMonitorConsumer :
             { "Status", "Called" },
             { "RoomAssigned", ev.RoomId }
         };
-        await _projectionStore.UpsertAsync(ev.PatientId, "WaitingRoomMonitor", data);
+        await UpsertMonitorAsync(context, ev.PatientId, data, "Called");
     }
 
     public async Task Consume(ConsumeContext<PatientClaimedForAttention> context)
@@ -48,7 +53,7 @@ public class WaitingRoomMonitorConsumer :
             { "Status", "InConsultation" },
             { "RoomAssigned", ev.RoomId }
         };
-        await _projectionStore.UpsertAsync(ev.PatientId, "WaitingRoomMonitor", data);
+        await UpsertMonitorAsync(context, ev.PatientId, data, "InConsultation");
     }
 
     public async Task Consume(ConsumeContext<PatientAttentionCompleted> context)
@@ -60,8 +65,8 @@ public class WaitingRoomMonitorConsumer :
         {
             { "Status", "Completed" }
         };
-        await _projectionStore.UpsertAsync(ev.PatientId, "WaitingRoomMonitor", data);
-        
+        await UpsertMonitorAsync(context, ev.PatientId, data, "Completed");
+
         // Optionally delete after some time, but for now we keep it or delete it:
         // await _projectionStore.DeleteAsync(ev.PatientId);
     }
@@ -73,6 +78,30 @@ public class WaitingRoomMonitorConsumer :
         {
             { "Status", "Absent" }
         };
-        await _projectionStore.UpsertAsync(ev.PatientId, "WaitingRoomMonitor", data);
+        await UpsertMonitorAsync(context, ev.PatientId, data, "Absent");
+    }
+
+    private async Task UpsertMonitorAsync<TMessage>(ConsumeContext<TMessage> context, string projectionId, Dictionary<string, object> data, string monitorStatus)
+        where TMessage : DomainEvent
+    {
+        using var activity = MessageFlowTelemetry.StartConsumerActivity(context.Message, nameof(WaitingRoomMonitorConsumer));
+        using var scope = MessageFlowTelemetry.BeginScope(
+            _logger,
+            context.Message,
+            "projection-pending",
+            consumerName: nameof(WaitingRoomMonitorConsumer));
+
+        try
+        {
+            await _projectionStore.UpsertAsync(projectionId, "WaitingRoomMonitor", data, context.CancellationToken);
+            MessageFlowTelemetry.SetResult(activity, "projection-upserted");
+            _logger.LogInformation("Waiting room monitor projection updated to {MonitorStatus}.", monitorStatus);
+        }
+        catch (Exception ex)
+        {
+            MessageFlowTelemetry.RecordFailure(activity, ex, "projection-failed");
+            _logger.LogError(ex, "Waiting room monitor projection update failed.");
+            throw;
+        }
     }
 }

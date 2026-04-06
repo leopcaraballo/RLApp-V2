@@ -4,6 +4,8 @@ description: "Use when editing architecture-sensitive code, changing module boun
 
 # Architecture Instructions
 
+**Estado del proyecto:** Fase 0 — Diagnóstico Ejecutivo completado (2026-04-01). Ver: /docs/project/02-as-is-audit/10-FASE-0-DIAGNOSTICO.md
+
 La arquitectura objetivo esta definida en `/docs/project/03-target-architecture` y formalizada por `/docs/project/04-adr`.
 
 ## Leer antes de tocar estructura o dependencias

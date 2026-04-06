@@ -25,7 +25,7 @@ public class StaffUsersController : RLAppControllerBase
     /// </summary>
     [HttpPost("change-role")]
     public async Task<IActionResult> ChangeRole(
-        [FromBody] ChangeRoleRequest request, 
+        [FromBody] ChangeRoleRequest request,
         [FromHeader(Name = "X-Correlation-Id")] string correlationId,
         [FromHeader(Name = "X-Idempotency-Key")] string idempotencyKey,
         CancellationToken cancellationToken)

@@ -39,6 +39,10 @@ public class ProjectionStoreRepository : IProjectionStore
                 await UpsertDashboardAsync(projectionData, cancellationToken);
                 break;
 
+            case "PatientTrajectory":
+                await UpsertPatientTrajectoryAsync(projectionId, projectionData, cancellationToken);
+                break;
+
             default:
                 throw new InvalidOperationException($"Unknown projection type: {projectionType}");
         }
@@ -61,10 +65,37 @@ public class ProjectionStoreRepository : IProjectionStore
             "OperationsDashboardView" => await _context.OperationsDashboards
                 .FirstOrDefaultAsync(d => d.Id == "SYSTEM_SINGLETON", cancellationToken),
 
+            "PatientTrajectoryView" => await _context.PatientTrajectories
+                .FirstOrDefaultAsync(t => t.TrajectoryId == projectionId, cancellationToken),
+
             _ => throw new InvalidOperationException($"Unknown projection type: {typeName}")
         };
 
         return result as T ?? throw new KeyNotFoundException($"Projection not found: {projectionId}");
+    }
+
+    public async Task<PatientTrajectoryProjection?> GetPatientTrajectoryAsync(string trajectoryId, CancellationToken cancellationToken = default)
+    {
+        var view = await _context.PatientTrajectories
+            .AsNoTracking()
+            .FirstOrDefaultAsync(trajectory => trajectory.TrajectoryId == trajectoryId, cancellationToken);
+
+        if (view is null)
+        {
+            return null;
+        }
+
+        return new PatientTrajectoryProjection
+        {
+            TrajectoryId = view.TrajectoryId,
+            PatientId = view.PatientId,
+            QueueId = view.QueueId,
+            CurrentState = view.CurrentState,
+            OpenedAt = view.OpenedAt,
+            ClosedAt = view.ClosedAt,
+            CorrelationIds = Deserialize<List<string>>(view.CorrelationIdsJson),
+            Stages = Deserialize<List<PatientTrajectoryStageProjection>>(view.StagesJson)
+        };
     }
 
     public async Task DeleteAsync(string projectionId, CancellationToken cancellationToken = default)
@@ -82,6 +113,13 @@ public class ProjectionStoreRepository : IProjectionStore
         if (waitingRoom != null)
         {
             _context.WaitingRoomMonitors.Remove(waitingRoom);
+        }
+
+        var trajectory = await _context.PatientTrajectories
+            .FirstOrDefaultAsync(t => t.TrajectoryId == projectionId, cancellationToken);
+        if (trajectory != null)
+        {
+            _context.PatientTrajectories.Remove(trajectory);
         }
 
         await _context.SaveChangesAsync(cancellationToken);
@@ -133,7 +171,7 @@ public class ProjectionStoreRepository : IProjectionStore
             if (dict.TryGetValue("TicketNumber", out var tn) && tn != null) existing.TicketNumber = tn.ToString()!;
             if (dict.TryGetValue("Status", out var s) && s != null) existing.Status = s.ToString()!;
             if (dict.TryGetValue("RoomAssigned", out var ra)) existing.RoomAssigned = ra?.ToString();
-            
+
             existing.UpdatedAt = DateTime.UtcNow;
             _context.WaitingRoomMonitors.Update(existing);
         }
@@ -185,4 +223,51 @@ public class ProjectionStoreRepository : IProjectionStore
 
         await _context.SaveChangesAsync(cancellationToken);
     }
+
+    private async Task UpsertPatientTrajectoryAsync(string trajectoryId, object projectionData, CancellationToken cancellationToken)
+    {
+        if (projectionData is not PatientTrajectoryProjection trajectoryProjection)
+            throw new InvalidOperationException("Projection data must be a patient trajectory projection");
+
+        var existing = await _context.PatientTrajectories
+            .FirstOrDefaultAsync(trajectory => trajectory.TrajectoryId == trajectoryId, cancellationToken);
+
+        var correlationIdsJson = JsonSerializer.Serialize(trajectoryProjection.CorrelationIds);
+        var stagesJson = JsonSerializer.Serialize(trajectoryProjection.Stages);
+
+        if (existing is null)
+        {
+            existing = new PatientTrajectoryView
+            {
+                TrajectoryId = trajectoryProjection.TrajectoryId,
+                PatientId = trajectoryProjection.PatientId,
+                QueueId = trajectoryProjection.QueueId,
+                CurrentState = trajectoryProjection.CurrentState,
+                OpenedAt = trajectoryProjection.OpenedAt,
+                ClosedAt = trajectoryProjection.ClosedAt,
+                CorrelationIdsJson = correlationIdsJson,
+                StagesJson = stagesJson,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            await _context.PatientTrajectories.AddAsync(existing, cancellationToken);
+        }
+        else
+        {
+            existing.PatientId = trajectoryProjection.PatientId;
+            existing.QueueId = trajectoryProjection.QueueId;
+            existing.CurrentState = trajectoryProjection.CurrentState;
+            existing.OpenedAt = trajectoryProjection.OpenedAt;
+            existing.ClosedAt = trajectoryProjection.ClosedAt;
+            existing.CorrelationIdsJson = correlationIdsJson;
+            existing.StagesJson = stagesJson;
+            existing.UpdatedAt = DateTime.UtcNow;
+            _context.PatientTrajectories.Update(existing);
+        }
+
+        await _context.SaveChangesAsync(cancellationToken);
+    }
+
+    private static T Deserialize<T>(string payload) where T : new()
+        => JsonSerializer.Deserialize<T>(payload) ?? new T();
 }

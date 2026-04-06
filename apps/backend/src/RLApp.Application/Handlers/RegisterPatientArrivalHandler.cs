@@ -3,6 +3,7 @@ namespace RLApp.Application.Handlers;
 using Commands;
 using DTOs;
 using MediatR;
+using RLApp.Application.Services;
 using RLApp.Domain.Aggregates;
 using RLApp.Domain.Common;
 using RLApp.Ports.Inbound;
@@ -19,17 +20,20 @@ public class RegisterPatientArrivalHandler : IRequestHandler<RegisterPatientArri
     private readonly IEventPublisher _eventPublisher;
     private readonly IAuditStore _auditStore;
     private readonly IPersistenceSession _persistenceSession;
+    private readonly PatientTrajectoryOrchestrator _trajectoryOrchestrator;
 
     public RegisterPatientArrivalHandler(
         IWaitingQueueRepository queueRepository,
         IEventPublisher eventPublisher,
         IAuditStore auditStore,
-        IPersistenceSession persistenceSession)
+        IPersistenceSession persistenceSession,
+        PatientTrajectoryOrchestrator trajectoryOrchestrator)
     {
         _queueRepository = queueRepository;
         _eventPublisher = eventPublisher;
         _auditStore = auditStore;
         _persistenceSession = persistenceSession;
+        _trajectoryOrchestrator = trajectoryOrchestrator;
     }
 
     public async Task<CommandResult<RegisterPatientResultDto>> Handle(RegisterPatientArrivalCommand command, CancellationToken cancellationToken)
@@ -53,11 +57,11 @@ public class RegisterPatientArrivalHandler : IRequestHandler<RegisterPatientArri
             }
 
             queue.CheckInPatient(
-                command.PatientId, 
-                command.PatientName, 
-                command.AppointmentReference, 
-                command.Priority, 
-                command.Notes, 
+                command.PatientId,
+                command.PatientName,
+                command.AppointmentReference,
+                command.Priority,
+                command.Notes,
                 command.CorrelationId);
 
             if (isNewQueue)
@@ -71,6 +75,8 @@ public class RegisterPatientArrivalHandler : IRequestHandler<RegisterPatientArri
 
             // Publish domain events
             var events = queue.GetUnraisedEvents();
+            var checkedInEvent = events.OfType<RLApp.Domain.Events.PatientCheckedIn>().Last();
+            await _trajectoryOrchestrator.TrackCheckInAsync(targetQueueId, checkedInEvent, cancellationToken);
             await _eventPublisher.PublishBatchAsync(events, cancellationToken);
             await HandlerPersistence.CommitSuccessAsync(
                 _persistenceSession,
@@ -107,7 +113,7 @@ public class RegisterPatientArrivalHandler : IRequestHandler<RegisterPatientArri
                 command.CorrelationId,
                 ex.Message,
                 cancellationToken);
-            return CommandResult<RegisterPatientResultDto>.Failure(ex.Message, command.CorrelationId);
+            return CommandResult<RegisterPatientResultDto>.Failure(ex, command.CorrelationId);
         }
         catch (Exception ex)
         {

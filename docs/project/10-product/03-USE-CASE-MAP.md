@@ -1,5 +1,11 @@
 # Use Case Map
 
+## Waiting Room Core
+
+- UC-018 Reconstruct Patient Trajectory
+- UC-019 Protect Aggregate Writes With Optimistic Concurrency
+- UC-020 Correlate Sagas With Patient Trajectory
+
 ## Reception
 
 - UC-005 Register Patient Arrival

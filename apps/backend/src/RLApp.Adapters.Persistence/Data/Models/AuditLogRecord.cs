@@ -31,7 +31,7 @@ public class AuditLogRecord
             builder.Property(e => e.EntityId).HasMaxLength(100).IsRequired();
             builder.Property(e => e.Payload).HasColumnType("jsonb");
             builder.Property(e => e.CorrelationId).HasMaxLength(100).IsRequired();
-            
+
             builder.HasIndex(e => e.CorrelationId);
             builder.HasIndex(e => e.OccurredAt);
             builder.HasIndex(e => e.EntityId);

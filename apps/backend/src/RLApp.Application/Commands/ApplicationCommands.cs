@@ -98,13 +98,13 @@ public class RegisterPatientArrivalCommand : Command<CommandResult<RegisterPatie
     public string? Notes { get; set; }
 
     public RegisterPatientArrivalCommand(
-        string queueId, 
-        string patientId, 
-        string patientName, 
-        string? appointmentReference, 
-        int priority, 
-        string? notes, 
-        string correlationId, 
+        string queueId,
+        string patientId,
+        string patientName,
+        string? appointmentReference,
+        int priority,
+        string? notes,
+        string correlationId,
         string userId)
         : base(correlationId, userId)
     {
@@ -149,12 +149,12 @@ public class ValidatePaymentCommand : Command
     public string? PaymentReference { get; set; }
 
     public ValidatePaymentCommand(
-        string queueId, 
-        string patientId, 
-        decimal amount, 
-        string? turnId, 
-        string? paymentReference, 
-        string correlationId, 
+        string queueId,
+        string patientId,
+        decimal amount,
+        string? turnId,
+        string? paymentReference,
+        string correlationId,
         string userId)
         : base(correlationId, userId)
     {
@@ -252,12 +252,12 @@ public class MarkAbsenceCommand : Command
     public string? Reason { get; set; }
 
     public MarkAbsenceCommand(
-        string queueId, 
-        string patientId, 
-        string roomId, 
-        string? turnId, 
-        string? reason, 
-        string correlationId, 
+        string queueId,
+        string patientId,
+        string roomId,
+        string? turnId,
+        string? reason,
+        string correlationId,
         string userId)
         : base(correlationId, userId)
     {
@@ -283,12 +283,12 @@ public class FinishConsultationCommand : Command
     public string? Outcome { get; set; }
 
     public FinishConsultationCommand(
-        string queueId, 
-        string patientId, 
-        string roomId, 
-        string? turnId, 
-        string? outcome, 
-        string correlationId, 
+        string queueId,
+        string patientId,
+        string roomId,
+        string? turnId,
+        string? outcome,
+        string correlationId,
         string userId)
         : base(correlationId, userId)
     {
@@ -314,12 +314,12 @@ public class MarkAbsenceAtConsultationCommand : Command
     public string? Reason { get; set; }
 
     public MarkAbsenceAtConsultationCommand(
-        string queueId, 
-        string patientId, 
-        string roomId, 
-        string? turnId, 
-        string? reason, 
-        string correlationId, 
+        string queueId,
+        string patientId,
+        string roomId,
+        string? turnId,
+        string? reason,
+        string correlationId,
         string userId)
         : base(correlationId, userId)
     {
@@ -346,5 +346,33 @@ public class RebuildProjectionsCommand : Command
     {
         FromDate = fromDate;
         ToDate = toDate;
+    }
+}
+
+/// <summary>
+/// UC-018: Reconstruct Patient Trajectory
+/// Command to rebuild patient trajectories from historical events.
+/// Reference: S-011 Patient Trajectory Aggregate
+/// </summary>
+public class RebuildPatientTrajectoriesCommand : Command<CommandResult<RebuildPatientTrajectoriesResultDto>>
+{
+    public string? QueueId { get; set; }
+    public string? PatientId { get; set; }
+    public bool DryRun { get; set; }
+    public string IdempotencyKey { get; set; }
+
+    public RebuildPatientTrajectoriesCommand(
+        string? queueId,
+        string? patientId,
+        bool dryRun,
+        string idempotencyKey,
+        string correlationId,
+        string userId)
+        : base(correlationId, userId)
+    {
+        QueueId = queueId;
+        PatientId = patientId;
+        DryRun = dryRun;
+        IdempotencyKey = idempotencyKey;
     }
 }

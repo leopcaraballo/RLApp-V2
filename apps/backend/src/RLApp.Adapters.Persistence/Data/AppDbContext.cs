@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using RLApp.Adapters.Messaging.Sagas;
+using RLApp.Adapters.Persistence.Data.Configurations;
 using RLApp.Adapters.Persistence.Data.Models;
 
 namespace RLApp.Adapters.Persistence.Data;
@@ -7,8 +9,10 @@ public class AppDbContext : DbContext
 {
     public DbSet<EventRecord> EventStore { get; set; } = null!;
     public DbSet<OutboxMessage> OutboxMessages { get; set; } = null!;
+    public DbSet<OutboxDeadLetterMessage> OutboxDeadLetterMessages { get; set; } = null!;
     public DbSet<StaffUserRecord> StaffUsers { get; set; } = null!;
     public DbSet<AuditLogRecord> AuditLogs { get; set; } = null!;
+    public DbSet<ConsultationState> ConsultationSagaStates { get; set; } = null!;
 
     // Read Models
     public DbSet<WaitingRoomMonitorView> WaitingRoomMonitors { get; set; } = null!;
@@ -16,6 +20,7 @@ public class AppDbContext : DbContext
     public DbSet<NextTurnView> NextTurns { get; set; } = null!;
     public DbSet<RecentHistoryView> RecentHistories { get; set; } = null!;
     public DbSet<OperationsDashboardView> OperationsDashboards { get; set; } = null!;
+    public DbSet<PatientTrajectoryView> PatientTrajectories { get; set; } = null!;
 
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
     {
@@ -24,13 +29,15 @@ public class AppDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
-        
+
         // Apply configurations from assembly
         modelBuilder.ApplyConfiguration(new EventRecord.Configuration());
         modelBuilder.ApplyConfiguration(new OutboxMessage.Configuration());
+        modelBuilder.ApplyConfiguration(new OutboxDeadLetterMessage.Configuration());
         modelBuilder.ApplyConfiguration(new StaffUserRecord.Configuration());
         modelBuilder.ApplyConfiguration(new AuditLogRecord.Configuration());
-        
+        modelBuilder.ApplyConfiguration(new ConsultationStateConfiguration());
+
         // Read Models configuration
         ReadModelsConfiguration.Configure(modelBuilder);
     }

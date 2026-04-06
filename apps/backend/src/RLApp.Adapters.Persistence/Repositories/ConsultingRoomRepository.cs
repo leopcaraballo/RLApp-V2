@@ -40,7 +40,8 @@ public class ConsultingRoomRepository : IConsultingRoomRepository
     {
         // Persist domain events to event store (event sourcing)
         var events = consultingRoom.GetUnraisedEvents();
-        await _eventStore.SaveBatchAsync(events, cancellationToken);
+        await _eventStore.SaveBatchAsync(events, consultingRoom.Version, cancellationToken);
+        consultingRoom.SetPersistedVersion(consultingRoom.Version + events.Count);
     }
 
     public async Task UpdateAsync(ConsultingRoom consultingRoom, CancellationToken cancellationToken = default)
@@ -49,7 +50,8 @@ public class ConsultingRoomRepository : IConsultingRoomRepository
         var events = consultingRoom.GetUnraisedEvents();
         if (events.Count > 0)
         {
-            await _eventStore.SaveBatchAsync(events, cancellationToken);
+            await _eventStore.SaveBatchAsync(events, consultingRoom.Version, cancellationToken);
+            consultingRoom.SetPersistedVersion(consultingRoom.Version + events.Count);
         }
     }
 
@@ -116,6 +118,7 @@ public class ConsultingRoomRepository : IConsultingRoomRepository
             }
         }
 
+        room.SetPersistedVersion(events.Count);
         room.ClearUnraisedEvents();
         return room;
     }
