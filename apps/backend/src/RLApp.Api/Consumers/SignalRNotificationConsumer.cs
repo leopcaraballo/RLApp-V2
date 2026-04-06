@@ -9,7 +9,7 @@ namespace RLApp.Api.Consumers;
 /// Consumes domain events and pushes notifications to SignalR clients.
 /// This decouples the persistence projections from the real-time UI updates.
 /// </summary>
-public class SignalRNotificationConsumer : 
+public class SignalRNotificationConsumer :
     IConsumer<PatientCheckedIn>,
     IConsumer<PatientCalled>,
     IConsumer<PatientClaimedForAttention>,
@@ -25,7 +25,8 @@ public class SignalRNotificationConsumer :
     public async Task Consume(ConsumeContext<PatientCheckedIn> context)
     {
         var ev = context.Message;
-        await _hubContext.Clients.All.SendAsync("PatientCheckedIn", new {
+        await _hubContext.Clients.All.SendAsync("PatientCheckedIn", new
+        {
             ev.PatientId,
             ev.PatientName,
             Status = "Waiting"
@@ -35,7 +36,8 @@ public class SignalRNotificationConsumer :
     public async Task Consume(ConsumeContext<PatientCalled> context)
     {
         var ev = context.Message;
-        await _hubContext.Clients.All.SendAsync("PatientCalled", new {
+        await _hubContext.Clients.All.SendAsync("PatientCalled", new
+        {
             ev.PatientId,
             ev.RoomId,
             Status = "Called"
@@ -45,7 +47,8 @@ public class SignalRNotificationConsumer :
     public async Task Consume(ConsumeContext<PatientClaimedForAttention> context)
     {
         var ev = context.Message;
-        await _hubContext.Clients.Group($"queue-{ev.AggregateId}").SendAsync("PatientAtConsultation", new {
+        await _hubContext.Clients.Group($"queue-{ev.AggregateId}").SendAsync("PatientAtConsultation", new
+        {
             ev.PatientId,
             ev.RoomId,
             Status = "InConsultation"
@@ -55,7 +58,8 @@ public class SignalRNotificationConsumer :
     public async Task Consume(ConsumeContext<PatientAttentionCompleted> context)
     {
         var ev = context.Message;
-        await _hubContext.Clients.All.SendAsync("PatientAttentionCompleted", new {
+        await _hubContext.Clients.All.SendAsync("PatientAttentionCompleted", new
+        {
             ev.PatientId,
             Status = "Completed"
         });

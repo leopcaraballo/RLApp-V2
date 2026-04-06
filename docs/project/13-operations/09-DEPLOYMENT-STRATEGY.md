@@ -4,6 +4,6 @@ Despliegue independiente de API y worker, con versionado compatible de contratos
 
 ## Local Docker profile
 
-- `docker compose --profile backend --profile frontend up` levanta `db`, `backend` y `frontend`.
-- En perfil Docker local, si la mensajeria externa no esta disponible o requiere licencia, el procesamiento del outbox puede usar despacho en proceso para sostener read models y validacion funcional.
-- La integracion con broker externo sigue siendo la ruta objetivo para entornos no locales.
+- `docker compose --profile backend --profile frontend up` levanta `db`, `rabbitmq`, `backend` y `frontend`.
+- El perfil Docker local usa RabbitMQ como broker ejecutable por defecto para validar consumers, sagas y endpoints async en la misma topologia objetivo.
+- El fallback a mensajeria en proceso deja de ser baseline del perfil Docker local; queda solo como override puntual de pruebas o diagnostico.

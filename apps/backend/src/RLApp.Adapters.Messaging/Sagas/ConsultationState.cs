@@ -1,4 +1,4 @@
-using MassTransit;
+using Automatonymous;
 
 namespace RLApp.Adapters.Messaging.Sagas;
 

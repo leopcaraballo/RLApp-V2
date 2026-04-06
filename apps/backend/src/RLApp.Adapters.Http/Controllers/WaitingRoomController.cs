@@ -34,13 +34,13 @@ public class WaitingRoomController : RLAppControllerBase
             : request.PatientName;
 
         var command = new RegisterPatientArrivalCommand(
-            request.QueueId, 
-            request.PatientId, 
-            patientName, 
+            request.QueueId,
+            request.PatientId,
+            patientName,
             request.AppointmentReference,
             int.TryParse(request.Priority, out var p) ? p : 0,
             request.Notes,
-            correlationId, 
+            correlationId,
             CurrentUserId);
         var result = await _mediator.Send(command, cancellationToken);
         return FromCommandResult(result);
@@ -62,7 +62,7 @@ public class WaitingRoomController : RLAppControllerBase
         var result = await _mediator.Send(command, cancellationToken);
         return FromCommandResult(result);
     }
-    
+
     /// <summary>
     /// POST /api/waiting-room/claim-next
     /// </summary>

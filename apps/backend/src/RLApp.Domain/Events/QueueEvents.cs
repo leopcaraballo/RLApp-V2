@@ -43,12 +43,12 @@ public class PatientCheckedIn : DomainEvent
     public string? Notes { get; set; }
 
     public PatientCheckedIn(
-        string aggregateId, 
-        string patientId, 
-        string patientName, 
-        string? appointmentReference, 
-        int priority, 
-        string? notes, 
+        string aggregateId,
+        string patientId,
+        string patientName,
+        string? appointmentReference,
+        int priority,
+        string? notes,
         string correlationId)
         : base(nameof(PatientCheckedIn), aggregateId, correlationId)
     {
@@ -103,11 +103,11 @@ public class PatientPaymentValidated : DomainEvent
     public string? PaymentReference { get; set; }
 
     public PatientPaymentValidated(
-        string aggregateId, 
-        string patientId, 
-        decimal amount, 
-        string? turnId, 
-        string? paymentReference, 
+        string aggregateId,
+        string patientId,
+        decimal amount,
+        string? turnId,
+        string? paymentReference,
         string correlationId)
         : base(nameof(PatientPaymentValidated), aggregateId, correlationId)
     {

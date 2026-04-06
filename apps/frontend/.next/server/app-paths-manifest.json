@@ -5,6 +5,7 @@
   "/(workspace)/page": "app/(workspace)/page.js",
   "/(workspace)/reception/page": "app/(workspace)/reception/page.js",
   "/(workspace)/staff/page": "app/(workspace)/staff/page.js",
+  "/(workspace)/trajectory/page": "app/(workspace)/trajectory/page.js",
   "/(workspace)/waiting-room/page": "app/(workspace)/waiting-room/page.js",
   "/_global-error/page": "app/_global-error/page.js",
   "/_not-found/page": "app/_not-found/page.js",
