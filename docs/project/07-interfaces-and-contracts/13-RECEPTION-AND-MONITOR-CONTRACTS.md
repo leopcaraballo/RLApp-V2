@@ -16,6 +16,24 @@
 | `turnNumber` | `string` | Yes | Identificador visible del turno. |
 | `visibleOutcome` | `string` | Yes | Estado publico o interno permitido para monitor. |
 
+### MonitorTurnEntry schema
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `turnId` | `string` | Yes | Identificador canonico del turno materializado. |
+| `patientName` | `string` | Yes | Nombre visible autorizado para monitor interno. |
+| `ticketNumber` | `string` | Yes | Turno visible del paciente. |
+| `status` | `string` | Yes | Estado visible actual de la entrada. |
+| `roomAssigned` | `string` | No | Consultorio visible cuando aplique. |
+| `updatedAt` | `string(date-time)` | Yes | Ultima actualizacion observada para la entrada. |
+
+### MonitorStatusCount schema
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `status` | `string` | Yes | Estado visible agregado. |
+| `total` | `integer` | Yes | Cantidad de entradas en ese estado. |
+
 ## Check-in command
 
 ### Check-in purpose
@@ -147,7 +165,7 @@ Exponer un snapshot operativo para recepcion y supervision sin leer del write-si
 
 | Header | Required | Notes |
 | --- | --- | --- |
-| `Authorization` | Yes | Staff autorizado para recepcion o supervision. |
+| `Authorization` | Yes | Disponible para `Receptionist` y `Supervisor`. |
 | `X-Correlation-Id` | No | Recomendado para tracing de lectura. |
 
 ### Monitor path parameters
@@ -163,10 +181,10 @@ Exponer un snapshot operativo para recepcion y supervision sin leer del write-si
 | `queueId` | `string` | Yes | Cola consultada. |
 | `generatedAt` | `string(date-time)` | Yes | Momento del snapshot. |
 | `waitingCount` | `integer` | Yes | Turnos aun esperando atencion. |
-| `cashierCurrentTurn` | `string` | No | Turno visible actual en caja. |
-| `consultationCurrentTurn` | `string` | No | Turno visible actual en consulta. |
-| `activeRooms` | `integer` | Yes | Consultorios activos observados por la proyeccion. |
-| `recentHistory` | `array[RecentHistoryEntry]` | Yes | Historial reciente visible para monitor. |
+| `averageWaitTimeMinutes` | `number` | Yes | Promedio de espera persistido para la queue. |
+| `activeConsultationRooms` | `integer` | Yes | Cantidad de consultorios visibles con atencion activa. |
+| `statusBreakdown` | `array[MonitorStatusCount]` | Yes | Conteo agregado por estado visible. |
+| `entries` | `array[MonitorTurnEntry]` | Yes | Entradas vivas del monitor ordenadas por `updatedAt` descendente. |
 
 ### Monitor example response
 
@@ -175,13 +193,26 @@ Exponer un snapshot operativo para recepcion y supervision sin leer del write-si
   "queueId": "Q-2026-03-17-MAIN",
   "generatedAt": "2026-03-17T10:15:30Z",
   "waitingCount": 9,
-  "cashierCurrentTurn": "R-041",
-  "consultationCurrentTurn": "C-014",
-  "activeRooms": 4,
-  "recentHistory": [
+  "averageWaitTimeMinutes": 18.25,
+  "activeConsultationRooms": 4,
+  "statusBreakdown": [
     {
-      "turnNumber": "R-040",
-      "visibleOutcome": "EnEsperaConsulta"
+      "status": "Waiting",
+      "total": 9
+    },
+    {
+      "status": "InConsultation",
+      "total": 4
+    }
+  ],
+  "entries": [
+    {
+      "turnId": "Q-2026-03-17-MAIN-PAT-0040",
+      "patientName": "Ana Perez",
+      "ticketNumber": "R-040",
+      "status": "Waiting",
+      "roomAssigned": null,
+      "updatedAt": "2026-03-17T10:15:22Z"
     }
   ]
 }
@@ -241,3 +272,9 @@ Exponer el historial reciente visible para recepcion, monitor y display sanitiza
 | `queueId` | `string` | Yes | Cola consultada. |
 | `entries` | `array[RecentHistoryEntry]` | Yes | Historial ordenado desde el mas reciente segun la proyeccion visible. |
 | `generatedAt` | `string(date-time)` | Yes | Momento del snapshot. |
+
+## Query rules
+
+- el monitor lee desde `v_queue_state` y `v_waiting_room_monitor` o equivalentes persistidos; no consulta el write-side
+- las `entries` del monitor se ordenan por `updatedAt` descendente
+- `waitingCount` y `averageWaitTimeMinutes` deben reflejar el snapshot de queue persistido mas reciente

@@ -26,6 +26,7 @@ public class LocalOutboxIntegrationTests : IClassFixture<LocalOutboxWebApplicati
         const string queueId = "Q-LOCAL-OUTBOX-001";
         const string patientId = "PAT-LOCAL-OUTBOX-001";
         const string correlationId = "CORR-local-outbox-001";
+        var turnId = $"{queueId}-{patientId}";
 
         using (var scope = _factory.Services.CreateScope())
         {
@@ -54,7 +55,7 @@ public class LocalOutboxIntegrationTests : IClassFixture<LocalOutboxWebApplicati
 
             projection = await db.WaitingRoomMonitors
                 .AsNoTracking()
-                .SingleOrDefaultAsync(item => item.TurnId == patientId);
+                .SingleOrDefaultAsync(item => item.TurnId == turnId);
 
             outboxMessages = await db.OutboxMessages
                 .AsNoTracking()
@@ -72,8 +73,11 @@ public class LocalOutboxIntegrationTests : IClassFixture<LocalOutboxWebApplicati
 
         projection.Should().NotBeNull();
         projection!.PatientName.Should().Be("Paciente Local");
-        projection.TicketNumber.Should().Be(patientId);
+        projection.QueueId.Should().Be(queueId);
+        projection.PatientId.Should().Be(patientId);
+        projection.TicketNumber.Should().Be(turnId);
         projection.Status.Should().Be("Waiting");
+        projection.CheckedInAt.Should().BeAfter(DateTime.UtcNow.AddMinutes(-2));
 
         outboxMessages.Should().NotBeNull();
         outboxMessages!.Should().HaveCount(4);

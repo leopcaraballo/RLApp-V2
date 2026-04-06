@@ -14,6 +14,7 @@ import type {
   FinishConsultationRequest,
   HealthStatusResponse,
   LoginRequest,
+  OperationsDashboardSnapshot,
   MarkPaymentPendingRequest,
   MedicalMarkAbsentRequest,
   PatientTrajectoryDiscoveryResponse,
@@ -23,6 +24,7 @@ import type {
   RebuildPatientTrajectoriesRequest,
   RebuildPatientTrajectoriesResult,
   ValidatePaymentRequest,
+  WaitingRoomMonitorSnapshot,
 } from '@/types/api';
 import type { LoginResponseEnvelope, SessionUser } from '@/types/session';
 
@@ -88,6 +90,16 @@ export const rlappApi = {
   getPatientTrajectory(trajectoryId: string): Promise<PatientTrajectoryResponse> {
     return httpRequest<PatientTrajectoryResponse>(
       buildPath(`/patient-trajectories/${encodeURIComponent(trajectoryId)}`)
+    );
+  },
+
+  getOperationsDashboard(): Promise<OperationsDashboardSnapshot> {
+    return httpRequest<OperationsDashboardSnapshot>(buildPath('/v1/operations/dashboard'));
+  },
+
+  getWaitingRoomMonitor(queueId: string): Promise<WaitingRoomMonitorSnapshot> {
+    return httpRequest<WaitingRoomMonitorSnapshot>(
+      buildPath(`/v1/waiting-room/${encodeURIComponent(queueId)}/monitor`)
     );
   },
 

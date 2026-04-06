@@ -138,6 +138,11 @@ var healthResponseWriter = new Microsoft.AspNetCore.Diagnostics.HealthChecks.Hea
 
 app.MapHealthChecks("/health", healthResponseWriter);
 app.MapHealthChecks("/health/ready", healthResponseWriter);
+app.MapHealthChecks("/health/startup", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("startup"),
+    ResponseWriter = healthResponseWriter.ResponseWriter
+});
 app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
 {
     Predicate = check => check.Tags.Contains("live"),

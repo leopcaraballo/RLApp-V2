@@ -37,6 +37,63 @@ export type RebuildPatientTrajectoriesResult =
   components['schemas']['RebuildPatientTrajectoriesResult'];
 export type TrajectoryOperationError = components['schemas']['TrajectoryOperationError'];
 
+export interface OperationalStatusCount {
+  status: string;
+  total: number;
+}
+
+export interface DashboardQueueSnapshot {
+  queueId: string;
+  totalPending: number;
+  averageWaitTimeMinutes: number;
+  lastUpdatedAt: string;
+}
+
+export interface OperationsDashboardSnapshot {
+  generatedAt: string;
+  currentWaitingCount: number;
+  averageWaitTimeMinutes: number;
+  totalPatientsToday: number;
+  totalCompleted: number;
+  activeRooms: number;
+  projectionLagSeconds: number;
+  queueSnapshots: DashboardQueueSnapshot[];
+  statusBreakdown: OperationalStatusCount[];
+}
+
+export interface WaitingRoomMonitorEntry {
+  turnId: string;
+  patientId: string;
+  patientName: string;
+  ticketNumber: string;
+  status: string;
+  roomAssigned?: string | null;
+  checkedInAt: string;
+  updatedAt: string;
+}
+
+export interface WaitingRoomMonitorSnapshot {
+  queueId: string;
+  generatedAt: string;
+  waitingCount: number;
+  averageWaitTimeMinutes: number;
+  activeConsultationRooms: number;
+  statusBreakdown: OperationalStatusCount[];
+  entries: WaitingRoomMonitorEntry[];
+}
+
+export type OperationalRealtimeScope = 'queue' | 'dashboard' | 'trajectory';
+
+export interface OperationalRealtimeEvent {
+  version: string;
+  eventType: string;
+  scope: OperationalRealtimeScope;
+  queueId?: string;
+  trajectoryId?: string;
+  correlationId?: string;
+  occurredAt: string;
+}
+
 export type ApiEnvelopeError =
   | InlineCommandError
   | ValidationProblemDetails

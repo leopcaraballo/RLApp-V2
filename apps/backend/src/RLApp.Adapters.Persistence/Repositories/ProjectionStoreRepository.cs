@@ -15,6 +15,8 @@ namespace RLApp.Adapters.Persistence.Repositories;
 public class ProjectionStoreRepository : IProjectionStore
 {
     private readonly AppDbContext _context;
+    private static readonly string[] WaitingStatuses = ["Waiting"];
+    private static readonly string[] ActiveConsultationStatuses = ["InConsultation"];
 
     public ProjectionStoreRepository(AppDbContext context)
     {
@@ -133,6 +135,149 @@ public class ProjectionStoreRepository : IProjectionStore
         };
     }
 
+    public async Task<WaitingRoomMonitorProjection?> GetWaitingRoomMonitorAsync(string queueId, CancellationToken cancellationToken = default)
+    {
+        var normalizedQueueId = queueId.Trim();
+        if (string.IsNullOrWhiteSpace(normalizedQueueId))
+        {
+            return null;
+        }
+
+        var queueState = await _context.QueueStates
+            .AsNoTracking()
+            .FirstOrDefaultAsync(queue => queue.QueueId == normalizedQueueId, cancellationToken);
+
+        var monitors = await _context.WaitingRoomMonitors
+            .AsNoTracking()
+            .Where(monitor => monitor.QueueId == normalizedQueueId)
+            .OrderByDescending(monitor => monitor.UpdatedAt)
+            .ToListAsync(cancellationToken);
+
+        if (queueState is null && monitors.Count == 0)
+        {
+            return null;
+        }
+
+        var generatedAt = monitors.Count == 0
+            ? queueState?.LastUpdatedAt ?? DateTime.UtcNow
+            : MaxDate(queueState?.LastUpdatedAt, monitors.Max(monitor => monitor.UpdatedAt));
+
+        var waitingEntries = monitors.Where(monitor => WaitingStatuses.Contains(monitor.Status, StringComparer.OrdinalIgnoreCase)).ToArray();
+        var inConsultationEntries = monitors.Where(monitor => ActiveConsultationStatuses.Contains(monitor.Status, StringComparer.OrdinalIgnoreCase)).ToArray();
+
+        return new WaitingRoomMonitorProjection
+        {
+            QueueId = normalizedQueueId,
+            GeneratedAt = generatedAt,
+            WaitingCount = waitingEntries.Length,
+            AverageWaitTimeMinutes = CalculateAverageWaitMinutes(waitingEntries),
+            ActiveConsultationRooms = inConsultationEntries
+                .Select(monitor => monitor.RoomAssigned)
+                .Where(roomAssigned => !string.IsNullOrWhiteSpace(roomAssigned))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Count(),
+            StatusBreakdown = BuildStatusBreakdown(monitors),
+            Entries = monitors.Select(monitor => new WaitingRoomMonitorEntryProjection
+            {
+                TurnId = monitor.TurnId,
+                PatientId = monitor.PatientId,
+                PatientName = monitor.PatientName,
+                TicketNumber = monitor.TicketNumber,
+                Status = monitor.Status,
+                RoomAssigned = monitor.RoomAssigned,
+                CheckedInAt = monitor.CheckedInAt,
+                UpdatedAt = monitor.UpdatedAt
+            }).ToArray()
+        };
+    }
+
+    public async Task<OperationsDashboardProjection> GetOperationsDashboardAsync(CancellationToken cancellationToken = default)
+    {
+        var dashboard = await _context.OperationsDashboards
+            .AsNoTracking()
+            .FirstOrDefaultAsync(cancellationToken);
+
+        var queueStates = await _context.QueueStates
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
+
+        var monitors = await _context.WaitingRoomMonitors
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
+
+        var queueIds = queueStates.Select(queue => queue.QueueId)
+            .Concat(monitors.Select(monitor => monitor.QueueId))
+            .Where(queueId => !string.IsNullOrWhiteSpace(queueId))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(queueId => queueId, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        var queueSnapshots = queueIds
+            .Select(queueId =>
+            {
+                var queue = queueStates.FirstOrDefault(item => string.Equals(item.QueueId, queueId, StringComparison.OrdinalIgnoreCase));
+                var queueMonitors = monitors.Where(monitor => string.Equals(monitor.QueueId, queueId, StringComparison.OrdinalIgnoreCase)).ToArray();
+                var waitingEntries = queueMonitors.Where(monitor => WaitingStatuses.Contains(monitor.Status, StringComparer.OrdinalIgnoreCase)).ToArray();
+
+                return new DashboardQueueSnapshotProjection
+                {
+                    QueueId = queueId,
+                    TotalPending = Math.Max(queue?.TotalPending ?? 0, waitingEntries.Length),
+                    AverageWaitTimeMinutes = queue?.AverageWaitTimeMinutes > 0
+                        ? queue.AverageWaitTimeMinutes
+                        : CalculateAverageWaitMinutes(waitingEntries),
+                    LastUpdatedAt = MaxDate(
+                        queue?.LastUpdatedAt,
+                        queueMonitors.Select(monitor => (DateTime?)monitor.UpdatedAt).DefaultIfEmpty().Max())
+                };
+            })
+            .ToArray();
+
+        var latestProjectionAt = new[]
+        {
+            queueSnapshots.Select(snapshot => (DateTime?)snapshot.LastUpdatedAt).DefaultIfEmpty().Max(),
+            monitors.Select(monitor => (DateTime?)monitor.UpdatedAt).DefaultIfEmpty().Max()
+        }
+        .Where(value => value.HasValue)
+        .Select(value => value!.Value)
+        .DefaultIfEmpty(DateTime.UtcNow)
+        .Max();
+
+        var latestEventAt = await _context.EventStore
+            .AsNoTracking()
+            .OrderByDescending(record => record.OccurredAt)
+            .Select(record => (DateTime?)record.OccurredAt)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        var activeRooms = Math.Max(
+            dashboard?.ActiveRooms ?? 0,
+            monitors
+                .Where(monitor => ActiveConsultationStatuses.Contains(monitor.Status, StringComparer.OrdinalIgnoreCase))
+                .Select(monitor => monitor.RoomAssigned)
+                .Where(roomAssigned => !string.IsNullOrWhiteSpace(roomAssigned))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Count());
+
+        var today = DateTime.UtcNow.Date;
+        var derivedTotalPatientsToday = monitors.Count(monitor => monitor.CheckedInAt.Date == today);
+        var derivedTotalCompleted = monitors.Count(monitor => string.Equals(monitor.Status, "Completed", StringComparison.OrdinalIgnoreCase) && monitor.UpdatedAt.Date == today);
+
+        return new OperationsDashboardProjection
+        {
+            GeneratedAt = latestProjectionAt,
+            CurrentWaitingCount = queueSnapshots.Sum(snapshot => snapshot.TotalPending),
+            AverageWaitTimeMinutes = queueSnapshots.Length == 0
+                ? 0
+                : Math.Round(queueSnapshots.Average(snapshot => snapshot.AverageWaitTimeMinutes), 2),
+            TotalPatientsToday = Math.Max(dashboard?.TotalPatientsToday ?? 0, derivedTotalPatientsToday),
+            TotalCompleted = Math.Max(dashboard?.TotalCompleted ?? 0, derivedTotalCompleted),
+            ActiveRooms = activeRooms,
+            ProjectionLagSeconds = CalculateProjectionLagSeconds(latestProjectionAt, latestEventAt),
+            QueueSnapshots = queueSnapshots,
+            StatusBreakdown = BuildStatusBreakdown(monitors)
+        };
+    }
+
     public async Task DeleteAsync(string projectionId, CancellationToken cancellationToken = default)
     {
         // Remove from all possible views
@@ -197,29 +342,55 @@ public class ProjectionStoreRepository : IProjectionStore
         if (projectionData is not System.Collections.Generic.IDictionary<string, object> dict)
             throw new InvalidOperationException("Projection data must be a dictionary");
 
+        var patientId = ReadString(dict, "PatientId") ?? turnId;
+        var queueId = ReadString(dict, "QueueId");
+        var providedTurnId = ReadString(dict, "TurnId") ?? turnId;
+
         var existing = await _context.WaitingRoomMonitors
-            .FirstOrDefaultAsync(w => w.TurnId == turnId, cancellationToken);
+            .FirstOrDefaultAsync(w => w.TurnId == providedTurnId, cancellationToken);
+
+        if (existing is null)
+        {
+            existing = await _context.WaitingRoomMonitors
+                .FirstOrDefaultAsync(w => w.PatientId == patientId, cancellationToken);
+        }
+
+        var effectiveQueueId = queueId
+            ?? existing?.QueueId
+            ?? ExtractQueueId(providedTurnId)
+            ?? string.Empty;
+        var effectiveTurnId = existing?.TurnId
+            ?? providedTurnId
+            ?? BuildTurnId(effectiveQueueId, patientId);
+        var checkedInAt = ReadDateTime(dict, "CheckedInAt") ?? existing?.CheckedInAt ?? DateTime.UtcNow;
+        var updatedAt = ReadDateTime(dict, "UpdatedAt") ?? DateTime.UtcNow;
 
         if (existing != null)
         {
+            existing.QueueId = effectiveQueueId;
+            existing.PatientId = patientId;
             if (dict.TryGetValue("PatientName", out var pn) && pn != null) existing.PatientName = pn.ToString()!;
             if (dict.TryGetValue("TicketNumber", out var tn) && tn != null) existing.TicketNumber = tn.ToString()!;
             if (dict.TryGetValue("Status", out var s) && s != null) existing.Status = s.ToString()!;
             if (dict.TryGetValue("RoomAssigned", out var ra)) existing.RoomAssigned = ra?.ToString();
 
-            existing.UpdatedAt = DateTime.UtcNow;
+            existing.CheckedInAt = checkedInAt;
+            existing.UpdatedAt = updatedAt;
             _context.WaitingRoomMonitors.Update(existing);
         }
         else
         {
             var newMonitor = new WaitingRoomMonitorView
             {
-                TurnId = turnId,
+                TurnId = effectiveTurnId,
+                QueueId = effectiveQueueId,
+                PatientId = patientId,
                 PatientName = dict.TryGetValue("PatientName", out var pn) ? pn?.ToString() ?? "Unknown" : "Unknown",
-                TicketNumber = dict.TryGetValue("TicketNumber", out var tn) ? tn?.ToString() ?? turnId : turnId,
+                TicketNumber = dict.TryGetValue("TicketNumber", out var tn) ? tn?.ToString() ?? effectiveTurnId : effectiveTurnId,
                 Status = dict.TryGetValue("Status", out var s) ? s?.ToString() ?? "Waiting" : "Waiting",
                 RoomAssigned = dict.TryGetValue("RoomAssigned", out var ra) ? ra?.ToString() : null,
-                UpdatedAt = DateTime.UtcNow
+                CheckedInAt = checkedInAt,
+                UpdatedAt = updatedAt
             };
             await _context.WaitingRoomMonitors.AddAsync(newMonitor, cancellationToken);
         }
@@ -305,4 +476,102 @@ public class ProjectionStoreRepository : IProjectionStore
 
     private static T Deserialize<T>(string payload) where T : new()
         => JsonSerializer.Deserialize<T>(payload) ?? new T();
+
+    private static string? ReadString(System.Collections.Generic.IDictionary<string, object> dict, string key)
+        => dict.TryGetValue(key, out var value) ? value?.ToString() : null;
+
+    private static DateTime? ReadDateTime(System.Collections.Generic.IDictionary<string, object> dict, string key)
+    {
+        if (!dict.TryGetValue(key, out var value) || value is null)
+        {
+            return null;
+        }
+
+        return value switch
+        {
+            DateTime dateTime => dateTime,
+            DateTimeOffset dateTimeOffset => dateTimeOffset.UtcDateTime,
+            string text when DateTime.TryParse(text, out var parsed) => parsed,
+            _ => null
+        };
+    }
+
+    private static string? ExtractQueueId(string turnId)
+    {
+        if (string.IsNullOrWhiteSpace(turnId))
+        {
+            return null;
+        }
+
+        var marker = "-PAT-";
+        var markerIndex = turnId.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+        if (markerIndex <= 0)
+        {
+            return null;
+        }
+
+        return turnId[..markerIndex];
+    }
+
+    private static string BuildTurnId(string queueId, string patientId)
+        => string.IsNullOrWhiteSpace(queueId) ? patientId : $"{queueId}-{patientId}";
+
+    private static IReadOnlyList<OperationalStatusCountProjection> BuildStatusBreakdown(IEnumerable<WaitingRoomMonitorView> monitors)
+        => monitors
+            .GroupBy(monitor => NormalizeStatus(monitor.Status), StringComparer.OrdinalIgnoreCase)
+            .OrderByDescending(group => group.Count())
+            .ThenBy(group => group.Key, StringComparer.OrdinalIgnoreCase)
+            .Select(group => new OperationalStatusCountProjection
+            {
+                Status = group.Key,
+                Total = group.Count()
+            })
+            .ToArray();
+
+    private static string NormalizeStatus(string status)
+        => string.IsNullOrWhiteSpace(status) ? "Unknown" : status.Trim();
+
+    private static double CalculateAverageWaitMinutes(IEnumerable<WaitingRoomMonitorView> entries)
+    {
+        var activeEntries = entries.ToArray();
+        if (activeEntries.Length == 0)
+        {
+            return 0;
+        }
+
+        var now = DateTime.UtcNow;
+        var average = activeEntries.Average(entry => Math.Max(0, (now - entry.CheckedInAt).TotalMinutes));
+        return Math.Round(average, 2);
+    }
+
+    private static DateTime MaxDate(DateTime? left, DateTime? right)
+    {
+        if (!left.HasValue)
+        {
+            return right ?? DateTime.UtcNow;
+        }
+
+        if (!right.HasValue)
+        {
+            return left.Value;
+        }
+
+        return left.Value >= right.Value ? left.Value : right.Value;
+    }
+
+    private static int CalculateProjectionLagSeconds(DateTime latestProjectionAt, DateTime? latestEventAt)
+    {
+        if (!latestEventAt.HasValue)
+        {
+            return 0;
+        }
+
+        var lag = latestEventAt.Value - latestProjectionAt;
+        if (lag <= TimeSpan.Zero)
+        {
+            return 0;
+        }
+
+        return (int)Math.Round(lag.TotalSeconds);
+    }
 }

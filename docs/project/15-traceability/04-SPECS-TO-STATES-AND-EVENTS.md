@@ -12,3 +12,4 @@
 | S-008 | Soporta ST-001 a ST-012 | Soporta EV-001 a EV-019 | Garantiza persistencia, outbox, proyecciones y rebuild |
 | S-009 | N/A | N/A | Restriccion transversal de plataforma, seguridad, recovery y observabilidad |
 | S-011 | ST-010, ST-011, ST-012; observa ST-001 a ST-009 | EV-015, EV-016, EV-017, EV-018, EV-019; observa EV-001 a EV-014 | TrayectoriaPaciente consolida hitos longitudinales y replay controlado |
+| S-013 | Observa ST-001 a ST-012 | Observa EV-001 a EV-019 | Sincroniza visibilidad de staff sobre snapshots persistidos y realtime mediado por BFF |

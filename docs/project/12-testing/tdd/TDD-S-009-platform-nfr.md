@@ -11,3 +11,4 @@
 - propagate tracing for trajectory discovery with `correlationId`, `patientId` and optional `queueId`
 - dead-letter alerts and counters for unrecoverable outbox messages
 - readiness remains healthy without broker when external messaging is disabled
+- validate staff stream reconnect and refetch semantics through the BFF without leaking raw backend tokens

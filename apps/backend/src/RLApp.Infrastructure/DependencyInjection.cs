@@ -18,7 +18,6 @@ using RLApp.Ports.Outbound;
 using Polly;
 using Polly.Retry;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
-using RabbitMQ.Client;
 using System;
 
 namespace RLApp.Infrastructure;
@@ -142,21 +141,15 @@ public static class DependencyInjection
         services.AddSignalR();
 
         // Add Health Checks
-        var rabbitConnectionString = $"amqp://{rabbitUser}:{rabbitPass}@{rabbitHost}:{rabbitPort}/";
-
         var healthChecks = services.AddHealthChecks()
-            .AddNpgSql(configuration.GetConnectionString("Postgres") ?? "", tags: ["ready"])
+            .AddNpgSql(configuration.GetConnectionString("Postgres") ?? "", tags: ["ready", "startup"])
             .AddCheck<RLApp.Infrastructure.HealthChecks.ProjectionLagHealthCheck>("ProjectionLag", tags: ["ready"])
             .AddCheck<RLApp.Infrastructure.HealthChecks.RealtimeChannelHealthCheck>("RealtimeChannel", tags: ["ready"])
-            .AddCheck("Self", () => HealthCheckResult.Healthy(), tags: ["live"]);
+            .AddCheck("Self", () => HealthCheckResult.Healthy(), tags: ["live", "startup"]);
 
         if (messagingEnabled && enableRabbitHealthCheck)
         {
-            healthChecks.AddRabbitMQ(async sp =>
-            {
-                var factory = new ConnectionFactory { Uri = new Uri(rabbitConnectionString) };
-                return await factory.CreateConnectionAsync();
-            }, name: "RabbitMQ", tags: ["ready"]);
+            healthChecks.AddCheck<RLApp.Infrastructure.HealthChecks.RabbitMqHealthCheck>("RabbitMQ", tags: ["ready", "startup"]);
         }
 
         // Configure Polly Resilience Pipelines (using Microsoft.Extensions.Resilience)
@@ -170,6 +163,8 @@ public static class DependencyInjection
                 Delay = TimeSpan.FromSeconds(1)
             });
         });
+
+        services.AddHostedService<OperationalProjectionWarmupService>();
 
         // Configure the Outbox Background Service
         services.AddHostedService<OutboxProcessor>();
