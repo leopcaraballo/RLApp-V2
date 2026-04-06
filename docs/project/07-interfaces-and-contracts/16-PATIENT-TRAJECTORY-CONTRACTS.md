@@ -94,6 +94,84 @@ Exponer la trayectoria longitudinal de un paciente desde una proyeccion persiste
 }
 ```
 
+## Trajectory discovery
+
+### Discovery purpose
+
+Resolver `trajectoryId` candidatos cuando el operador conoce `patientId` y, opcionalmente, `queueId`, pero aun no tiene el identificador longitudinal exacto.
+
+### Discovery method and path
+
+- `GET /api/patient-trajectories`
+
+### Discovery authorization and headers
+
+| Header | Required | Notes |
+| --- | --- | --- |
+| `Authorization` | Yes | Disponible para `Supervisor` y `Support`. |
+| `X-Correlation-Id` | No | Recomendado para trazar el lookup operacional. |
+
+### Discovery query parameters
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `patientId` | `string` | Yes | Paciente a buscar dentro de trayectorias materializadas. |
+| `queueId` | `string` | No | Acota la busqueda a una queue especifica cuando el operador conoce el contexto operativo. |
+
+### Discovery response schema
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `total` | `integer` | Yes | Cantidad de trayectorias candidatas encontradas. |
+| `items` | `array[TrajectoryDiscoveryEntry]` | Yes | Candidatas ordenadas con trayectorias activas primero y luego por `openedAt` descendente. |
+
+### Discovery entry schema
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `trajectoryId` | `string` | Yes | Identificador longitudinal candidato. |
+| `patientId` | `string` | Yes | Paciente asociado a la trayectoria. |
+| `queueId` | `string` | Yes | Queue canonica donde se abrio la trayectoria. |
+| `currentState` | `string` | Yes | Estado actual de la trayectoria (`ST-010`, `ST-011` o `ST-012`). |
+| `openedAt` | `string(date-time)` | Yes | Momento de apertura de la trayectoria. |
+| `closedAt` | `string(date-time)` | No | Momento de cierre cuando aplique. |
+| `lastCorrelationId` | `string` | No | Ultima correlacion operativa conocida para continuar el diagnostico. |
+
+### Discovery canonical errors
+
+| Code | When |
+| --- | --- |
+| `TRAJECTORY_DISCOVERY_SCOPE_INVALID` | La busqueda no define un `patientId` valido. |
+| `AUTH_ROLE_FORBIDDEN` | El actor autenticado no puede descubrir trayectorias. |
+
+### Discovery example response
+
+```json
+{
+  "total": 2,
+  "items": [
+    {
+      "trajectoryId": "TRJ-00041",
+      "patientId": "PAT-00041",
+      "queueId": "QUEUE-01",
+      "currentState": "TrayectoriaActiva",
+      "openedAt": "2026-04-06T08:10:00Z",
+      "closedAt": null,
+      "lastCorrelationId": "CORR-b4"
+    },
+    {
+      "trajectoryId": "TRJ-00012",
+      "patientId": "PAT-00041",
+      "queueId": "QUEUE-2026-03-31",
+      "currentState": "TrayectoriaFinalizada",
+      "openedAt": "2026-03-31T09:10:00Z",
+      "closedAt": "2026-03-31T09:44:00Z",
+      "lastCorrelationId": "CORR-a3"
+    }
+  ]
+}
+```
+
 ## Trajectory rebuild
 
 ### Rebuild purpose
@@ -141,5 +219,7 @@ Reprocesar eventos historicos para materializar o reconciliar trayectorias de pa
 ## Query rules
 
 - La consulta de trayectoria lee siempre desde proyecciones persistentes, nunca desde replay en hot path.
+- El discovery lee siempre desde proyecciones persistentes y no puede disparar rebuild ni replay implicito.
+- Un discovery sin coincidencias responde `200` con `total=0` e `items=[]`.
 - El rebuild debe ser controlado, auditable e idempotente.
 - Ningun rebuild de trayectoria puede reemitir mensajes externos ni modificar eventos historicos ya persistidos.

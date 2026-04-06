@@ -16,6 +16,7 @@ import type {
   LoginRequest,
   MarkPaymentPendingRequest,
   MedicalMarkAbsentRequest,
+  PatientTrajectoryDiscoveryResponse,
   PatientTrajectoryResponse,
   PatientCallResult,
   ReceptionRegisterRequest,
@@ -67,6 +68,21 @@ export const rlappApi = {
 
   getLiveness(): Promise<HealthStatusResponse> {
     return httpRequest<HealthStatusResponse>(buildPath('/health/live'));
+  },
+
+  discoverPatientTrajectories(
+    patientId: string,
+    queueId?: string
+  ): Promise<PatientTrajectoryDiscoveryResponse> {
+    const query: Record<string, string> = { patientId };
+
+    if (queueId) {
+      query.queueId = queueId;
+    }
+
+    return httpRequest<PatientTrajectoryDiscoveryResponse>(
+      buildPath('/patient-trajectories', query)
+    );
   },
 
   getPatientTrajectory(trajectoryId: string): Promise<PatientTrajectoryResponse> {

@@ -6,6 +6,7 @@ using Microsoft.Extensions.Options;
 using RLApp.Adapters.Persistence.Persistence;
 using RLApp.Infrastructure.BackgroundServices;
 using RLApp.Infrastructure.Data;
+using RLApp.Infrastructure.Realtime;
 using RLApp.Infrastructure.Security;
 using RLApp.Adapters.Persistence.Data;
 using RLApp.Adapters.Persistence.Publishers;
@@ -52,6 +53,7 @@ public static class DependencyInjection
 
         // Register adapters for interfaces
         services.AddSingleton<IOutboxProcessingSignal, OutboxProcessingSignal>();
+        services.AddSingleton<RealtimeChannelStatus>();
         services.AddScoped<IEventStore, EventStoreRepository>();
         services.AddScoped<IEventPublisher, OutboxEventPublisher>(); // Pushes to the outbox via EF Core
         services.AddScoped<IProjectionStore, ProjectionStoreRepository>(); // Read model projections
@@ -145,6 +147,7 @@ public static class DependencyInjection
         var healthChecks = services.AddHealthChecks()
             .AddNpgSql(configuration.GetConnectionString("Postgres") ?? "", tags: ["ready"])
             .AddCheck<RLApp.Infrastructure.HealthChecks.ProjectionLagHealthCheck>("ProjectionLag", tags: ["ready"])
+            .AddCheck<RLApp.Infrastructure.HealthChecks.RealtimeChannelHealthCheck>("RealtimeChannel", tags: ["ready"])
             .AddCheck("Self", () => HealthCheckResult.Healthy(), tags: ["live"]);
 
         if (messagingEnabled && enableRabbitHealthCheck)

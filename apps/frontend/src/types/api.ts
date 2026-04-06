@@ -25,6 +25,10 @@ export type ValidationProblemDetails = components['schemas']['ValidationProblemD
 export type ProblemDetails = components['schemas']['ProblemDetails'];
 export type HealthDetail = components['schemas']['HealthDetail'];
 export type HealthStatusResponse = components['schemas']['HealthStatusResponse'];
+export type PatientTrajectoryDiscoveryEntry =
+  components['schemas']['PatientTrajectoryDiscoveryEntry'];
+export type PatientTrajectoryDiscoveryResponse =
+  components['schemas']['PatientTrajectoryDiscoveryResponse'];
 export type PatientTrajectoryResponse = components['schemas']['PatientTrajectoryResponse'];
 export type PatientTrajectoryStageEntry = components['schemas']['TrajectoryStageEntry'];
 export type RebuildPatientTrajectoriesRequest =

@@ -79,5 +79,13 @@ public class PatientFlowIntegrationTests : IClassFixture<CustomWebApplicationFac
         response.EnsureSuccessStatusCode();
         var content = JsonSerializer.Deserialize<JsonElement>(detail!);
         content.GetProperty("status").GetString().Should().Be("Healthy");
+        content.GetProperty("details")
+            .EnumerateArray()
+            .Any(item => item.GetProperty("key").GetString() == "ProjectionLag")
+            .Should().BeTrue();
+        content.GetProperty("details")
+            .EnumerateArray()
+            .Any(item => item.GetProperty("key").GetString() == "RealtimeChannel")
+            .Should().BeTrue();
     }
 }

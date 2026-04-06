@@ -2,6 +2,7 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using RLApp.Adapters.Persistence.Data;
 using RLApp.Adapters.Persistence.Data.Models;
+using RLApp.Domain.Aggregates;
 using RLApp.Ports.Outbound;
 
 namespace RLApp.Adapters.Persistence.Repositories;
@@ -72,6 +73,40 @@ public class ProjectionStoreRepository : IProjectionStore
         };
 
         return result as T ?? throw new KeyNotFoundException($"Projection not found: {projectionId}");
+    }
+
+    public async Task<IReadOnlyList<PatientTrajectoryProjection>> FindPatientTrajectoriesAsync(
+        string patientId,
+        string? queueId,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _context.PatientTrajectories
+            .AsNoTracking()
+            .Where(trajectory => trajectory.PatientId == patientId);
+
+        if (!string.IsNullOrWhiteSpace(queueId))
+        {
+            query = query.Where(trajectory => trajectory.QueueId == queueId);
+        }
+
+        var views = await query
+            .OrderByDescending(trajectory => trajectory.CurrentState == PatientTrajectory.ActiveState)
+            .ThenByDescending(trajectory => trajectory.OpenedAt)
+            .ToListAsync(cancellationToken);
+
+        return views
+            .Select(view => new PatientTrajectoryProjection
+            {
+                TrajectoryId = view.TrajectoryId,
+                PatientId = view.PatientId,
+                QueueId = view.QueueId,
+                CurrentState = view.CurrentState,
+                OpenedAt = view.OpenedAt,
+                ClosedAt = view.ClosedAt,
+                CorrelationIds = Deserialize<List<string>>(view.CorrelationIdsJson),
+                Stages = Deserialize<List<PatientTrajectoryStageProjection>>(view.StagesJson)
+            })
+            .ToArray();
     }
 
     public async Task<PatientTrajectoryProjection?> GetPatientTrajectoryAsync(string trajectoryId, CancellationToken cancellationToken = default)

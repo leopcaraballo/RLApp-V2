@@ -29,6 +29,7 @@
 | GET /api/v1/waiting-room/{queueId}/next-turn | Query | US-006, US-007 | S-003, S-006 |
 | GET /api/v1/waiting-room/{queueId}/recent-history | Query | US-006, US-010 | S-003, S-006 |
 | POST /api/v1/waiting-room/{queueId}/rebuild | Query-like operation | US-016 | S-008 |
+| GET /api/patient-trajectories | Query | US-018 | S-011 |
 | GET /api/patient-trajectories/{trajectoryId} | Query | US-012, US-018 | S-011 |
 | POST /api/patient-trajectories/rebuild | Query-like operation | US-018 | S-011 |
 | GET or WS /ws/waiting-room | Realtime | US-006, US-007, US-010 | S-006 |
@@ -36,5 +37,5 @@
 ## Contract gap
 
 - No quedan endpoints faltantes para `S-001` y `S-007`.
-- `S-011` ya expone endpoints canonicos para consulta protegida y rebuild controlado de trayectoria.
+- `S-011` ya expone endpoints canonicos para discovery operativo, consulta protegida y rebuild controlado de trayectoria.
 - Los contratos de identidad, reporting, recepcion, caja y consulta ya incluyen payloads tipados, required/optional y errores canonicos suficientes para traduccion directa a OpenAPI.

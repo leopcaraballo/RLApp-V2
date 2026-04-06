@@ -7,5 +7,6 @@
 - GET /api/v1/waiting-room/{queueId}/next-turn
 - GET /api/v1/waiting-room/{queueId}/recent-history
 - POST /api/v1/waiting-room/{queueId}/rebuild
+- GET /api/patient-trajectories
 - GET /api/patient-trajectories/{trajectoryId}
 - POST /api/patient-trajectories/rebuild

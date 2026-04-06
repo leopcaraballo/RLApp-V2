@@ -13,11 +13,18 @@ import { useOperationJournal } from '@/hooks/use-operation-journal';
 import { ApiError } from '@/services/http-client';
 import { rlappApi } from '@/services/rlapp-api';
 import type {
+  PatientTrajectoryDiscoveryEntry,
+  PatientTrajectoryDiscoveryResponse,
   PatientTrajectoryResponse,
   RebuildPatientTrajectoriesRequest,
   RebuildPatientTrajectoriesResult,
 } from '@/types/api';
 import type { SessionUser } from '@/types/session';
+
+const discoverySchema = z.object({
+  patientId: z.string().trim().min(1, 'Patient ID is required.'),
+  queueId: z.string().optional(),
+});
 
 const querySchema = z.object({
   trajectoryId: z.string().trim().min(1, 'Trajectory ID is required.'),
@@ -29,6 +36,7 @@ const rebuildSchema = z.object({
   dryRun: z.enum(['true', 'false']),
 });
 
+type DiscoveryFormValues = z.infer<typeof discoverySchema>;
 type QueryFormValues = z.infer<typeof querySchema>;
 type RebuildFormValues = z.infer<typeof rebuildSchema>;
 
@@ -79,6 +87,95 @@ function formatTimestamp(value: string | null | undefined): string {
   }
 
   return new Date(value).toLocaleString();
+}
+
+function TrajectoryDiscoveryResults({
+  discovery,
+  isLoading,
+  onSelect,
+}: {
+  discovery: PatientTrajectoryDiscoveryResponse;
+  isLoading: boolean;
+  onSelect: (trajectoryId: string) => Promise<void>;
+}) {
+  if (discovery.total === 0) {
+    return (
+      <div className="response-card" style={{ marginTop: '20px' }}>
+        <div className="response-card__title">No persisted trajectories found</div>
+        <p>
+          No candidate trajectories matched the current filters. Verify the patient has a
+          materialized trajectory or narrow the lookup with queueId.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <section className="panel" style={{ marginTop: '20px' }}>
+      <div className="panel__header">
+        <div>
+          <div className="panel__eyebrow">Discovery candidates</div>
+          <h2>{discovery.total} candidate trajectory(s)</h2>
+          <p>Select the trajectory you want to inspect in full detail.</p>
+        </div>
+        <StatusBadge tone="info">Projection-backed</StatusBadge>
+      </div>
+
+      <div className="history-list" style={{ marginTop: '20px' }}>
+        {discovery.items.map((item) => (
+          <TrajectoryDiscoveryItem
+            entry={item}
+            isLoading={isLoading}
+            key={`${item.trajectoryId}-${item.openedAt}`}
+            onSelect={onSelect}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function TrajectoryDiscoveryItem({
+  entry,
+  isLoading,
+  onSelect,
+}: {
+  entry: PatientTrajectoryDiscoveryEntry;
+  isLoading: boolean;
+  onSelect: (trajectoryId: string) => Promise<void>;
+}) {
+  return (
+    <article className="history-item">
+      <div className="history-item__header">
+        <div>
+          <h3>{entry.trajectoryId}</h3>
+          <p>
+            {entry.patientId} in {entry.queueId}
+          </p>
+        </div>
+        <StatusBadge tone={toneFromState(entry.currentState)}>{entry.currentState}</StatusBadge>
+      </div>
+      <div className="history-item__meta">
+        <span>Opened: {formatTimestamp(entry.openedAt)}</span>
+        <span>Closed: {formatTimestamp(entry.closedAt)}</span>
+      </div>
+      <div className="history-item__meta" style={{ marginTop: '8px' }}>
+        <span>Last correlation: {entry.lastCorrelationId ?? 'Not captured yet'}</span>
+      </div>
+      <div className="form-actions" style={{ marginTop: '12px' }}>
+        <button
+          className="ghost-button"
+          disabled={isLoading}
+          onClick={() => {
+            void onSelect(entry.trajectoryId);
+          }}
+          type="button"
+        >
+          {isLoading ? 'Loading...' : 'Load trajectory'}
+        </button>
+      </div>
+    </article>
+  );
 }
 
 function TrajectorySummary({ trajectory }: { trajectory: PatientTrajectoryResponse }) {
@@ -189,6 +286,14 @@ function RebuildResult({ result }: { result: RebuildPatientTrajectoriesResult })
 }
 
 export function PatientTrajectoryConsole({ session }: { session: SessionUser }) {
+  const discoveryForm = useForm<DiscoveryFormValues>({
+    resolver: zodResolver(discoverySchema),
+    defaultValues: {
+      patientId: '',
+      queueId: '',
+    },
+  });
+
   const queryForm = useForm<QueryFormValues>({
     resolver: zodResolver(querySchema),
     defaultValues: {
@@ -197,6 +302,33 @@ export function PatientTrajectoryConsole({ session }: { session: SessionUser }) 
   });
 
   const { entries, pushEntry, clearEntries } = useOperationJournal('patient-trajectory');
+
+  const discoveryMutation = useMutation({
+    mutationFn: ({ patientId, queueId }: DiscoveryFormValues) =>
+      rlappApi.discoverPatientTrajectories(patientId.trim(), normalizeOptional(queueId)),
+    onSuccess(result, variables) {
+      pushEntry({
+        title: 'Discover patient trajectories',
+        status: 'success',
+        message:
+          result.total === 0
+            ? `No persisted trajectories found for patient ${variables.patientId}.`
+            : `${result.total} trajectory candidate(s) discovered for patient ${variables.patientId}.`,
+        correlationId: result.items[0]?.lastCorrelationId ?? undefined,
+        timestamp: new Date().toISOString(),
+      });
+    },
+    onError(error) {
+      const failure = readError(error);
+      pushEntry({
+        title: 'Discover patient trajectories',
+        status: 'error',
+        message: failure.message,
+        correlationId: failure.correlationId,
+        timestamp: new Date().toISOString(),
+      });
+    },
+  });
 
   const queryMutation = useMutation({
     mutationFn: ({ trajectoryId }: QueryFormValues) => rlappApi.getPatientTrajectory(trajectoryId),
@@ -225,13 +357,23 @@ export function PatientTrajectoryConsole({ session }: { session: SessionUser }) 
 
   const canRebuild = session.role === 'Support';
 
+  async function loadTrajectory(trajectoryId: string) {
+    queryForm.setValue('trajectoryId', trajectoryId, {
+      shouldDirty: true,
+      shouldTouch: true,
+      shouldValidate: true,
+    });
+
+    await queryMutation.mutateAsync({ trajectoryId });
+  }
+
   return (
     <>
       <SectionIntro
         badge={session.role}
         eyebrow="Support diagnostics"
         title="Patient trajectory console"
-        description="Docker local now exposes the audited trajectory query and controlled rebuild flow without leaving the operational console."
+        description="Docker local now exposes trajectory discovery, audited trajectory query and controlled rebuild flow without leaving the operational console."
       />
 
       <div className="grid grid--two">
@@ -239,8 +381,11 @@ export function PatientTrajectoryConsole({ session }: { session: SessionUser }) 
           <div className="operation-card__header">
             <div>
               <div className="panel__eyebrow">Backend query</div>
-              <h2>Fetch a persisted trajectory</h2>
-              <p>Use a known trajectoryId to inspect the event-derived longitudinal projection.</p>
+              <h2>Discover and inspect a persisted trajectory</h2>
+              <p>
+                Start with patientId, optionally narrow by queueId, and load the exact event-derived
+                longitudinal projection when multiple histories exist.
+              </p>
             </div>
             <StatusBadge tone="info">GET</StatusBadge>
           </div>
@@ -248,17 +393,80 @@ export function PatientTrajectoryConsole({ session }: { session: SessionUser }) 
           <ContractAlert
             title="Contract caveats"
             items={[
-              'The backend offers no search endpoint by patientId or queueId; this screen works with a known trajectoryId only.',
+              'Discovery requires patientId and can narrow by queueId when the operator knows the active context.',
+              'Full trajectory detail remains a second explicit query by trajectoryId after candidate selection.',
               'Access is limited to Support and Supervisor roles.',
             ]}
           />
 
           <form
             className="form-grid"
-            onSubmit={queryForm.handleSubmit(async (values) => {
-              await queryMutation.mutateAsync(values);
+            onSubmit={discoveryForm.handleSubmit(async (values) => {
+              await discoveryMutation.mutateAsync(values);
             })}
+            style={{ marginTop: '20px' }}
           >
+            <label className="form-field" htmlFor="discoveryPatientId">
+              <span>Patient ID</span>
+              <input
+                id="discoveryPatientId"
+                placeholder="PAT-0045"
+                {...discoveryForm.register('patientId')}
+              />
+              <small>Required. This lookup stays on the persisted read model.</small>
+              {discoveryForm.formState.errors.patientId ? (
+                <strong className="form-field__error">
+                  {discoveryForm.formState.errors.patientId.message}
+                </strong>
+              ) : null}
+            </label>
+
+            <label className="form-field" htmlFor="discoveryQueueId">
+              <span>Queue ID</span>
+              <input
+                id="discoveryQueueId"
+                placeholder="Q-2026-03-19-MAIN"
+                {...discoveryForm.register('queueId')}
+              />
+              <small>
+                Optional. Use it to narrow the lookup when the patient has multiple histories.
+              </small>
+            </label>
+
+            <div className="form-actions">
+              <button
+                className="primary-button"
+                disabled={discoveryMutation.isPending}
+                type="submit"
+              >
+                {discoveryMutation.isPending ? 'Searching...' : 'Discover candidates'}
+              </button>
+            </div>
+          </form>
+
+          {discoveryMutation.isError ? (
+            <div className="response-card response-card--error" style={{ marginTop: '20px' }}>
+              <div className="response-card__title">Backend rejected the discovery</div>
+              <p>{readError(discoveryMutation.error).message}</p>
+            </div>
+          ) : null}
+
+          {discoveryMutation.data ? (
+            <TrajectoryDiscoveryResults
+              discovery={discoveryMutation.data}
+              isLoading={queryMutation.isPending}
+              onSelect={loadTrajectory}
+            />
+          ) : null}
+
+          <form
+            className="form-grid"
+            onSubmit={queryForm.handleSubmit(async (values) => {
+              await loadTrajectory(values.trajectoryId);
+            })}
+            style={{ marginTop: '24px' }}
+          >
+            <div className="panel__eyebrow">Direct query</div>
             <label className="form-field" htmlFor="trajectoryId">
               <span>Trajectory ID</span>
               <input
@@ -267,7 +475,8 @@ export function PatientTrajectoryConsole({ session }: { session: SessionUser }) 
                 {...queryForm.register('trajectoryId')}
               />
               <small>
-                Use the canonical trajectory identifier captured by the projection/audit trail.
+                Use this when you already know the canonical trajectory identifier from support
+                evidence.
               </small>
               {queryForm.formState.errors.trajectoryId ? (
                 <strong className="form-field__error">
@@ -378,13 +587,16 @@ export function PatientTrajectoryConsole({ session }: { session: SessionUser }) 
             <div>
               <div className="panel__eyebrow">Projection output</div>
               <h2>No trajectory loaded yet</h2>
-              <p>Submit a known trajectoryId to inspect the persisted longitudinal state.</p>
+              <p>
+                Discover candidates by patientId or submit a known trajectoryId to inspect the
+                persisted longitudinal state.
+              </p>
             </div>
           </div>
           <div className="empty-state" style={{ marginTop: '20px' }}>
             <p>
-              This screen intentionally avoids inventing search contracts the backend does not
-              publish. Use a trajectoryId already captured by diagnostics or support evidence.
+              This screen now stays backend-aligned by discovering candidate trajectoryIds first and
+              loading the full projection only after an explicit selection.
             </p>
           </div>
         </section>

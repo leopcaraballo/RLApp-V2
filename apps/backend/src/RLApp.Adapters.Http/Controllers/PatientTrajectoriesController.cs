@@ -20,6 +20,30 @@ public sealed class PatientTrajectoriesController : RLAppControllerBase
     }
 
     [Authorize(Policy = AuthorizationPolicies.SupportOrSupervisor)]
+    [HttpGet]
+    public async Task<IActionResult> Discover(
+        [FromQuery] string? patientId,
+        [FromQuery] string? queueId,
+        [FromHeader(Name = "X-Correlation-Id")] string? correlationId,
+        CancellationToken cancellationToken)
+    {
+        var activeCorrelationId = string.IsNullOrWhiteSpace(correlationId)
+            ? Guid.NewGuid().ToString()
+            : correlationId;
+
+        var result = await _mediator.Send(
+            new DiscoverPatientTrajectoriesQuery(patientId ?? string.Empty, queueId, activeCorrelationId),
+            cancellationToken);
+
+        if (!result.Success)
+        {
+            return BadRequest(new { Code = result.Message, result.CorrelationId });
+        }
+
+        return Ok(result.Data);
+    }
+
+    [Authorize(Policy = AuthorizationPolicies.SupportOrSupervisor)]
     [HttpGet("{trajectoryId}")]
     public async Task<IActionResult> GetById(
         [FromRoute] string trajectoryId,

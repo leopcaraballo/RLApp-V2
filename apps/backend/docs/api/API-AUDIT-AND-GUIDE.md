@@ -127,7 +127,7 @@ Pendiente o inconsistente:
 - `X-Idempotency-Key` se recibe, pero no se persiste ni se reejecuta idempotentemente.
 - No hay formato uniforme para errores `401/403`.
 
-### 7. Health checks por debajo de la documentación operativa objetivo
+### 7. Health checks todavía parciales frente a la operación objetivo
 
 La documentación operativa del proyecto exige revisar también:
 
@@ -137,12 +137,15 @@ La documentación operativa del proyecto exige revisar también:
 La implementación actual expone:
 
 - `database`
+- `projection lag`
+- `realtime channel`
 - `broker` opcional según configuración
 - `self`
 
 Impacto:
 
-- `ready` puede reportar verde sin cubrir todas las dependencias observables esperadas por operaciones.
+- `ready` ya cubre la salud de proyecciones persistidas y del broadcaster realtime en función de conexiones activas y del resultado de la última publicación SignalR.
+- Siguen faltando alertas operativas dedicadas y evidencia end-to-end de reconnect para el canal realtime.
 
 ## Recomendaciones técnicas
 
@@ -165,7 +168,7 @@ Impacto:
 
 - Implementar idempotencia real sobre `X-Idempotency-Key`.
 - Hacer consistente el uso de `404` para recursos faltantes.
-- Incorporar health checks para proyecciones y canal realtime.
+- Endurecer evidencia operativa end-to-end del canal realtime, incluyendo reconnect y alertas sobre thresholds de propagación.
 
 ## Guía para frontend developers
 
