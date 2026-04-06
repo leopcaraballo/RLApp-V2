@@ -4,1602 +4,1704 @@
  */
 
 export interface paths {
-    "/api/staff/auth/login": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Autenticar usuario interno
-         * @description Autentica un usuario interno y devuelve un token JWT Bearer.
-         *
-         *     Hallazgo importante:
-         *     - El campo `identifier` hoy solo se resuelve contra `username`; el backend no hace fallback a email ni a otro identificador.
-         *     - `capabilities` existe en la respuesta, pero actualmente se devuelve vacío.
-         */
-        post: operations["loginStaff"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+  '/api/staff/auth/login': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/staff/users/change-role": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Cambiar rol de un usuario interno
-         * @description Cambia el rol operativo de un usuario interno.
-         *
-         *     Hallazgos importantes:
-         *     - Requiere política `SupervisorOnly`.
-         *     - El campo `reason` es obligatorio en el request DTO, pero hoy no se usa en el handler.
-         *     - La respuesta real es un `CommandResult` genérico y no el `ChangeRoleResponse` definido en `Adapters.Http/Responses`.
-         */
-        post: operations["changeStaffRole"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /**
+     * Autenticar usuario interno
+     * @description Autentica un usuario interno y devuelve un token JWT Bearer.
+     *
+     *     Hallazgo importante:
+     *     - El campo `identifier` hoy solo se resuelve contra `username`; el backend no hace fallback a email ni a otro identificador.
+     *     - `capabilities` existe en la respuesta, pero actualmente se devuelve vacío.
+     */
+    post: operations['loginStaff'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/staff/users/change-role': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/reception/register": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Registrar llegada de paciente desde recepción
-         * @description Alias operativo para registrar la llegada de un paciente.
-         *
-         *     Hallazgos importantes:
-         *     - Requiere política `ReceptionOperations`.
-         *     - `appointmentReference`, `priority` y `notes` son requeridos/aceptados por el DTO, pero hoy no influyen en el handler.
-         *     - `patientName` es opcional; si no se envía, el backend usa `patientId` como nombre.
-         *     - La respuesta no devuelve `queueId` ni `turnId`; devuelve un `CommandResult` genérico.
-         */
-        post: operations["receptionRegisterPatient"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /**
+     * Cambiar rol de un usuario interno
+     * @description Cambia el rol operativo de un usuario interno.
+     *
+     *     Hallazgos importantes:
+     *     - Requiere política `SupervisorOnly`.
+     *     - El campo `reason` es obligatorio en el request DTO, pero hoy no se usa en el handler.
+     *     - La respuesta real es un `CommandResult` genérico y no el `ChangeRoleResponse` definido en `Adapters.Http/Responses`.
+     */
+    post: operations['changeStaffRole'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/reception/register': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/waiting-room/check-in": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Registrar check-in de paciente en la cola
-         * @description Registra al paciente en la cola operativa.
-         *
-         *     Hallazgos importantes:
-         *     - Requiere política `ReceptionOperations`.
-         *     - `appointmentReference`, `consultationType` y `priority` hoy no son consumidos por el handler.
-         *     - `patientName` es opcional; si no se envía, el backend usa `patientId` como nombre.
-         *     - La respuesta implementada es un `CommandResult` genérico, no el contrato rico descrito en la documentación TO-BE.
-         */
-        post: operations["checkInPatient"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /**
+     * Registrar llegada de paciente desde recepción
+     * @description Alias operativo para registrar la llegada de un paciente.
+     *
+     *     Hallazgos importantes:
+     *     - Requiere política `ReceptionOperations`.
+     *     - `appointmentReference`, `priority` y `notes` son requeridos/aceptados por el DTO, pero hoy no influyen en el handler.
+     *     - `patientName` es opcional; si no se envía, el backend usa `patientId` como nombre.
+     *     - La respuesta no devuelve `queueId` ni `turnId`; devuelve un `CommandResult` genérico.
+     */
+    post: operations['receptionRegisterPatient'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/waiting-room/check-in': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/waiting-room/call-patient": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Llamar un paciente ya identificado a consulta
-         * @description Llama a un paciente específico hacia el consultorio.
-         *
-         *     Hallazgos importantes:
-         *     - Requiere política `DoctorOperations`.
-         *     - `queueId` llega por query string, mientras otros endpoints mutantes usan body; esto rompe consistencia del contrato.
-         *     - El backend no usa `turnId`; el request opera por `patientId`.
-         *     - Si falta `queueId`, el controller devuelve un error inline 400 propio.
-         */
-        post: operations["callPatientToConsultation"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /**
+     * Registrar check-in de paciente en la cola
+     * @description Registra al paciente en la cola operativa.
+     *
+     *     Hallazgos importantes:
+     *     - Requiere política `ReceptionOperations`.
+     *     - `appointmentReference`, `consultationType` y `priority` hoy no son consumidos por el handler.
+     *     - `patientName` es opcional; si no se envía, el backend usa `patientId` como nombre.
+     *     - La respuesta implementada es un `CommandResult` genérico, no el contrato rico descrito en la documentación TO-BE.
+     */
+    post: operations['checkInPatient'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/waiting-room/call-patient': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/waiting-room/claim-next": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Reclamar el siguiente paciente elegible para consulta
-         * @description Reclama el siguiente paciente de la cola y lo asigna a un consultorio.
-         *
-         *     Hallazgos importantes:
-         *     - Requiere política `DoctorOperations`.
-         *     - `queueId` se pasa por query string.
-         *     - La respuesta real contiene `patientId`, `roomId` y `claimedAt`; no devuelve `turnId`, `turnNumber` ni `claimStatus`.
-         */
-        post: operations["claimNextPatient"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /**
+     * Llamar un paciente ya identificado a consulta
+     * @description Llama a un paciente específico hacia el consultorio.
+     *
+     *     Hallazgos importantes:
+     *     - Requiere política `DoctorOperations`.
+     *     - `queueId` llega por query string, mientras otros endpoints mutantes usan body; esto rompe consistencia del contrato.
+     *     - El backend no usa `turnId`; el request opera por `patientId`.
+     *     - Si falta `queueId`, el controller devuelve un error inline 400 propio.
+     */
+    post: operations['callPatientToConsultation'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/waiting-room/claim-next': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/cashier/call-next": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Llamar el siguiente paciente en caja
-         * @description Obtiene el siguiente paciente elegible de la cola y lo marca como llamado a caja.
-         *
-         *     Hallazgos importantes:
-         *     - Requiere política `CashierOperations`.
-         *     - `cashierStationId` es obligatorio en el DTO, pero hoy no se usa en la lógica.
-         *     - La respuesta real devuelve `patientId`, `calledAt` y `queuePosition`; no devuelve `turnId`, `turnNumber` ni `cashierStationId`.
-         */
-        post: operations["callNextAtCashier"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /**
+     * Reclamar el siguiente paciente elegible para consulta
+     * @description Reclama el siguiente paciente de la cola y lo asigna a un consultorio.
+     *
+     *     Hallazgos importantes:
+     *     - Requiere política `DoctorOperations`.
+     *     - `queueId` se pasa por query string.
+     *     - La respuesta real contiene `patientId`, `roomId` y `claimedAt`; no devuelve `turnId`, `turnNumber` ni `claimStatus`.
+     */
+    post: operations['claimNextPatient'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/cashier/call-next': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/cashier/validate-payment": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Validar pago de un paciente
-         * @description Marca el pago de un paciente como validado.
-         *
-         *     Hallazgos importantes:
-         *     - Requiere política `CashierOperations`.
-         *     - `turnId` y `paymentReference` son obligatorios en el request DTO, pero no se usan en el command ni en el handler.
-         *     - El flujo opera por `queueId` + `patientId`.
-         */
-        post: operations["validatePayment"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /**
+     * Llamar el siguiente paciente en caja
+     * @description Obtiene el siguiente paciente elegible de la cola y lo marca como llamado a caja.
+     *
+     *     Hallazgos importantes:
+     *     - Requiere política `CashierOperations`.
+     *     - `cashierStationId` es obligatorio en el DTO, pero hoy no se usa en la lógica.
+     *     - La respuesta real devuelve `patientId`, `calledAt` y `queuePosition`; no devuelve `turnId`, `turnNumber` ni `cashierStationId`.
+     */
+    post: operations['callNextAtCashier'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/cashier/validate-payment': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/cashier/mark-payment-pending": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Marcar pago como pendiente
-         * @description Marca el pago de un paciente como pendiente.
-         *
-         *     Hallazgos importantes:
-         *     - Requiere política `CashierOperations`.
-         *     - `turnId`, `reason` y `attemptNumber` son obligatorios en el request DTO, pero hoy no se usan en el handler.
-         */
-        post: operations["markPaymentPending"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /**
+     * Validar pago de un paciente
+     * @description Marca el pago de un paciente como validado.
+     *
+     *     Hallazgos importantes:
+     *     - Requiere política `CashierOperations`.
+     *     - `turnId` y `paymentReference` son obligatorios en el request DTO, pero no se usan en el command ni en el handler.
+     *     - El flujo opera por `queueId` + `patientId`.
+     */
+    post: operations['validatePayment'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/cashier/mark-payment-pending': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/cashier/mark-absent": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Marcar ausencia en caja
-         * @description Marca un paciente como ausente durante el flujo de caja.
-         *
-         *     Hallazgos importantes:
-         *     - Requiere política `CashierOperations`.
-         *     - `turnId` y `reason` son obligatorios en el DTO, pero hoy no se usan.
-         *     - El handler inyecta internamente `ROOM-CASHIER` como identificador de ubicación.
-         */
-        post: operations["markAbsentAtCashier"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /**
+     * Marcar pago como pendiente
+     * @description Marca el pago de un paciente como pendiente.
+     *
+     *     Hallazgos importantes:
+     *     - Requiere política `CashierOperations`.
+     *     - `turnId`, `reason` y `attemptNumber` son obligatorios en el request DTO, pero hoy no se usan en el handler.
+     */
+    post: operations['markPaymentPending'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/cashier/mark-absent': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/medical/consulting-room/activate": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Activar consultorio
-         * @description Activa un consultorio para operación diaria.
-         *
-         *     Requiere política `SupervisorOnly`.
-         */
-        post: operations["activateConsultingRoom"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /**
+     * Marcar ausencia en caja
+     * @description Marca un paciente como ausente durante el flujo de caja.
+     *
+     *     Hallazgos importantes:
+     *     - Requiere política `CashierOperations`.
+     *     - `turnId` y `reason` son obligatorios en el DTO, pero hoy no se usan.
+     *     - El handler inyecta internamente `ROOM-CASHIER` como identificador de ubicación.
+     */
+    post: operations['markAbsentAtCashier'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/medical/consulting-room/activate': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/medical/consulting-room/deactivate": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Desactivar consultorio
-         * @description Desactiva un consultorio.
-         *
-         *     Hallazgos importantes:
-         *     - Requiere política `SupervisorOnly`.
-         *     - Si el consultorio no existe, el handler responde 400 con mensaje de negocio en lugar de 404.
-         */
-        post: operations["deactivateConsultingRoom"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /**
+     * Activar consultorio
+     * @description Activa un consultorio para operación diaria.
+     *
+     *     Requiere política `SupervisorOnly`.
+     */
+    post: operations['activateConsultingRoom'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/medical/consulting-room/deactivate': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/medical/finish-consultation": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Finalizar consulta
-         * @description Finaliza la atención de un paciente y libera el consultorio.
-         *
-         *     Hallazgos importantes:
-         *     - Requiere política `DoctorOperations`.
-         *     - `turnId` y `outcome` son obligatorios en el request DTO, pero hoy no son usados en el handler.
-         *     - La respuesta real es un `CommandResult` simple, no incluye `finishedAt` ni confirmación de liberación del consultorio.
-         */
-        post: operations["finishConsultation"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /**
+     * Desactivar consultorio
+     * @description Desactiva un consultorio.
+     *
+     *     Hallazgos importantes:
+     *     - Requiere política `SupervisorOnly`.
+     *     - Si el consultorio no existe, el handler responde 400 con mensaje de negocio en lugar de 404.
+     */
+    post: operations['deactivateConsultingRoom'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/medical/finish-consultation': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/medical/mark-absent": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Marcar ausencia en consulta
-         * @description Marca a un paciente como ausente durante el flujo de consulta.
-         *
-         *     Hallazgos importantes:
-         *     - Requiere política `DoctorOperations`.
-         *     - `turnId` y `reason` son obligatorios en el request DTO, pero hoy no se usan en el handler.
-         *     - La respuesta real es un `CommandResult` simple; no devuelve `policyOutcome`.
-         */
-        post: operations["markAbsentAtConsultation"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /**
+     * Finalizar consulta
+     * @description Finaliza la atención de un paciente y libera el consultorio.
+     *
+     *     Hallazgos importantes:
+     *     - Requiere política `DoctorOperations`.
+     *     - `turnId` y `outcome` son obligatorios en el request DTO, pero hoy no son usados en el handler.
+     *     - La respuesta real es un `CommandResult` simple, no incluye `finishedAt` ni confirmación de liberación del consultorio.
+     */
+    post: operations['finishConsultation'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/medical/mark-absent': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/patient-trajectories/{trajectoryId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Consultar trayectoria materializada
-         * @description Devuelve la trayectoria longitudinal persistida para un `trajectoryId` conocido.
-         *
-         *     Hallazgos importantes:
-         *     - Requiere política `SupportOrSupervisor`.
-         *     - No existe endpoint de búsqueda por `patientId`; el cliente debe conocer `trajectoryId`.
-         *     - La respuesta sale directamente desde la proyección persistente y no usa envelope de query.
-         */
-        get: operations["getPatientTrajectory"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /**
+     * Marcar ausencia en consulta
+     * @description Marca a un paciente como ausente durante el flujo de consulta.
+     *
+     *     Hallazgos importantes:
+     *     - Requiere política `DoctorOperations`.
+     *     - `turnId` y `reason` son obligatorios en el request DTO, pero hoy no se usan en el handler.
+     *     - La respuesta real es un `CommandResult` simple; no devuelve `policyOutcome`.
+     */
+    post: operations['markAbsentAtConsultation'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/patient-trajectories': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/patient-trajectories/rebuild": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Ejecutar rebuild controlado de trayectorias
-         * @description Reprocesa eventos históricos para materializar o reconciliar trayectorias longitudinales.
-         *
-         *     Hallazgos importantes:
-         *     - Requiere política `SupportOnly`.
-         *     - `X-Correlation-Id` e `X-Idempotency-Key` son obligatorios.
-         *     - `dryRun=true` valida alcance y conteos sin materializar cambios.
-         */
-        post: operations["rebuildPatientTrajectories"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /**
+     * Descubrir trayectorias materializadas
+     * @description Resuelve trayectorias candidatas cuando el operador conoce `patientId`
+     *     y opcionalmente `queueId`, pero todavía no tiene el `trajectoryId`
+     *     canónico.
+     *
+     *     Hallazgos importantes:
+     *     - Requiere política `SupportOrSupervisor`.
+     *     - `patientId` es obligatorio; `queueId` solo acota la búsqueda.
+     *     - La respuesta sale directamente desde la proyección persistente y no usa replay en hot path.
+     */
+    get: operations['discoverPatientTrajectories'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/patient-trajectories/{trajectoryId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/health": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Estado agregado de salud
-         * @description Devuelve el estado agregado de health checks registrados.
-         *
-         *     Hallazgos importantes:
-         *     - No requiere autenticación.
-         *     - La implementación actual no evalúa `projection lag` ni el canal realtime, aunque la documentación operativa TO-BE sí lo exige.
-         */
-        get: operations["getHealth"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /**
+     * Consultar trayectoria materializada
+     * @description Devuelve la trayectoria longitudinal persistida para un `trajectoryId` conocido.
+     *
+     *     Hallazgos importantes:
+     *     - Requiere política `SupportOrSupervisor`.
+     *     - Si no se conoce `trajectoryId`, primero debe usarse `GET /api/patient-trajectories`.
+     *     - La respuesta sale directamente desde la proyección persistente y no usa envelope de query.
+     */
+    get: operations['getPatientTrajectory'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/patient-trajectories/rebuild': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/health/ready": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Readiness del servicio
-         * @description Expone el mismo payload de salud agregado usado hoy para readiness.
-         */
-        get: operations["getReadiness"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /**
+     * Ejecutar rebuild controlado de trayectorias
+     * @description Reprocesa eventos históricos para materializar o reconciliar trayectorias longitudinales.
+     *
+     *     Hallazgos importantes:
+     *     - Requiere política `SupportOnly`.
+     *     - `X-Correlation-Id` e `X-Idempotency-Key` son obligatorios.
+     *     - `dryRun=true` valida alcance y conteos sin materializar cambios.
+     */
+    post: operations['rebuildPatientTrajectories'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/health': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/health/live": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Liveness del proceso
-         * @description Expone los checks etiquetados como `live`.
-         *     Actualmente evalúa principalmente el check `Self`.
-         */
-        get: operations["getLiveness"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /**
+     * Estado agregado de salud
+     * @description Devuelve el estado agregado de health checks registrados.
+     *
+     *     Hallazgos importantes:
+     *     - No requiere autenticación.
+     *     - La implementación actual no evalúa `projection lag` ni el canal realtime, aunque la documentación operativa TO-BE sí lo exige.
+     */
+    get: operations['getHealth'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/health/ready': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
+    /**
+     * Readiness del servicio
+     * @description Expone el mismo payload de salud agregado usado hoy para readiness.
+     */
+    get: operations['getReadiness'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/health/live': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Liveness del proceso
+     * @description Expone los checks etiquetados como `live`.
+     *     Actualmente evalúa principalmente el check `Self`.
+     */
+    get: operations['getLiveness'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
-    schemas: {
-        /**
-         * @description Rol operativo interno.
-         * @example Supervisor
-         * @enum {string}
-         */
-        StaffRole: "Receptionist" | "Cashier" | "Doctor" | "Supervisor" | "Support";
-        LoginRequest: {
-            /**
-             * @description Identificador enviado por el cliente.
-             *     Hallazgo: la implementación actual solo resuelve este valor contra `username`.
-             * @example admin
-             */
-            identifier: string;
-            /**
-             * Format: password
-             * @example Password123!
-             */
-            password: string;
-        };
-        ChangeRoleRequest: {
-            /** @example staff-cashier-01 */
-            staffUserId: string;
-            newRole: components["schemas"]["StaffRole"];
-            /**
-             * @description Campo requerido en el request, pero actualmente ignorado por el handler.
-             * @example Cobertura temporal del turno
-             */
-            reason: string;
-        };
-        CheckInRequest: {
-            /** @example Q-2026-03-19-MAIN */
-            queueId: string;
-            /**
-             * @description Campo requerido, pero hoy no se usa en la lógica.
-             * @example APT-20260319-0045
-             */
-            appointmentReference: string;
-            /** @example PAT-0045 */
-            patientId: string;
-            /**
-             * @description Si se omite, el backend usa `patientId` como nombre.
-             * @example Ana Perez
-             */
-            patientName?: string | null;
-            /**
-             * @description Campo requerido, pero hoy no se usa en la lógica.
-             * @example GeneralMedicine
-             */
-            consultationType: string;
-            /**
-             * @description Campo requerido, pero hoy no se usa en la lógica.
-             * @example Standard
-             */
-            priority: string;
-        };
-        ReceptionRegisterRequest: {
-            /** @example Q-2026-03-19-MAIN */
-            queueId: string;
-            /** @example PAT-0045 */
-            patientId: string;
-            /**
-             * @description Si se omite, el backend usa `patientId` como nombre.
-             * @example Ana Perez
-             */
-            patientName?: string | null;
-            /**
-             * @description Campo requerido, pero hoy no se usa en la lógica.
-             * @example APT-20260319-0045
-             */
-            appointmentReference: string;
-            /**
-             * @description Campo requerido, pero hoy no se usa en la lógica.
-             * @example Standard
-             */
-            priority: string;
-            /**
-             * @description Campo opcional aceptado por la API, pero hoy ignorado.
-             * @example Paciente con movilidad reducida
-             */
-            notes?: string | null;
-        };
-        CallPatientRequest: {
-            /** @example PAT-0045 */
-            patientId: string;
-            /** @example ROOM-01 */
-            roomId: string;
-        };
-        ClaimNextPatientRequest: {
-            /** @example ROOM-01 */
-            roomId: string;
-        };
-        CallNextAtCashierRequest: {
-            /** @example Q-2026-03-19-MAIN */
-            queueId: string;
-            /**
-             * @description Campo requerido en el DTO, pero hoy no se usa en el handler.
-             * @example CASH-01
-             */
-            cashierStationId: string;
-        };
-        ValidatePaymentRequest: {
-            /**
-             * @description Campo requerido, pero actualmente ignorado por el backend.
-             * @example TURN-00045
-             */
-            turnId: string;
-            /** @example Q-2026-03-19-MAIN */
-            queueId: string;
-            /** @example PAT-0045 */
-            patientId: string;
-            /**
-             * @description Campo requerido, pero actualmente ignorado por el backend.
-             * @example PAY-20260319-0001
-             */
-            paymentReference: string;
-            /**
-             * Format: double
-             * @example 85.5
-             */
-            validatedAmount: number;
-        };
-        MarkPaymentPendingRequest: {
-            /**
-             * @description Campo requerido, pero actualmente ignorado por el backend.
-             * @example TURN-00045
-             */
-            turnId: string;
-            /** @example Q-2026-03-19-MAIN */
-            queueId: string;
-            /** @example PAT-0045 */
-            patientId: string;
-            /**
-             * @description Campo requerido, pero actualmente ignorado por el backend.
-             * @example Datáfono temporalmente caído
-             */
-            reason: string;
-            /**
-             * @description Campo requerido, pero actualmente ignorado por el backend.
-             * @example 1
-             */
-            attemptNumber: number;
-        };
-        CashierMarkAbsentRequest: {
-            /**
-             * @description Campo requerido, pero actualmente ignorado por el backend.
-             * @example TURN-00045
-             */
-            turnId: string;
-            /** @example Q-2026-03-19-MAIN */
-            queueId: string;
-            /** @example PAT-0045 */
-            patientId: string;
-            /**
-             * @description Campo requerido, pero actualmente ignorado por el backend.
-             * @example No respondió al llamado
-             */
-            reason: string;
-        };
-        ActivateConsultingRoomRequest: {
-            /** @example ROOM-01 */
-            roomId: string;
-            /** @example Consultorio 1 */
-            roomName: string;
-        };
-        DeactivateConsultingRoomRequest: {
-            /** @example ROOM-01 */
-            roomId: string;
-        };
-        FinishConsultationRequest: {
-            /**
-             * @description Campo requerido, pero actualmente ignorado por el backend.
-             * @example TURN-00052
-             */
-            turnId: string;
-            /** @example Q-2026-03-19-MAIN */
-            queueId: string;
-            /** @example PAT-0052 */
-            patientId: string;
-            /** @example ROOM-01 */
-            consultingRoomId: string;
-            /**
-             * @description Campo requerido, pero actualmente ignorado por el backend.
-             * @example completed
-             */
-            outcome: string;
-        };
-        MedicalMarkAbsentRequest: {
-            /**
-             * @description Campo requerido, pero actualmente ignorado por el backend.
-             * @example TURN-00052
-             */
-            turnId: string;
-            /** @example Q-2026-03-19-MAIN */
-            queueId: string;
-            /** @example PAT-0052 */
-            patientId: string;
-            /** @example ROOM-01 */
-            consultingRoomId: string;
-            /**
-             * @description Campo requerido, pero actualmente ignorado por el backend.
-             * @example No ingresó al consultorio
-             */
-            reason: string;
-        };
-        AuthenticationResult: {
-            /** @example staff-admin */
-            staffId: string;
-            /** @example admin */
-            username: string;
-            /**
-             * Format: email
-             * @example admin@clinic.local
-             */
-            email: string;
-            role: components["schemas"]["StaffRole"];
-            /** @example eyJhbGciOi... */
-            accessToken: string;
-            /** @example Bearer */
-            tokenType: string;
-            /** @example 3600 */
-            expiresInSeconds: number;
-            /**
-             * Format: date-time
-             * @example 2026-03-19T14:00:00Z
-             */
-            authenticatedAt: string;
-            /** @example CORR-login-001 */
-            correlationId: string;
-            /**
-             * @description Actualmente la implementación devuelve `[]`.
-             * @example []
-             */
-            capabilities: string[];
-        };
-        CommandResult: {
-            /** @example true */
-            success: boolean;
-        };
-        TrajectoryOperationError: {
-            /** @example TRAJECTORY_NOT_FOUND */
-            code: string;
-            /** @example CORR-trj-404 */
-            correlationId?: string | null;
-        };
-        TrajectoryStageEntry: {
-            /**
-             * Format: date-time
-             * @example 2026-04-01T09:10:00Z
-             */
-            occurredAt: string;
-            /** @example Recepcion */
-            stage: string;
-            /** @example PatientCheckedIn */
-            sourceEvent: string;
-            /** @example EnEsperaTaquilla */
-            sourceState?: string | null;
-            /** @example corr-checkin */
-            correlationId: string;
-        };
-        PatientTrajectoryResponse: {
-            /** @example TRJ-Q-2026-03-19-MAIN-PAT-0045-20260401091000000 */
-            trajectoryId: string;
-            /** @example PAT-0045 */
-            patientId: string;
-            /** @example Q-2026-03-19-MAIN */
-            queueId: string;
-            /** @example TrayectoriaFinalizada */
-            currentState: string;
-            /**
-             * Format: date-time
-             * @example 2026-04-01T09:10:00Z
-             */
-            openedAt: string;
-            /**
-             * Format: date-time
-             * @example 2026-04-01T09:42:00Z
-             */
-            closedAt?: string | null;
-            correlationIds: string[];
-            stages: components["schemas"]["TrajectoryStageEntry"][];
-        };
-        RebuildPatientTrajectoriesRequest: {
-            /** @example Q-2026-03-19-MAIN */
-            queueId?: string | null;
-            /** @example PAT-0045 */
-            patientId?: string | null;
-            /** @example true */
-            dryRun: boolean;
-        };
-        RebuildPatientTrajectoriesResult: {
-            /** @example TRJ-REBUILD-01f7dce2d3af48a2a4cc3d0cbf73eb1d */
-            jobId: string;
-            /**
-             * Format: date-time
-             * @example 2026-04-01T10:05:00Z
-             */
-            acceptedAt: string;
-            /** @example queue:Q-2026-03-19-MAIN|patient:PAT-0045 */
-            scope: string;
-            /** @example false */
-            dryRun: boolean;
-            /** @example Accepted */
-            status: string;
-            /** @example 3 */
-            eventsProcessed: number;
-            /** @example 1 */
-            trajectoriesProcessed: number;
-            /** @example Operation completed successfully */
-            message?: string;
-            /** @example CORR-001 */
-            correlationId?: string;
-            /**
-             * Format: date-time
-             * @example 2026-03-19T14:00:00Z
-             */
-            executedAt?: string;
-        };
-        PatientCallResult: {
-            /** @example PAT-0045 */
-            patientId: string;
-            /**
-             * Format: date-time
-             * @example 2026-03-19T14:15:00Z
-             */
-            calledAt: string;
-            /** @example 1 */
-            queuePosition: number;
-        };
-        ClaimedPatientResult: {
-            /** @example PAT-0045 */
-            patientId: string;
-            /** @example ROOM-01 */
-            roomId: string;
-            /**
-             * Format: date-time
-             * @example 2026-03-19T14:18:00Z
-             */
-            claimedAt: string;
-        };
-        InlineCommandError: {
-            /**
-             * @description Mensaje devuelto directamente por el controller ante `CommandResult.Failure`.
-             *     Puede ser un código canónico (`AUTH_INVALID_CREDENTIALS`) o un texto libre (`Queue not found`).
-             * @example Queue not found
-             */
-            error: string;
-            /** @example CORR-err-001 */
-            correlationId: string;
-        };
-        ProblemDetails: {
-            /** @example An unexpected error occurred. */
-            title: string;
-            /** @example 500 */
-            status: number;
-            /** @example The server could not process the request. */
-            detail: string;
-            /** @example /api/cashier/validate-payment */
-            instance: string;
-            /** @example 00-a1b2c3d4e5f6-0000000000000000-00 */
-            traceId: string;
-            /** @example CORR-500-001 */
-            correlationId?: string | null;
-        };
-        ValidationProblemDetails: {
-            /** @example https://tools.ietf.org/html/rfc9110#section-15.5.1 */
-            type?: string | null;
-            /** @example One or more validation errors occurred. */
-            title: string;
-            /** @example 400 */
-            status: number;
-            /** @example 00-a1b2c3d4e5f6-0000000000000000-00 */
-            traceId?: string | null;
-            /**
-             * @example {
-             *       "queueId": [
-             *         "The QueueId field is required."
-             *       ]
-             *     }
-             */
-            errors: {
-                [key: string]: string[];
-            };
-        };
-        HealthDetail: {
-            /** @example npgsql */
-            key: string;
-            /** @example Healthy */
-            status: string;
-            /** @example null */
-            description?: string | null;
-        };
-        HealthStatusResponse: {
-            /** @example Healthy */
-            status: string;
-            details: components["schemas"]["HealthDetail"][];
-        };
+  schemas: {
+    /**
+     * @description Rol operativo interno.
+     * @example Supervisor
+     * @enum {string}
+     */
+    StaffRole: 'Receptionist' | 'Cashier' | 'Doctor' | 'Supervisor' | 'Support';
+    LoginRequest: {
+      /**
+       * @description Identificador enviado por el cliente.
+       *     Hallazgo: la implementación actual solo resuelve este valor contra `username`.
+       * @example admin
+       */
+      identifier: string;
+      /**
+       * Format: password
+       * @example Password123!
+       */
+      password: string;
+    };
+    ChangeRoleRequest: {
+      /** @example staff-cashier-01 */
+      staffUserId: string;
+      newRole: components['schemas']['StaffRole'];
+      /**
+       * @description Campo requerido en el request, pero actualmente ignorado por el handler.
+       * @example Cobertura temporal del turno
+       */
+      reason: string;
+    };
+    CheckInRequest: {
+      /** @example Q-2026-03-19-MAIN */
+      queueId: string;
+      /**
+       * @description Campo requerido, pero hoy no se usa en la lógica.
+       * @example APT-20260319-0045
+       */
+      appointmentReference: string;
+      /** @example PAT-0045 */
+      patientId: string;
+      /**
+       * @description Si se omite, el backend usa `patientId` como nombre.
+       * @example Ana Perez
+       */
+      patientName?: string | null;
+      /**
+       * @description Campo requerido, pero hoy no se usa en la lógica.
+       * @example GeneralMedicine
+       */
+      consultationType: string;
+      /**
+       * @description Campo requerido, pero hoy no se usa en la lógica.
+       * @example Standard
+       */
+      priority: string;
+    };
+    ReceptionRegisterRequest: {
+      /** @example Q-2026-03-19-MAIN */
+      queueId: string;
+      /** @example PAT-0045 */
+      patientId: string;
+      /**
+       * @description Si se omite, el backend usa `patientId` como nombre.
+       * @example Ana Perez
+       */
+      patientName?: string | null;
+      /**
+       * @description Campo requerido, pero hoy no se usa en la lógica.
+       * @example APT-20260319-0045
+       */
+      appointmentReference: string;
+      /**
+       * @description Campo requerido, pero hoy no se usa en la lógica.
+       * @example Standard
+       */
+      priority: string;
+      /**
+       * @description Campo opcional aceptado por la API, pero hoy ignorado.
+       * @example Paciente con movilidad reducida
+       */
+      notes?: string | null;
+    };
+    CallPatientRequest: {
+      /** @example PAT-0045 */
+      patientId: string;
+      /** @example ROOM-01 */
+      roomId: string;
+    };
+    ClaimNextPatientRequest: {
+      /** @example ROOM-01 */
+      roomId: string;
+    };
+    CallNextAtCashierRequest: {
+      /** @example Q-2026-03-19-MAIN */
+      queueId: string;
+      /**
+       * @description Campo requerido en el DTO, pero hoy no se usa en el handler.
+       * @example CASH-01
+       */
+      cashierStationId: string;
+    };
+    ValidatePaymentRequest: {
+      /**
+       * @description Campo requerido, pero actualmente ignorado por el backend.
+       * @example TURN-00045
+       */
+      turnId: string;
+      /** @example Q-2026-03-19-MAIN */
+      queueId: string;
+      /** @example PAT-0045 */
+      patientId: string;
+      /**
+       * @description Campo requerido, pero actualmente ignorado por el backend.
+       * @example PAY-20260319-0001
+       */
+      paymentReference: string;
+      /**
+       * Format: double
+       * @example 85.5
+       */
+      validatedAmount: number;
+    };
+    MarkPaymentPendingRequest: {
+      /**
+       * @description Campo requerido, pero actualmente ignorado por el backend.
+       * @example TURN-00045
+       */
+      turnId: string;
+      /** @example Q-2026-03-19-MAIN */
+      queueId: string;
+      /** @example PAT-0045 */
+      patientId: string;
+      /**
+       * @description Campo requerido, pero actualmente ignorado por el backend.
+       * @example Datáfono temporalmente caído
+       */
+      reason: string;
+      /**
+       * @description Campo requerido, pero actualmente ignorado por el backend.
+       * @example 1
+       */
+      attemptNumber: number;
+    };
+    CashierMarkAbsentRequest: {
+      /**
+       * @description Campo requerido, pero actualmente ignorado por el backend.
+       * @example TURN-00045
+       */
+      turnId: string;
+      /** @example Q-2026-03-19-MAIN */
+      queueId: string;
+      /** @example PAT-0045 */
+      patientId: string;
+      /**
+       * @description Campo requerido, pero actualmente ignorado por el backend.
+       * @example No respondió al llamado
+       */
+      reason: string;
+    };
+    ActivateConsultingRoomRequest: {
+      /** @example ROOM-01 */
+      roomId: string;
+      /** @example Consultorio 1 */
+      roomName: string;
+    };
+    DeactivateConsultingRoomRequest: {
+      /** @example ROOM-01 */
+      roomId: string;
+    };
+    FinishConsultationRequest: {
+      /**
+       * @description Campo requerido, pero actualmente ignorado por el backend.
+       * @example TURN-00052
+       */
+      turnId: string;
+      /** @example Q-2026-03-19-MAIN */
+      queueId: string;
+      /** @example PAT-0052 */
+      patientId: string;
+      /** @example ROOM-01 */
+      consultingRoomId: string;
+      /**
+       * @description Campo requerido, pero actualmente ignorado por el backend.
+       * @example completed
+       */
+      outcome: string;
+    };
+    MedicalMarkAbsentRequest: {
+      /**
+       * @description Campo requerido, pero actualmente ignorado por el backend.
+       * @example TURN-00052
+       */
+      turnId: string;
+      /** @example Q-2026-03-19-MAIN */
+      queueId: string;
+      /** @example PAT-0052 */
+      patientId: string;
+      /** @example ROOM-01 */
+      consultingRoomId: string;
+      /**
+       * @description Campo requerido, pero actualmente ignorado por el backend.
+       * @example No ingresó al consultorio
+       */
+      reason: string;
+    };
+    AuthenticationResult: {
+      /** @example staff-admin */
+      staffId: string;
+      /** @example admin */
+      username: string;
+      /**
+       * Format: email
+       * @example admin@clinic.local
+       */
+      email: string;
+      role: components['schemas']['StaffRole'];
+      /** @example eyJhbGciOi... */
+      accessToken: string;
+      /** @example Bearer */
+      tokenType: string;
+      /** @example 3600 */
+      expiresInSeconds: number;
+      /**
+       * Format: date-time
+       * @example 2026-03-19T14:00:00Z
+       */
+      authenticatedAt: string;
+      /** @example CORR-login-001 */
+      correlationId: string;
+      /**
+       * @description Actualmente la implementación devuelve `[]`.
+       * @example []
+       */
+      capabilities: string[];
+    };
+    CommandResult: {
+      /** @example true */
+      success: boolean;
+    };
+    TrajectoryOperationError: {
+      /** @example TRAJECTORY_NOT_FOUND */
+      code: string;
+      /** @example CORR-trj-404 */
+      correlationId?: string | null;
+    };
+    PatientTrajectoryDiscoveryEntry: {
+      /** @example TRJ-Q-2026-04-06-MAIN-PAT-0045-20260406081000000 */
+      trajectoryId: string;
+      /** @example PAT-0045 */
+      patientId: string;
+      /** @example Q-2026-04-06-MAIN */
+      queueId: string;
+      /** @example TrayectoriaActiva */
+      currentState: string;
+      /**
+       * Format: date-time
+       * @example 2026-04-06T08:10:00Z
+       */
+      openedAt: string;
+      /**
+       * Format: date-time
+       * @example 2026-04-05T09:42:00Z
+       */
+      closedAt?: string | null;
+      /** @example corr-active */
+      lastCorrelationId?: string | null;
+    };
+    PatientTrajectoryDiscoveryResponse: {
+      /** @example 2 */
+      total: number;
+      items: components['schemas']['PatientTrajectoryDiscoveryEntry'][];
+    };
+    TrajectoryStageEntry: {
+      /**
+       * Format: date-time
+       * @example 2026-04-01T09:10:00Z
+       */
+      occurredAt: string;
+      /** @example Recepcion */
+      stage: string;
+      /** @example PatientCheckedIn */
+      sourceEvent: string;
+      /** @example EnEsperaTaquilla */
+      sourceState?: string | null;
+      /** @example corr-checkin */
+      correlationId: string;
+    };
+    PatientTrajectoryResponse: {
+      /** @example TRJ-Q-2026-03-19-MAIN-PAT-0045-20260401091000000 */
+      trajectoryId: string;
+      /** @example PAT-0045 */
+      patientId: string;
+      /** @example Q-2026-03-19-MAIN */
+      queueId: string;
+      /** @example TrayectoriaFinalizada */
+      currentState: string;
+      /**
+       * Format: date-time
+       * @example 2026-04-01T09:10:00Z
+       */
+      openedAt: string;
+      /**
+       * Format: date-time
+       * @example 2026-04-01T09:42:00Z
+       */
+      closedAt?: string | null;
+      correlationIds: string[];
+      stages: components['schemas']['TrajectoryStageEntry'][];
+    };
+    RebuildPatientTrajectoriesRequest: {
+      /** @example Q-2026-03-19-MAIN */
+      queueId?: string | null;
+      /** @example PAT-0045 */
+      patientId?: string | null;
+      /** @example true */
+      dryRun: boolean;
+    };
+    RebuildPatientTrajectoriesResult: {
+      /** @example TRJ-REBUILD-01f7dce2d3af48a2a4cc3d0cbf73eb1d */
+      jobId: string;
+      /**
+       * Format: date-time
+       * @example 2026-04-01T10:05:00Z
+       */
+      acceptedAt: string;
+      /** @example queue:Q-2026-03-19-MAIN|patient:PAT-0045 */
+      scope: string;
+      /** @example false */
+      dryRun: boolean;
+      /** @example Accepted */
+      status: string;
+      /** @example 3 */
+      eventsProcessed: number;
+      /** @example 1 */
+      trajectoriesProcessed: number;
+      /** @example Operation completed successfully */
+      message?: string;
+      /** @example CORR-001 */
+      correlationId?: string;
+      /**
+       * Format: date-time
+       * @example 2026-03-19T14:00:00Z
+       */
+      executedAt?: string;
+    };
+    PatientCallResult: {
+      /** @example PAT-0045 */
+      patientId: string;
+      /**
+       * Format: date-time
+       * @example 2026-03-19T14:15:00Z
+       */
+      calledAt: string;
+      /** @example 1 */
+      queuePosition: number;
+    };
+    ClaimedPatientResult: {
+      /** @example PAT-0045 */
+      patientId: string;
+      /** @example ROOM-01 */
+      roomId: string;
+      /**
+       * Format: date-time
+       * @example 2026-03-19T14:18:00Z
+       */
+      claimedAt: string;
+    };
+    InlineCommandError: {
+      /**
+       * @description Mensaje devuelto directamente por el controller ante `CommandResult.Failure`.
+       *     Puede ser un código canónico (`AUTH_INVALID_CREDENTIALS`) o un texto libre (`Queue not found`).
+       * @example Queue not found
+       */
+      error: string;
+      /** @example CORR-err-001 */
+      correlationId: string;
+    };
+    ProblemDetails: {
+      /** @example An unexpected error occurred. */
+      title: string;
+      /** @example 500 */
+      status: number;
+      /** @example The server could not process the request. */
+      detail: string;
+      /** @example /api/cashier/validate-payment */
+      instance: string;
+      /** @example 00-a1b2c3d4e5f6-0000000000000000-00 */
+      traceId: string;
+      /** @example CORR-500-001 */
+      correlationId?: string | null;
+    };
+    ValidationProblemDetails: {
+      /** @example https://tools.ietf.org/html/rfc9110#section-15.5.1 */
+      type?: string | null;
+      /** @example One or more validation errors occurred. */
+      title: string;
+      /** @example 400 */
+      status: number;
+      /** @example 00-a1b2c3d4e5f6-0000000000000000-00 */
+      traceId?: string | null;
+      /**
+       * @example {
+       *       "queueId": [
+       *         "The QueueId field is required."
+       *       ]
+       *     }
+       */
+      errors: {
+        [key: string]: string[];
+      };
+    };
+    HealthDetail: {
+      /** @example npgsql */
+      key: string;
+      /** @example Healthy */
+      status: string;
+      /** @example null */
+      description?: string | null;
+    };
+    HealthStatusResponse: {
+      /** @example Healthy */
+      status: string;
+      details: components['schemas']['HealthDetail'][];
+    };
+  };
+  responses: {
+    /** @description Error de negocio inline o error de validación ASP.NET. */
+    BadRequestCommandOrValidation: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        'application/json':
+          | components['schemas']['InlineCommandError']
+          | components['schemas']['ValidationProblemDetails'];
+      };
+    };
+    /**
+     * @description Token ausente, inválido o expirado.
+     *     La implementación actual usa el challenge por defecto de ASP.NET Core JWT y puede devolver una respuesta sin body estructurado.
+     */
+    Unauthorized: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content?: never;
+    };
+    /**
+     * @description El token es válido, pero el rol no satisface la policy del endpoint.
+     *     La implementación actual puede responder sin body estructurado.
+     */
+    Forbidden: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content?: never;
+    };
+    /** @description Error no controlado manejado por `GlobalExceptionMiddleware`. */
+    InternalServerError: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        'application/problem+json': components['schemas']['ProblemDetails'];
+      };
+    };
+  };
+  parameters: {
+    /**
+     * @description Identificador de trazabilidad. El controller lo espera de forma obligatoria en este endpoint.
+     *     No existe una política uniforme de validación; la obligatoriedad depende de cómo el action method fue declarado.
+     */
+    CorrelationIdHeaderRequired: string;
+    /** @description Identificador de trazabilidad opcional. Si no se envía, el controller genera uno. */
+    CorrelationIdHeaderOptional: string;
+    /**
+     * @description Header declarado por el contrato mutante y recibido por el controller.
+     *     Hallazgo crítico: actualmente no existe persistencia ni replay real de idempotencia; el valor se ignora en la lógica de aplicación.
+     */
+    IdempotencyKeyHeaderDeclaredRequired: string;
+    /** @description Identificador de la cola operativa. */
+    QueueIdQueryRequired: string;
+  };
+  requestBodies: never;
+  headers: never;
+  pathItems: never;
+}
+export type $defs = Record<string, never>;
+export interface operations {
+  loginStaff: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Identificador de trazabilidad opcional. Si no se envía, el controller genera uno. */
+        'X-Correlation-Id'?: components['parameters']['CorrelationIdHeaderOptional'];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['LoginRequest'];
+      };
     };
     responses: {
-        /** @description Error de negocio inline o error de validación ASP.NET. */
-        BadRequestCommandOrValidation: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": components["schemas"]["InlineCommandError"] | components["schemas"]["ValidationProblemDetails"];
-            };
+      /** @description Usuario autenticado correctamente. */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        /**
-         * @description Token ausente, inválido o expirado.
-         *     La implementación actual usa el challenge por defecto de ASP.NET Core JWT y puede devolver una respuesta sin body estructurado.
-         */
-        Unauthorized: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content?: never;
+        content: {
+          'application/json': components['schemas']['AuthenticationResult'];
         };
-        /**
-         * @description El token es válido, pero el rol no satisface la policy del endpoint.
-         *     La implementación actual puede responder sin body estructurado.
-         */
-        Forbidden: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content?: never;
+      };
+      /** @description Credenciales inválidas o error de validación. */
+      400: {
+        headers: {
+          [name: string]: unknown;
         };
-        /** @description Error no controlado manejado por `GlobalExceptionMiddleware`. */
-        InternalServerError: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/problem+json": components["schemas"]["ProblemDetails"];
-            };
+        content: {
+          'application/json':
+            | components['schemas']['InlineCommandError']
+            | components['schemas']['ValidationProblemDetails'];
         };
+      };
+      500: components['responses']['InternalServerError'];
     };
+  };
+  changeStaffRole: {
     parameters: {
+      query?: never;
+      header: {
         /**
          * @description Identificador de trazabilidad. El controller lo espera de forma obligatoria en este endpoint.
          *     No existe una política uniforme de validación; la obligatoriedad depende de cómo el action method fue declarado.
          */
-        CorrelationIdHeaderRequired: string;
-        /** @description Identificador de trazabilidad opcional. Si no se envía, el controller genera uno. */
-        CorrelationIdHeaderOptional: string;
+        'X-Correlation-Id': components['parameters']['CorrelationIdHeaderRequired'];
         /**
          * @description Header declarado por el contrato mutante y recibido por el controller.
          *     Hallazgo crítico: actualmente no existe persistencia ni replay real de idempotencia; el valor se ignora en la lógica de aplicación.
          */
-        IdempotencyKeyHeaderDeclaredRequired: string;
+        'X-Idempotency-Key': components['parameters']['IdempotencyKeyHeaderDeclaredRequired'];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ChangeRoleRequest'];
+      };
+    };
+    responses: {
+      /** @description Rol cambiado correctamente. */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['CommandResult'];
+        };
+      };
+      400: components['responses']['BadRequestCommandOrValidation'];
+      401: components['responses']['Unauthorized'];
+      403: components['responses']['Forbidden'];
+      500: components['responses']['InternalServerError'];
+    };
+  };
+  receptionRegisterPatient: {
+    parameters: {
+      query?: never;
+      header: {
+        /**
+         * @description Identificador de trazabilidad. El controller lo espera de forma obligatoria en este endpoint.
+         *     No existe una política uniforme de validación; la obligatoriedad depende de cómo el action method fue declarado.
+         */
+        'X-Correlation-Id': components['parameters']['CorrelationIdHeaderRequired'];
+        /**
+         * @description Header declarado por el contrato mutante y recibido por el controller.
+         *     Hallazgo crítico: actualmente no existe persistencia ni replay real de idempotencia; el valor se ignora en la lógica de aplicación.
+         */
+        'X-Idempotency-Key': components['parameters']['IdempotencyKeyHeaderDeclaredRequired'];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ReceptionRegisterRequest'];
+      };
+    };
+    responses: {
+      /** @description Llegada registrada. */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['CommandResult'];
+        };
+      };
+      400: components['responses']['BadRequestCommandOrValidation'];
+      401: components['responses']['Unauthorized'];
+      403: components['responses']['Forbidden'];
+      500: components['responses']['InternalServerError'];
+    };
+  };
+  checkInPatient: {
+    parameters: {
+      query?: never;
+      header: {
+        /**
+         * @description Identificador de trazabilidad. El controller lo espera de forma obligatoria en este endpoint.
+         *     No existe una política uniforme de validación; la obligatoriedad depende de cómo el action method fue declarado.
+         */
+        'X-Correlation-Id': components['parameters']['CorrelationIdHeaderRequired'];
+        /**
+         * @description Header declarado por el contrato mutante y recibido por el controller.
+         *     Hallazgo crítico: actualmente no existe persistencia ni replay real de idempotencia; el valor se ignora en la lógica de aplicación.
+         */
+        'X-Idempotency-Key': components['parameters']['IdempotencyKeyHeaderDeclaredRequired'];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CheckInRequest'];
+      };
+    };
+    responses: {
+      /** @description Check-in procesado. */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['CommandResult'];
+        };
+      };
+      400: components['responses']['BadRequestCommandOrValidation'];
+      401: components['responses']['Unauthorized'];
+      403: components['responses']['Forbidden'];
+      500: components['responses']['InternalServerError'];
+    };
+  };
+  callPatientToConsultation: {
+    parameters: {
+      query: {
         /** @description Identificador de la cola operativa. */
-        QueueIdQueryRequired: string;
+        queueId: components['parameters']['QueueIdQueryRequired'];
+      };
+      header?: {
+        /** @description Identificador de trazabilidad opcional. Si no se envía, el controller genera uno. */
+        'X-Correlation-Id'?: components['parameters']['CorrelationIdHeaderOptional'];
+      };
+      path?: never;
+      cookie?: never;
     };
-    requestBodies: never;
-    headers: never;
-    pathItems: never;
-}
-export type $defs = Record<string, never>;
-export interface operations {
-    loginStaff: {
-        parameters: {
-            query?: never;
-            header?: {
-                /** @description Identificador de trazabilidad opcional. Si no se envía, el controller genera uno. */
-                "X-Correlation-Id"?: components["parameters"]["CorrelationIdHeaderOptional"];
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["LoginRequest"];
-            };
-        };
-        responses: {
-            /** @description Usuario autenticado correctamente. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AuthenticationResult"];
-                };
-            };
-            /** @description Credenciales inválidas o error de validación. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["InlineCommandError"] | components["schemas"]["ValidationProblemDetails"];
-                };
-            };
-            500: components["responses"]["InternalServerError"];
-        };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CallPatientRequest'];
+      };
     };
-    changeStaffRole: {
-        parameters: {
-            query?: never;
-            header: {
-                /**
-                 * @description Identificador de trazabilidad. El controller lo espera de forma obligatoria en este endpoint.
-                 *     No existe una política uniforme de validación; la obligatoriedad depende de cómo el action method fue declarado.
-                 */
-                "X-Correlation-Id": components["parameters"]["CorrelationIdHeaderRequired"];
-                /**
-                 * @description Header declarado por el contrato mutante y recibido por el controller.
-                 *     Hallazgo crítico: actualmente no existe persistencia ni replay real de idempotencia; el valor se ignora en la lógica de aplicación.
-                 */
-                "X-Idempotency-Key": components["parameters"]["IdempotencyKeyHeaderDeclaredRequired"];
-            };
-            path?: never;
-            cookie?: never;
+    responses: {
+      /** @description Paciente llamado a consulta. */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ChangeRoleRequest"];
-            };
+        content: {
+          'application/json': components['schemas']['CommandResult'];
         };
-        responses: {
-            /** @description Rol cambiado correctamente. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CommandResult"];
-                };
-            };
-            400: components["responses"]["BadRequestCommandOrValidation"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            500: components["responses"]["InternalServerError"];
-        };
+      };
+      400: components['responses']['BadRequestCommandOrValidation'];
+      401: components['responses']['Unauthorized'];
+      403: components['responses']['Forbidden'];
+      500: components['responses']['InternalServerError'];
     };
-    receptionRegisterPatient: {
-        parameters: {
-            query?: never;
-            header: {
-                /**
-                 * @description Identificador de trazabilidad. El controller lo espera de forma obligatoria en este endpoint.
-                 *     No existe una política uniforme de validación; la obligatoriedad depende de cómo el action method fue declarado.
-                 */
-                "X-Correlation-Id": components["parameters"]["CorrelationIdHeaderRequired"];
-                /**
-                 * @description Header declarado por el contrato mutante y recibido por el controller.
-                 *     Hallazgo crítico: actualmente no existe persistencia ni replay real de idempotencia; el valor se ignora en la lógica de aplicación.
-                 */
-                "X-Idempotency-Key": components["parameters"]["IdempotencyKeyHeaderDeclaredRequired"];
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ReceptionRegisterRequest"];
-            };
-        };
-        responses: {
-            /** @description Llegada registrada. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CommandResult"];
-                };
-            };
-            400: components["responses"]["BadRequestCommandOrValidation"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            500: components["responses"]["InternalServerError"];
-        };
+  };
+  claimNextPatient: {
+    parameters: {
+      query: {
+        /** @description Identificador de la cola operativa. */
+        queueId: components['parameters']['QueueIdQueryRequired'];
+      };
+      header?: {
+        /** @description Identificador de trazabilidad opcional. Si no se envía, el controller genera uno. */
+        'X-Correlation-Id'?: components['parameters']['CorrelationIdHeaderOptional'];
+      };
+      path?: never;
+      cookie?: never;
     };
-    checkInPatient: {
-        parameters: {
-            query?: never;
-            header: {
-                /**
-                 * @description Identificador de trazabilidad. El controller lo espera de forma obligatoria en este endpoint.
-                 *     No existe una política uniforme de validación; la obligatoriedad depende de cómo el action method fue declarado.
-                 */
-                "X-Correlation-Id": components["parameters"]["CorrelationIdHeaderRequired"];
-                /**
-                 * @description Header declarado por el contrato mutante y recibido por el controller.
-                 *     Hallazgo crítico: actualmente no existe persistencia ni replay real de idempotencia; el valor se ignora en la lógica de aplicación.
-                 */
-                "X-Idempotency-Key": components["parameters"]["IdempotencyKeyHeaderDeclaredRequired"];
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CheckInRequest"];
-            };
-        };
-        responses: {
-            /** @description Check-in procesado. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CommandResult"];
-                };
-            };
-            400: components["responses"]["BadRequestCommandOrValidation"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            500: components["responses"]["InternalServerError"];
-        };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ClaimNextPatientRequest'];
+      };
     };
-    callPatientToConsultation: {
-        parameters: {
-            query: {
-                /** @description Identificador de la cola operativa. */
-                queueId: components["parameters"]["QueueIdQueryRequired"];
-            };
-            header?: {
-                /** @description Identificador de trazabilidad opcional. Si no se envía, el controller genera uno. */
-                "X-Correlation-Id"?: components["parameters"]["CorrelationIdHeaderOptional"];
-            };
-            path?: never;
-            cookie?: never;
+    responses: {
+      /** @description Paciente reclamado correctamente. */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CallPatientRequest"];
-            };
+        content: {
+          'application/json': components['schemas']['ClaimedPatientResult'];
         };
-        responses: {
-            /** @description Paciente llamado a consulta. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CommandResult"];
-                };
-            };
-            400: components["responses"]["BadRequestCommandOrValidation"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            500: components["responses"]["InternalServerError"];
-        };
+      };
+      400: components['responses']['BadRequestCommandOrValidation'];
+      401: components['responses']['Unauthorized'];
+      403: components['responses']['Forbidden'];
+      500: components['responses']['InternalServerError'];
     };
-    claimNextPatient: {
-        parameters: {
-            query: {
-                /** @description Identificador de la cola operativa. */
-                queueId: components["parameters"]["QueueIdQueryRequired"];
-            };
-            header?: {
-                /** @description Identificador de trazabilidad opcional. Si no se envía, el controller genera uno. */
-                "X-Correlation-Id"?: components["parameters"]["CorrelationIdHeaderOptional"];
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ClaimNextPatientRequest"];
-            };
-        };
-        responses: {
-            /** @description Paciente reclamado correctamente. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ClaimedPatientResult"];
-                };
-            };
-            400: components["responses"]["BadRequestCommandOrValidation"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            500: components["responses"]["InternalServerError"];
-        };
+  };
+  callNextAtCashier: {
+    parameters: {
+      query?: never;
+      header: {
+        /**
+         * @description Identificador de trazabilidad. El controller lo espera de forma obligatoria en este endpoint.
+         *     No existe una política uniforme de validación; la obligatoriedad depende de cómo el action method fue declarado.
+         */
+        'X-Correlation-Id': components['parameters']['CorrelationIdHeaderRequired'];
+        /**
+         * @description Header declarado por el contrato mutante y recibido por el controller.
+         *     Hallazgo crítico: actualmente no existe persistencia ni replay real de idempotencia; el valor se ignora en la lógica de aplicación.
+         */
+        'X-Idempotency-Key': components['parameters']['IdempotencyKeyHeaderDeclaredRequired'];
+      };
+      path?: never;
+      cookie?: never;
     };
-    callNextAtCashier: {
-        parameters: {
-            query?: never;
-            header: {
-                /**
-                 * @description Identificador de trazabilidad. El controller lo espera de forma obligatoria en este endpoint.
-                 *     No existe una política uniforme de validación; la obligatoriedad depende de cómo el action method fue declarado.
-                 */
-                "X-Correlation-Id": components["parameters"]["CorrelationIdHeaderRequired"];
-                /**
-                 * @description Header declarado por el contrato mutante y recibido por el controller.
-                 *     Hallazgo crítico: actualmente no existe persistencia ni replay real de idempotencia; el valor se ignora en la lógica de aplicación.
-                 */
-                "X-Idempotency-Key": components["parameters"]["IdempotencyKeyHeaderDeclaredRequired"];
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CallNextAtCashierRequest"];
-            };
-        };
-        responses: {
-            /** @description Paciente llamado a caja. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PatientCallResult"];
-                };
-            };
-            400: components["responses"]["BadRequestCommandOrValidation"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            500: components["responses"]["InternalServerError"];
-        };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CallNextAtCashierRequest'];
+      };
     };
-    validatePayment: {
-        parameters: {
-            query?: never;
-            header?: {
-                /** @description Identificador de trazabilidad opcional. Si no se envía, el controller genera uno. */
-                "X-Correlation-Id"?: components["parameters"]["CorrelationIdHeaderOptional"];
-            };
-            path?: never;
-            cookie?: never;
+    responses: {
+      /** @description Paciente llamado a caja. */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ValidatePaymentRequest"];
-            };
+        content: {
+          'application/json': components['schemas']['PatientCallResult'];
         };
-        responses: {
-            /** @description Pago validado. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CommandResult"];
-                };
-            };
-            /** @description Error de negocio o validación. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["InlineCommandError"] | components["schemas"]["ValidationProblemDetails"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            500: components["responses"]["InternalServerError"];
-        };
+      };
+      400: components['responses']['BadRequestCommandOrValidation'];
+      401: components['responses']['Unauthorized'];
+      403: components['responses']['Forbidden'];
+      500: components['responses']['InternalServerError'];
     };
-    markPaymentPending: {
-        parameters: {
-            query?: never;
-            header?: {
-                /** @description Identificador de trazabilidad opcional. Si no se envía, el controller genera uno. */
-                "X-Correlation-Id"?: components["parameters"]["CorrelationIdHeaderOptional"];
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["MarkPaymentPendingRequest"];
-            };
-        };
-        responses: {
-            /** @description Pago marcado como pendiente. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CommandResult"];
-                };
-            };
-            400: components["responses"]["BadRequestCommandOrValidation"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            500: components["responses"]["InternalServerError"];
-        };
+  };
+  validatePayment: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Identificador de trazabilidad opcional. Si no se envía, el controller genera uno. */
+        'X-Correlation-Id'?: components['parameters']['CorrelationIdHeaderOptional'];
+      };
+      path?: never;
+      cookie?: never;
     };
-    markAbsentAtCashier: {
-        parameters: {
-            query?: never;
-            header?: {
-                /** @description Identificador de trazabilidad opcional. Si no se envía, el controller genera uno. */
-                "X-Correlation-Id"?: components["parameters"]["CorrelationIdHeaderOptional"];
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CashierMarkAbsentRequest"];
-            };
-        };
-        responses: {
-            /** @description Ausencia registrada. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CommandResult"];
-                };
-            };
-            400: components["responses"]["BadRequestCommandOrValidation"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            500: components["responses"]["InternalServerError"];
-        };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ValidatePaymentRequest'];
+      };
     };
-    activateConsultingRoom: {
-        parameters: {
-            query?: never;
-            header: {
-                /**
-                 * @description Identificador de trazabilidad. El controller lo espera de forma obligatoria en este endpoint.
-                 *     No existe una política uniforme de validación; la obligatoriedad depende de cómo el action method fue declarado.
-                 */
-                "X-Correlation-Id": components["parameters"]["CorrelationIdHeaderRequired"];
-            };
-            path?: never;
-            cookie?: never;
+    responses: {
+      /** @description Pago validado. */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ActivateConsultingRoomRequest"];
-            };
+        content: {
+          'application/json': components['schemas']['CommandResult'];
         };
-        responses: {
-            /** @description Consultorio activado. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CommandResult"];
-                };
-            };
-            400: components["responses"]["BadRequestCommandOrValidation"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            500: components["responses"]["InternalServerError"];
+      };
+      /** @description Error de negocio o validación. */
+      400: {
+        headers: {
+          [name: string]: unknown;
         };
+        content: {
+          'application/json':
+            | components['schemas']['InlineCommandError']
+            | components['schemas']['ValidationProblemDetails'];
+        };
+      };
+      401: components['responses']['Unauthorized'];
+      403: components['responses']['Forbidden'];
+      500: components['responses']['InternalServerError'];
     };
-    deactivateConsultingRoom: {
-        parameters: {
-            query?: never;
-            header: {
-                /**
-                 * @description Identificador de trazabilidad. El controller lo espera de forma obligatoria en este endpoint.
-                 *     No existe una política uniforme de validación; la obligatoriedad depende de cómo el action method fue declarado.
-                 */
-                "X-Correlation-Id": components["parameters"]["CorrelationIdHeaderRequired"];
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DeactivateConsultingRoomRequest"];
-            };
-        };
-        responses: {
-            /** @description Consultorio desactivado. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CommandResult"];
-                };
-            };
-            400: components["responses"]["BadRequestCommandOrValidation"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            500: components["responses"]["InternalServerError"];
-        };
+  };
+  markPaymentPending: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Identificador de trazabilidad opcional. Si no se envía, el controller genera uno. */
+        'X-Correlation-Id'?: components['parameters']['CorrelationIdHeaderOptional'];
+      };
+      path?: never;
+      cookie?: never;
     };
-    finishConsultation: {
-        parameters: {
-            query?: never;
-            header?: {
-                /** @description Identificador de trazabilidad opcional. Si no se envía, el controller genera uno. */
-                "X-Correlation-Id"?: components["parameters"]["CorrelationIdHeaderOptional"];
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["FinishConsultationRequest"];
-            };
-        };
-        responses: {
-            /** @description Consulta finalizada. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CommandResult"];
-                };
-            };
-            400: components["responses"]["BadRequestCommandOrValidation"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            500: components["responses"]["InternalServerError"];
-        };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['MarkPaymentPendingRequest'];
+      };
     };
-    markAbsentAtConsultation: {
-        parameters: {
-            query?: never;
-            header?: {
-                /** @description Identificador de trazabilidad opcional. Si no se envía, el controller genera uno. */
-                "X-Correlation-Id"?: components["parameters"]["CorrelationIdHeaderOptional"];
-            };
-            path?: never;
-            cookie?: never;
+    responses: {
+      /** @description Pago marcado como pendiente. */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["MedicalMarkAbsentRequest"];
-            };
+        content: {
+          'application/json': components['schemas']['CommandResult'];
         };
-        responses: {
-            /** @description Ausencia registrada. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CommandResult"];
-                };
-            };
-            400: components["responses"]["BadRequestCommandOrValidation"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            500: components["responses"]["InternalServerError"];
-        };
+      };
+      400: components['responses']['BadRequestCommandOrValidation'];
+      401: components['responses']['Unauthorized'];
+      403: components['responses']['Forbidden'];
+      500: components['responses']['InternalServerError'];
     };
-    getPatientTrajectory: {
-        parameters: {
-            query?: never;
-            header?: {
-                /** @description Identificador de trazabilidad opcional. Si no se envía, el controller genera uno. */
-                "X-Correlation-Id"?: components["parameters"]["CorrelationIdHeaderOptional"];
-            };
-            path: {
-                /** @description Identificador canónico de la trayectoria. */
-                trajectoryId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Trayectoria encontrada. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PatientTrajectoryResponse"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            /** @description No existe proyección persistida para el `trajectoryId` solicitado. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["TrajectoryOperationError"];
-                };
-            };
-            500: components["responses"]["InternalServerError"];
-        };
+  };
+  markAbsentAtCashier: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Identificador de trazabilidad opcional. Si no se envía, el controller genera uno. */
+        'X-Correlation-Id'?: components['parameters']['CorrelationIdHeaderOptional'];
+      };
+      path?: never;
+      cookie?: never;
     };
-    rebuildPatientTrajectories: {
-        parameters: {
-            query?: never;
-            header: {
-                /**
-                 * @description Identificador de trazabilidad. El controller lo espera de forma obligatoria en este endpoint.
-                 *     No existe una política uniforme de validación; la obligatoriedad depende de cómo el action method fue declarado.
-                 */
-                "X-Correlation-Id": components["parameters"]["CorrelationIdHeaderRequired"];
-                /**
-                 * @description Header declarado por el contrato mutante y recibido por el controller.
-                 *     Hallazgo crítico: actualmente no existe persistencia ni replay real de idempotencia; el valor se ignora en la lógica de aplicación.
-                 */
-                "X-Idempotency-Key": components["parameters"]["IdempotencyKeyHeaderDeclaredRequired"];
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["RebuildPatientTrajectoriesRequest"];
-            };
-        };
-        responses: {
-            /** @description Rebuild aceptado o simulado correctamente. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RebuildPatientTrajectoriesResult"];
-                };
-            };
-            /** @description Alcance inválido o error de validación ASP.NET. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["TrajectoryOperationError"] | components["schemas"]["ValidationProblemDetails"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            /** @description Ya existe un rebuild corriendo para el mismo alcance e idempotency key. */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["TrajectoryOperationError"];
-                };
-            };
-            500: components["responses"]["InternalServerError"];
-        };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CashierMarkAbsentRequest'];
+      };
     };
-    getHealth: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
+    responses: {
+      /** @description Ausencia registrada. */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody?: never;
-        responses: {
-            /** @description El servicio está saludable. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HealthStatusResponse"];
-                };
-            };
-            /** @description El servicio o alguna dependencia crítica no está lista. */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HealthStatusResponse"];
-                };
-            };
+        content: {
+          'application/json': components['schemas']['CommandResult'];
         };
+      };
+      400: components['responses']['BadRequestCommandOrValidation'];
+      401: components['responses']['Unauthorized'];
+      403: components['responses']['Forbidden'];
+      500: components['responses']['InternalServerError'];
     };
-    getReadiness: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Dependencias listas. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HealthStatusResponse"];
-                };
-            };
-            /** @description Dependencias no listas. */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HealthStatusResponse"];
-                };
-            };
-        };
+  };
+  activateConsultingRoom: {
+    parameters: {
+      query?: never;
+      header: {
+        /**
+         * @description Identificador de trazabilidad. El controller lo espera de forma obligatoria en este endpoint.
+         *     No existe una política uniforme de validación; la obligatoriedad depende de cómo el action method fue declarado.
+         */
+        'X-Correlation-Id': components['parameters']['CorrelationIdHeaderRequired'];
+      };
+      path?: never;
+      cookie?: never;
     };
-    getLiveness: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Proceso vivo. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HealthStatusResponse"];
-                };
-            };
-            /** @description El proceso reporta fallo de liveness. */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HealthStatusResponse"];
-                };
-            };
-        };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ActivateConsultingRoomRequest'];
+      };
     };
+    responses: {
+      /** @description Consultorio activado. */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['CommandResult'];
+        };
+      };
+      400: components['responses']['BadRequestCommandOrValidation'];
+      401: components['responses']['Unauthorized'];
+      403: components['responses']['Forbidden'];
+      500: components['responses']['InternalServerError'];
+    };
+  };
+  deactivateConsultingRoom: {
+    parameters: {
+      query?: never;
+      header: {
+        /**
+         * @description Identificador de trazabilidad. El controller lo espera de forma obligatoria en este endpoint.
+         *     No existe una política uniforme de validación; la obligatoriedad depende de cómo el action method fue declarado.
+         */
+        'X-Correlation-Id': components['parameters']['CorrelationIdHeaderRequired'];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['DeactivateConsultingRoomRequest'];
+      };
+    };
+    responses: {
+      /** @description Consultorio desactivado. */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['CommandResult'];
+        };
+      };
+      400: components['responses']['BadRequestCommandOrValidation'];
+      401: components['responses']['Unauthorized'];
+      403: components['responses']['Forbidden'];
+      500: components['responses']['InternalServerError'];
+    };
+  };
+  finishConsultation: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Identificador de trazabilidad opcional. Si no se envía, el controller genera uno. */
+        'X-Correlation-Id'?: components['parameters']['CorrelationIdHeaderOptional'];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['FinishConsultationRequest'];
+      };
+    };
+    responses: {
+      /** @description Consulta finalizada. */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['CommandResult'];
+        };
+      };
+      400: components['responses']['BadRequestCommandOrValidation'];
+      401: components['responses']['Unauthorized'];
+      403: components['responses']['Forbidden'];
+      500: components['responses']['InternalServerError'];
+    };
+  };
+  markAbsentAtConsultation: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Identificador de trazabilidad opcional. Si no se envía, el controller genera uno. */
+        'X-Correlation-Id'?: components['parameters']['CorrelationIdHeaderOptional'];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['MedicalMarkAbsentRequest'];
+      };
+    };
+    responses: {
+      /** @description Ausencia registrada. */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['CommandResult'];
+        };
+      };
+      400: components['responses']['BadRequestCommandOrValidation'];
+      401: components['responses']['Unauthorized'];
+      403: components['responses']['Forbidden'];
+      500: components['responses']['InternalServerError'];
+    };
+  };
+  discoverPatientTrajectories: {
+    parameters: {
+      query: {
+        /** @description Identificador interno del paciente a buscar. */
+        patientId: string;
+        /** @description Queue operativa usada para acotar la búsqueda. */
+        queueId?: string;
+      };
+      header?: {
+        /** @description Identificador de trazabilidad opcional. Si no se envía, el controller genera uno. */
+        'X-Correlation-Id'?: components['parameters']['CorrelationIdHeaderOptional'];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Discovery ejecutado correctamente. */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PatientTrajectoryDiscoveryResponse'];
+        };
+      };
+      /** @description Alcance inválido para el discovery. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['TrajectoryOperationError'];
+        };
+      };
+      401: components['responses']['Unauthorized'];
+      403: components['responses']['Forbidden'];
+      500: components['responses']['InternalServerError'];
+    };
+  };
+  getPatientTrajectory: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Identificador de trazabilidad opcional. Si no se envía, el controller genera uno. */
+        'X-Correlation-Id'?: components['parameters']['CorrelationIdHeaderOptional'];
+      };
+      path: {
+        /** @description Identificador canónico de la trayectoria. */
+        trajectoryId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Trayectoria encontrada. */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PatientTrajectoryResponse'];
+        };
+      };
+      401: components['responses']['Unauthorized'];
+      403: components['responses']['Forbidden'];
+      /** @description No existe proyección persistida para el `trajectoryId` solicitado. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['TrajectoryOperationError'];
+        };
+      };
+      500: components['responses']['InternalServerError'];
+    };
+  };
+  rebuildPatientTrajectories: {
+    parameters: {
+      query?: never;
+      header: {
+        /**
+         * @description Identificador de trazabilidad. El controller lo espera de forma obligatoria en este endpoint.
+         *     No existe una política uniforme de validación; la obligatoriedad depende de cómo el action method fue declarado.
+         */
+        'X-Correlation-Id': components['parameters']['CorrelationIdHeaderRequired'];
+        /**
+         * @description Header declarado por el contrato mutante y recibido por el controller.
+         *     Hallazgo crítico: actualmente no existe persistencia ni replay real de idempotencia; el valor se ignora en la lógica de aplicación.
+         */
+        'X-Idempotency-Key': components['parameters']['IdempotencyKeyHeaderDeclaredRequired'];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['RebuildPatientTrajectoriesRequest'];
+      };
+    };
+    responses: {
+      /** @description Rebuild aceptado o simulado correctamente. */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['RebuildPatientTrajectoriesResult'];
+        };
+      };
+      /** @description Alcance inválido o error de validación ASP.NET. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json':
+            | components['schemas']['TrajectoryOperationError']
+            | components['schemas']['ValidationProblemDetails'];
+        };
+      };
+      401: components['responses']['Unauthorized'];
+      403: components['responses']['Forbidden'];
+      /** @description Ya existe un rebuild corriendo para el mismo alcance e idempotency key. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['TrajectoryOperationError'];
+        };
+      };
+      500: components['responses']['InternalServerError'];
+    };
+  };
+  getHealth: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description El servicio está saludable. */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HealthStatusResponse'];
+        };
+      };
+      /** @description El servicio o alguna dependencia crítica no está lista. */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HealthStatusResponse'];
+        };
+      };
+    };
+  };
+  getReadiness: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Dependencias listas. */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HealthStatusResponse'];
+        };
+      };
+      /** @description Dependencias no listas. */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HealthStatusResponse'];
+        };
+      };
+    };
+  };
+  getLiveness: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Proceso vivo. */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HealthStatusResponse'];
+        };
+      };
+      /** @description El proceso reporta fallo de liveness. */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HealthStatusResponse'];
+        };
+      };
+    };
+  };
 }

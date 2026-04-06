@@ -1,6 +1,6 @@
 # RLApp Frontend
 
-**Estado del proyecto:** Fase 2 — TrayectoriaPaciente operativa en frontend y Docker local. Ver: ../../docs/project/02-as-is-audit/16-FASE-2-CIERRE.md
+**Estado del proyecto:** Fase 5 — discovery operacional de trayectoria en curso. Ver: ../../docs/project/02-as-is-audit/21-FASE-5-KICKOFF.md
 
 Frontend operativo en Next.js 16 alineado al contrato HTTP real del backend actual.
 
@@ -95,8 +95,8 @@ src/
 
 ## Limitaciones reales del backend reflejadas en la UI
 
-- No existen endpoints GET de negocio para listar recursos o ver detalle persistido.
-- La consulta de trayectoria existe, pero requiere conocer `trajectoryId`; no hay búsqueda por `patientId` ni `queueId`.
+- Los GET de negocio siguen siendo limitados; hoy el backend expone discovery y detalle de trayectoria como lecturas operativas auditadas.
+- La consola de trayectoria ya soporta discovery por `patientId` y `queueId` opcional, pero el backend no expone búsquedas genéricas equivalentes para otros módulos.
 - Varios campos requeridos por DTO siguen siendo ignorados por los handlers backend.
 - `queueId` es inconsistente: a veces va en body y a veces en query.
 - El login recibe `identifier`, pero en la práctica autentica por `username`.

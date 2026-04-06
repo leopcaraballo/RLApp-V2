@@ -67,3 +67,22 @@ public class GetPatientTrajectoryQuery : IRequest<QueryResult<PatientTrajectoryD
         CorrelationId = correlationId;
     }
 }
+
+/// <summary>
+/// UC-018: Reconstruct Patient Trajectory
+/// Query to discover persisted patient trajectory candidates by patient and optional queue.
+/// Reference: S-011 Patient Trajectory Aggregate
+/// </summary>
+public sealed class DiscoverPatientTrajectoriesQuery : IRequest<QueryResult<PatientTrajectoryDiscoveryResponseDto>>
+{
+    public string PatientId { get; }
+    public string? QueueId { get; }
+    public string CorrelationId { get; }
+
+    public DiscoverPatientTrajectoriesQuery(string patientId, string? queueId, string correlationId)
+    {
+        PatientId = patientId;
+        QueueId = queueId;
+        CorrelationId = correlationId;
+    }
+}

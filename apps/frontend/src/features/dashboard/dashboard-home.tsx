@@ -5,8 +5,8 @@ import { StatusBadge } from '@/components/shared/status-badge';
 import type { SessionUser } from '@/types/session';
 
 const criticalFindings = [
-  'There are still no generic business GET endpoints; the only audited read model exposed today is the patient trajectory query by known trajectoryId.',
-  'Patient trajectory diagnostics are now available, but the contract still offers no search endpoint by patientId or queueId.',
+  'Business GET coverage is still narrow: the audited operational reads are patient trajectory discovery and patient trajectory detail.',
+  'Patient trajectory diagnostics now support discovery by patientId with optional queueId narrowing for Support and Supervisor.',
   'Several request fields are required by DTOs but ignored by handlers, which can mislead frontend and QA automation.',
 ];
 

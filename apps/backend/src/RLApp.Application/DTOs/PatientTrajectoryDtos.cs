@@ -21,6 +21,23 @@ public sealed class PatientTrajectoryStageDto
     public string CorrelationId { get; set; } = string.Empty;
 }
 
+public sealed class PatientTrajectoryDiscoveryResponseDto
+{
+    public int Total { get; set; }
+    public IReadOnlyList<PatientTrajectoryDiscoveryItemDto> Items { get; set; } = Array.Empty<PatientTrajectoryDiscoveryItemDto>();
+}
+
+public sealed class PatientTrajectoryDiscoveryItemDto
+{
+    public string TrajectoryId { get; set; } = string.Empty;
+    public string PatientId { get; set; } = string.Empty;
+    public string QueueId { get; set; } = string.Empty;
+    public string CurrentState { get; set; } = string.Empty;
+    public DateTime OpenedAt { get; set; }
+    public DateTime? ClosedAt { get; set; }
+    public string? LastCorrelationId { get; set; }
+}
+
 public sealed class RebuildPatientTrajectoriesResultDto
 {
     public string JobId { get; set; } = string.Empty;

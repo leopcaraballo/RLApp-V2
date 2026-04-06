@@ -16,6 +16,8 @@ Proveer una vista maestra de la estructura documental y de la dependencia entre 
   - 02-as-is-audit/17-FASE-3-KICKOFF.md: Fase 3 — inicio documental de concurrencia optimista en EventStore
   - 02-as-is-audit/18-FASE-3-CIERRE.md: Fase 3 — cierre tecnico de concurrencia optimista, evidencia backend y validacion Docker-first
   - 02-as-is-audit/19-FASE-4-KICKOFF.md: Fase 4 — inicio documental de correlacion de sagas y state machines por `trajectoryId`
+  - 02-as-is-audit/20-FASE-4-CIERRE.md: Fase 4 — cierre tecnico de correlacion longitudinal de sagas y persistencia durable
+  - 02-as-is-audit/21-FASE-5-KICKOFF.md: Fase 5 — inicio documental de discovery operacional de trayectorias desde proyecciones persistidas
 - 03-target-architecture: arquitectura objetivo del proyecto nuevo
 - 04-adr: decisiones formales
 - 05-domain: modelo de dominio, estados y eventos

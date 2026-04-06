@@ -1,9 +1,12 @@
 namespace RLApp.Application.Handlers;
 
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using Commands;
 using DTOs;
 using MediatR;
+using Microsoft.Extensions.Logging;
+using Observability;
 using Queries;
 using RLApp.Application.Services;
 using RLApp.Domain.Aggregates;
@@ -11,6 +14,90 @@ using RLApp.Domain.Common;
 using RLApp.Domain.Events;
 using RLApp.Ports.Inbound;
 using RLApp.Ports.Outbound;
+
+public sealed class DiscoverPatientTrajectoriesHandler : IRequestHandler<DiscoverPatientTrajectoriesQuery, QueryResult<PatientTrajectoryDiscoveryResponseDto>>
+{
+    private readonly IProjectionStore _projectionStore;
+    private readonly ILogger<DiscoverPatientTrajectoriesHandler> _logger;
+
+    public DiscoverPatientTrajectoriesHandler(
+        IProjectionStore projectionStore,
+        ILogger<DiscoverPatientTrajectoriesHandler> logger)
+    {
+        _projectionStore = projectionStore;
+        _logger = logger;
+    }
+
+    public async Task<QueryResult<PatientTrajectoryDiscoveryResponseDto>> Handle(
+        DiscoverPatientTrajectoriesQuery query,
+        CancellationToken cancellationToken)
+    {
+        var patientId = query.PatientId.Trim();
+        var queueId = string.IsNullOrWhiteSpace(query.QueueId) ? null : query.QueueId.Trim();
+        var queueFilterApplied = !string.IsNullOrWhiteSpace(queueId);
+        using var activity = PatientTrajectoryTelemetry.StartDiscoveryActivity(query.CorrelationId, patientId, queueId);
+        var stopwatch = Stopwatch.StartNew();
+
+        try
+        {
+            if (string.IsNullOrWhiteSpace(patientId))
+            {
+                _logger.LogWarning(
+                    "Trajectory discovery rejected due to invalid scope. CorrelationId: {CorrelationId}, QueueId: {QueueId}",
+                    query.CorrelationId,
+                    queueId);
+
+                stopwatch.Stop();
+                PatientTrajectoryTelemetry.RecordDiscoveryRejected(stopwatch.Elapsed, queueFilterApplied, "invalid_scope");
+                PatientTrajectoryTelemetry.SetDiscoveryResult(activity, "invalid_scope", 0);
+
+                return QueryResult<PatientTrajectoryDiscoveryResponseDto>.Failure(
+                    "TRAJECTORY_DISCOVERY_SCOPE_INVALID",
+                    query.CorrelationId);
+            }
+
+            var projections = await _projectionStore.FindPatientTrajectoriesAsync(patientId, queueId, cancellationToken);
+            var items = projections
+                .Select(projection => new PatientTrajectoryDiscoveryItemDto
+                {
+                    TrajectoryId = projection.TrajectoryId,
+                    PatientId = projection.PatientId,
+                    QueueId = projection.QueueId,
+                    CurrentState = projection.CurrentState,
+                    OpenedAt = projection.OpenedAt,
+                    ClosedAt = projection.ClosedAt,
+                    LastCorrelationId = projection.CorrelationIds.LastOrDefault()
+                })
+                .ToArray();
+
+            _logger.LogInformation(
+                "Trajectory discovery completed. CorrelationId: {CorrelationId}, PatientId: {PatientId}, QueueId: {QueueId}, MatchCount: {MatchCount}",
+                query.CorrelationId,
+                patientId,
+                queueId,
+                items.Length);
+
+            stopwatch.Stop();
+            PatientTrajectoryTelemetry.RecordDiscoveryCompleted(items.Length, stopwatch.Elapsed, queueFilterApplied);
+            PatientTrajectoryTelemetry.SetDiscoveryResult(activity, "success", items.Length);
+
+            return QueryResult<PatientTrajectoryDiscoveryResponseDto>.Ok(
+                new PatientTrajectoryDiscoveryResponseDto
+                {
+                    Total = items.Length,
+                    Items = items
+                },
+                query.CorrelationId);
+        }
+        catch (Exception ex)
+        {
+            stopwatch.Stop();
+            PatientTrajectoryTelemetry.RecordDiscoveryFailed(stopwatch.Elapsed, queueFilterApplied, ex.GetType().Name);
+            PatientTrajectoryTelemetry.RecordFailure(activity, ex);
+            throw;
+        }
+    }
+}
 
 public sealed class GetPatientTrajectoryHandler : IRequestHandler<GetPatientTrajectoryQuery, QueryResult<PatientTrajectoryDto>>
 {
