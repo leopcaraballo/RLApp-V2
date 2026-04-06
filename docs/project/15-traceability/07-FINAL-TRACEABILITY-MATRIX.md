@@ -18,7 +18,7 @@
 ## Remaining explicit gaps
 
 - Fase 3 cierra el control de concurrencia optimista del event store con evidencia ejecutable, migracion determinista de `SequenceNumber` y rechazo `CONCURRENCY_CONFLICT`; queda pendiente validar restores operativos y volumen legacy masivo en slices posteriores.
-- Fase 4 abre la migracion de correlacion de sagas a `trajectoryId`, pero todavia falta cerrar la implementacion ejecutable en `ConsultationSaga` y formalizar contratos async machine-readable para los flujos longitudinales.
+- Fase 4 ya materializa la correlacion principal de `ConsultationSaga` por `trajectoryId`, agrega contrato async machine-readable para `EV-011`..`EV-013` y elimina `InMemoryRepository` como baseline ejecutable; faltan slices posteriores para discovery operacional y observabilidad end-to-end mas amplia.
 - Los thresholds de `S-009` ya quedaron cuantificados y el baseline Docker-first tiene evidencia ejecutable en Fase 2 y Fase 3, pero todavia falta automatizar medicion end-to-end de observabilidad y thresholds sobre los servicios ejecutables.
 - `TrayectoriaPaciente` ya comparte versionado por aggregate y replay compatible con el event store endurecido, pero la busqueda por `patientId` y el discovery operativo de trayectorias siguen pendientes de slices posteriores.
-- El siguiente hueco material ya no es de codigo ejecutable base, sino de contratos async machine-readable, discovery de trayectorias y validacion operativa mas amplia sobre los slices posteriores.
+- El siguiente hueco material ya no es de persistencia base ni de contrato async de consulta, sino de discovery operacional de trayectorias y validacion operativa mas amplia sobre los slices posteriores.

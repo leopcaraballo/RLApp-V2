@@ -10,7 +10,7 @@ public class ConsultationState : SagaStateMachineInstance
     public Guid CorrelationId { get; set; }
     public string CurrentState { get; set; } = string.Empty;
 
-    public string TrajectoryId { get; set; } = string.Empty;
+    public string? TrajectoryId { get; set; }
     public string LastCorrelationId { get; set; } = string.Empty;
     public string PatientId { get; set; } = string.Empty;
     public string QueueId { get; set; } = string.Empty;

@@ -99,7 +99,11 @@ public static class DependencyInjection
 
                 // Register Sagas
                 x.AddSagaStateMachine<RLApp.Adapters.Messaging.Sagas.ConsultationSaga, RLApp.Adapters.Messaging.Sagas.ConsultationState>()
-                    .InMemoryRepository();
+                    .EntityFrameworkRepository(repository =>
+                    {
+                        repository.ExistingDbContext<AppDbContext>();
+                        repository.UsePostgres();
+                    });
 
                 // Apply extra config (e.g. from API layer)
                 extraMassTransitConfig?.Invoke(x);

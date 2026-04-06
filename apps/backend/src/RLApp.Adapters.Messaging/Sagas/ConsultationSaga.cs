@@ -56,7 +56,7 @@ public class ConsultationSaga : MassTransitStateMachine<ConsultationState>
             When(PatientCalled)
                 .Then(context =>
                 {
-                    context.Saga.TrajectoryId = context.Message.TrajectoryId ?? string.Empty;
+                    context.Saga.TrajectoryId = context.Message.TrajectoryId;
                     context.Saga.LastCorrelationId = context.Message.CorrelationId;
                     context.Saga.PatientId = context.Message.PatientId;
                     context.Saga.QueueId = context.Message.AggregateId;
