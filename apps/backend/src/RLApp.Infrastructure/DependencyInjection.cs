@@ -27,7 +27,8 @@ public static class DependencyInjection
     public static IServiceCollection AddInfrastructureServices(this IServiceCollection services, IConfiguration configuration, Action<IBusRegistrationConfigurator>? extraMassTransitConfig = null)
     {
         // MediatR registration picking up Application Assembly
-        services.AddMediatR(cfg => {
+        services.AddMediatR(cfg =>
+        {
             cfg.RegisterServicesFromAssembly(typeof(Command).Assembly);
         });
 

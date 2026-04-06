@@ -2,6 +2,7 @@ using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using RLApp.Adapters.Messaging.Observability;
 using RLApp.Adapters.Http.Middleware;
 using RLApp.Adapters.Http.Security;
 using RLApp.Adapters.Persistence.Data;
@@ -26,6 +27,7 @@ builder.Services.AddOpenTelemetry()
         .AddAspNetCoreInstrumentation()
         .AddEntityFrameworkCoreInstrumentation()
         .AddSource("MassTransit")
+        .AddSource(MessageFlowTelemetry.ActivitySourceName)
         .AddConsoleExporter())
     .WithMetrics(metrics => metrics
         .AddAspNetCoreInstrumentation()
@@ -34,7 +36,8 @@ builder.Services.AddOpenTelemetry()
         .AddPrometheusExporter());
 
 // Configure Hexagonal Architecture dependencies with SignalR consumers
-builder.Services.AddInfrastructureServices(builder.Configuration, x => {
+builder.Services.AddInfrastructureServices(builder.Configuration, x =>
+{
     x.AddConsumer<SignalRNotificationConsumer>();
 });
 

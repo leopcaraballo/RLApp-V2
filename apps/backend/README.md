@@ -114,6 +114,12 @@ Perfil operativo validado:
 docker compose --profile backend --profile frontend up --build
 ```
 
+Perfil de mensajeria ejecutable:
+
+- Docker Compose levanta `db`, `rabbitmq`, `backend` y `frontend`.
+- El backend usa `MassTransit + RabbitMQ` por defecto en Docker local.
+- RabbitMQ expone AMQP en `5672` y management UI en `15672`.
+
 Usuarios seeded para el perfil local:
 
 - `superadmin` / `SuperAdmin@2026Dev!` (`Supervisor`)

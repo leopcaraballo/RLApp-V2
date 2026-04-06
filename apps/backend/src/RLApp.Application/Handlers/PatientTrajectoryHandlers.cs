@@ -230,127 +230,127 @@ public sealed class RebuildPatientTrajectoriesHandler : IRequestHandler<RebuildP
             switch (@event)
             {
                 case PatientCheckedIn checkedIn:
-                {
-                    var queueId = checkedIn.AggregateId;
-                    lastKnownQueueByPatient[patientId] = queueId;
-                    var trajectory = PatientTrajectory.Start(
-                        PatientTrajectoryIdFactory.Create(queueId, patientId, checkedIn.OccurredAt),
-                        patientId,
-                        queueId,
-                        PatientTrajectory.ReceptionStage,
-                        checkedIn.EventType,
-                        "EnEsperaTaquilla",
-                        checkedIn.OccurredAt,
-                        checkedIn.CorrelationId);
-                    trajectories[trajectory.Id] = trajectory;
-                    activeTrajectories[BuildPatientQueueKey(patientId, queueId)] = trajectory;
-                    break;
-                }
+                    {
+                        var queueId = checkedIn.AggregateId;
+                        lastKnownQueueByPatient[patientId] = queueId;
+                        var trajectory = PatientTrajectory.Start(
+                            PatientTrajectoryIdFactory.Create(queueId, patientId, checkedIn.OccurredAt),
+                            patientId,
+                            queueId,
+                            PatientTrajectory.ReceptionStage,
+                            checkedIn.EventType,
+                            "EnEsperaTaquilla",
+                            checkedIn.OccurredAt,
+                            checkedIn.CorrelationId);
+                        trajectories[trajectory.Id] = trajectory;
+                        activeTrajectories[BuildPatientQueueKey(patientId, queueId)] = trajectory;
+                        break;
+                    }
 
                 case PatientPaymentValidated paymentValidated:
-                {
-                    var queueId = paymentValidated.AggregateId;
-                    lastKnownQueueByPatient[patientId] = queueId;
-                    var trajectory = GetOrCreateHistoricalTrajectory(
-                        trajectories,
-                        activeTrajectories,
-                        patientId,
-                        queueId,
-                        paymentValidated.OccurredAt,
-                        PatientTrajectory.CashierStage,
-                        paymentValidated.EventType,
-                        "EnEsperaConsulta",
-                        paymentValidated.CorrelationId);
-                    trajectory.RecordStage(
-                        PatientTrajectory.CashierStage,
-                        paymentValidated.EventType,
-                        "EnEsperaConsulta",
-                        paymentValidated.OccurredAt,
-                        paymentValidated.CorrelationId);
-                    break;
-                }
+                    {
+                        var queueId = paymentValidated.AggregateId;
+                        lastKnownQueueByPatient[patientId] = queueId;
+                        var trajectory = GetOrCreateHistoricalTrajectory(
+                            trajectories,
+                            activeTrajectories,
+                            patientId,
+                            queueId,
+                            paymentValidated.OccurredAt,
+                            PatientTrajectory.CashierStage,
+                            paymentValidated.EventType,
+                            "EnEsperaConsulta",
+                            paymentValidated.CorrelationId);
+                        trajectory.RecordStage(
+                            PatientTrajectory.CashierStage,
+                            paymentValidated.EventType,
+                            "EnEsperaConsulta",
+                            paymentValidated.OccurredAt,
+                            paymentValidated.CorrelationId);
+                        break;
+                    }
 
                 case PatientAbsentAtCashier absentAtCashier:
-                {
-                    var queueId = absentAtCashier.AggregateId;
-                    lastKnownQueueByPatient[patientId] = queueId;
-                    var trajectory = GetOrCreateHistoricalTrajectory(
-                        trajectories,
-                        activeTrajectories,
-                        patientId,
-                        queueId,
-                        absentAtCashier.OccurredAt,
-                        PatientTrajectory.CashierStage,
-                        absentAtCashier.EventType,
-                        "CanceladoPorPago",
-                        absentAtCashier.CorrelationId);
-                    trajectory.Cancel(
-                        absentAtCashier.EventType,
-                        "CanceladoPorPago",
-                        absentAtCashier.Reason,
-                        absentAtCashier.OccurredAt,
-                        absentAtCashier.CorrelationId);
-                    activeTrajectories.Remove(BuildPatientQueueKey(patientId, queueId));
-                    break;
-                }
+                    {
+                        var queueId = absentAtCashier.AggregateId;
+                        lastKnownQueueByPatient[patientId] = queueId;
+                        var trajectory = GetOrCreateHistoricalTrajectory(
+                            trajectories,
+                            activeTrajectories,
+                            patientId,
+                            queueId,
+                            absentAtCashier.OccurredAt,
+                            PatientTrajectory.CashierStage,
+                            absentAtCashier.EventType,
+                            "CanceladoPorPago",
+                            absentAtCashier.CorrelationId);
+                        trajectory.Cancel(
+                            absentAtCashier.EventType,
+                            "CanceladoPorPago",
+                            absentAtCashier.Reason,
+                            absentAtCashier.OccurredAt,
+                            absentAtCashier.CorrelationId);
+                        activeTrajectories.Remove(BuildPatientQueueKey(patientId, queueId));
+                        break;
+                    }
 
                 case PatientAttentionCompleted completed:
-                {
-                    var queueId = ResolveQueueId(completed, activeTrajectories, lastKnownQueueByPatient);
-                    if (queueId is null)
                     {
-                        continue;
-                    }
+                        var queueId = ResolveQueueId(completed, activeTrajectories, lastKnownQueueByPatient);
+                        if (queueId is null)
+                        {
+                            continue;
+                        }
 
-                    lastKnownQueueByPatient[patientId] = queueId;
-                    var trajectory = GetOrCreateHistoricalTrajectory(
-                        trajectories,
-                        activeTrajectories,
-                        patientId,
-                        queueId,
-                        completed.OccurredAt,
-                        PatientTrajectory.ConsultationStage,
-                        completed.EventType,
-                        "Finalizado",
-                        completed.CorrelationId);
-                    trajectory.Complete(
-                        PatientTrajectory.ConsultationStage,
-                        completed.EventType,
-                        "Finalizado",
-                        completed.OccurredAt,
-                        completed.CorrelationId);
-                    activeTrajectories.Remove(BuildPatientQueueKey(patientId, queueId));
-                    break;
-                }
+                        lastKnownQueueByPatient[patientId] = queueId;
+                        var trajectory = GetOrCreateHistoricalTrajectory(
+                            trajectories,
+                            activeTrajectories,
+                            patientId,
+                            queueId,
+                            completed.OccurredAt,
+                            PatientTrajectory.ConsultationStage,
+                            completed.EventType,
+                            "Finalizado",
+                            completed.CorrelationId);
+                        trajectory.Complete(
+                            PatientTrajectory.ConsultationStage,
+                            completed.EventType,
+                            "Finalizado",
+                            completed.OccurredAt,
+                            completed.CorrelationId);
+                        activeTrajectories.Remove(BuildPatientQueueKey(patientId, queueId));
+                        break;
+                    }
 
                 case PatientAbsentAtConsultation absentAtConsultation:
-                {
-                    var queueId = ResolveQueueId(absentAtConsultation, activeTrajectories, lastKnownQueueByPatient);
-                    if (queueId is null)
                     {
-                        continue;
-                    }
+                        var queueId = ResolveQueueId(absentAtConsultation, activeTrajectories, lastKnownQueueByPatient);
+                        if (queueId is null)
+                        {
+                            continue;
+                        }
 
-                    lastKnownQueueByPatient[patientId] = queueId;
-                    var trajectory = GetOrCreateHistoricalTrajectory(
-                        trajectories,
-                        activeTrajectories,
-                        patientId,
-                        queueId,
-                        absentAtConsultation.OccurredAt,
-                        PatientTrajectory.ConsultationStage,
-                        absentAtConsultation.EventType,
-                        "CanceladoPorAusencia",
-                        absentAtConsultation.CorrelationId);
-                    trajectory.Cancel(
-                        absentAtConsultation.EventType,
-                        "CanceladoPorAusencia",
-                        absentAtConsultation.Reason,
-                        absentAtConsultation.OccurredAt,
-                        absentAtConsultation.CorrelationId);
-                    activeTrajectories.Remove(BuildPatientQueueKey(patientId, queueId));
-                    break;
-                }
+                        lastKnownQueueByPatient[patientId] = queueId;
+                        var trajectory = GetOrCreateHistoricalTrajectory(
+                            trajectories,
+                            activeTrajectories,
+                            patientId,
+                            queueId,
+                            absentAtConsultation.OccurredAt,
+                            PatientTrajectory.ConsultationStage,
+                            absentAtConsultation.EventType,
+                            "CanceladoPorAusencia",
+                            absentAtConsultation.CorrelationId);
+                        trajectory.Cancel(
+                            absentAtConsultation.EventType,
+                            "CanceladoPorAusencia",
+                            absentAtConsultation.Reason,
+                            absentAtConsultation.OccurredAt,
+                            absentAtConsultation.CorrelationId);
+                        activeTrajectories.Remove(BuildPatientQueueKey(patientId, queueId));
+                        break;
+                    }
             }
         }
 

@@ -61,12 +61,12 @@ public class MedicalController : RLAppControllerBase
         var activeCorrelationId = correlationId ?? Guid.NewGuid().ToString();
 
         var command = new FinishConsultationCommand(
-            request.QueueId, 
-            request.PatientId, 
-            request.ConsultingRoomId, 
+            request.QueueId,
+            request.PatientId,
+            request.ConsultingRoomId,
             request.TurnId,
             request.Outcome,
-            activeCorrelationId, 
+            activeCorrelationId,
             CurrentUserId);
         var result = await _mediator.Send(command, cancellationToken);
         return FromCommandResult(result);
@@ -85,12 +85,12 @@ public class MedicalController : RLAppControllerBase
         var activeCorrelationId = correlationId ?? Guid.NewGuid().ToString();
 
         var command = new MarkAbsenceAtConsultationCommand(
-            request.QueueId, 
-            request.PatientId, 
-            request.ConsultingRoomId, 
+            request.QueueId,
+            request.PatientId,
+            request.ConsultingRoomId,
             request.TurnId,
             request.Reason,
-            activeCorrelationId, 
+            activeCorrelationId,
             CurrentUserId);
         var result = await _mediator.Send(command, cancellationToken);
         return FromCommandResult(result);

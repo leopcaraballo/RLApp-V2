@@ -26,6 +26,29 @@ services:
     networks:
       - rlapp-network
 
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    profiles:
+      - backend
+      - frontend
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
+    ports:
+      - "${RABBITMQ_PORT:-5672}:5672"
+      - "${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - rabbitmq-diagnostics -q ping
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 20s
+    networks:
+      - rlapp-network
+
   backend:
     build:
       context: .
@@ -39,14 +62,20 @@ services:
       ASPNETCORE_URLS: http://0.0.0.0:8080
       ConnectionStrings__Postgres: Host=db;Port=5432;Database=${POSTGRES_DB:-rlappdb};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-postgres}
       Jwt__Secret: ${JWT_SECRET:-local-dev-jwt-secret-change-this-before-production}
-      Messaging__Enabled: ${MESSAGING_ENABLED:-false}
-      Messaging__Transport: ${MESSAGING_TRANSPORT:-InMemory}
-      HealthChecks__RabbitMQ__Enabled: ${HEALTHCHECKS_RABBITMQ_ENABLED:-false}
+      RabbitMQ__Host: rabbitmq
+      RabbitMQ__Port: 5672
+      RabbitMQ__Username: ${RABBITMQ_USER:-guest}
+      RabbitMQ__Password: ${RABBITMQ_PASSWORD:-guest}
+      Messaging__Enabled: ${MESSAGING_ENABLED:-true}
+      Messaging__Transport: ${MESSAGING_TRANSPORT:-RabbitMQ}
+      HealthChecks__RabbitMQ__Enabled: ${HEALTHCHECKS_RABBITMQ_ENABLED:-true}
       Database__ApplyMigrationsOnStartup: ${APPLY_MIGRATIONS_ON_STARTUP:-true}
       OutboxProcessor__PollingIntervalMs: ${OUTBOX_POLLING_INTERVAL_MS:-500}
       OutboxProcessor__BatchSize: ${OUTBOX_BATCH_SIZE:-50}
     depends_on:
       db:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     ports:
       - "${BACKEND_PORT:-5094}:8080"

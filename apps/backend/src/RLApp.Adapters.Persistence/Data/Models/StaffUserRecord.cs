@@ -22,7 +22,7 @@ public class StaffUserRecord
             builder.HasKey(e => e.Id);
             builder.HasIndex(e => e.Username).IsUnique();
             builder.HasIndex(e => e.Email).IsUnique();
-            
+
             builder.Property(e => e.Username).IsRequired().HasMaxLength(100);
             builder.Property(e => e.Email).IsRequired().HasMaxLength(255);
             builder.Property(e => e.PasswordHash).IsRequired();
