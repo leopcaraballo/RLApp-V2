@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using RLApp.Adapters.Messaging.Sagas;
+using RLApp.Adapters.Persistence.Data.Configurations;
 using RLApp.Adapters.Persistence.Data.Models;
 
 namespace RLApp.Adapters.Persistence.Data;
@@ -10,6 +12,7 @@ public class AppDbContext : DbContext
     public DbSet<OutboxDeadLetterMessage> OutboxDeadLetterMessages { get; set; } = null!;
     public DbSet<StaffUserRecord> StaffUsers { get; set; } = null!;
     public DbSet<AuditLogRecord> AuditLogs { get; set; } = null!;
+    public DbSet<ConsultationState> ConsultationSagaStates { get; set; } = null!;
 
     // Read Models
     public DbSet<WaitingRoomMonitorView> WaitingRoomMonitors { get; set; } = null!;
@@ -33,6 +36,7 @@ public class AppDbContext : DbContext
         modelBuilder.ApplyConfiguration(new OutboxDeadLetterMessage.Configuration());
         modelBuilder.ApplyConfiguration(new StaffUserRecord.Configuration());
         modelBuilder.ApplyConfiguration(new AuditLogRecord.Configuration());
+        modelBuilder.ApplyConfiguration(new ConsultationStateConfiguration());
 
         // Read Models configuration
         ReadModelsConfiguration.Configure(modelBuilder);

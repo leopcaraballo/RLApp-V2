@@ -143,17 +143,20 @@ public class CallPatientToConsultationHandler : IRequestHandler<CallPatientComma
     private readonly IEventPublisher _eventPublisher;
     private readonly IAuditStore _auditStore;
     private readonly IPersistenceSession _persistenceSession;
+    private readonly PatientTrajectoryCorrelationResolver _trajectoryCorrelationResolver;
 
     public CallPatientToConsultationHandler(
         IWaitingQueueRepository queueRepository,
         IEventPublisher eventPublisher,
         IAuditStore auditStore,
-        IPersistenceSession persistenceSession)
+        IPersistenceSession persistenceSession,
+        PatientTrajectoryCorrelationResolver trajectoryCorrelationResolver)
     {
         _queueRepository = queueRepository;
         _eventPublisher = eventPublisher;
         _auditStore = auditStore;
         _persistenceSession = persistenceSession;
+        _trajectoryCorrelationResolver = trajectoryCorrelationResolver;
     }
 
     public async Task<CommandResult> Handle(CallPatientCommand command, CancellationToken cancellationToken)
@@ -182,7 +185,12 @@ public class CallPatientToConsultationHandler : IRequestHandler<CallPatientComma
                 return CommandResult.Failure("Queue not found", command.CorrelationId);
             }
 
-            queue.CallPatient(command.PatientId, command.RoomId, command.CorrelationId);
+            var trajectoryId = await _trajectoryCorrelationResolver.ResolveRequiredAsync(
+                command.PatientId,
+                targetQueueId,
+                cancellationToken);
+
+            queue.CallPatient(command.PatientId, command.RoomId, command.CorrelationId, trajectoryId);
             await _queueRepository.UpdateAsync(queue, cancellationToken);
 
             var events = queue.GetUnraisedEvents();
@@ -247,6 +255,7 @@ public class FinishConsultationHandler : IRequestHandler<FinishConsultationComma
     private readonly IAuditStore _auditStore;
     private readonly IPersistenceSession _persistenceSession;
     private readonly PatientTrajectoryOrchestrator _trajectoryOrchestrator;
+    private readonly PatientTrajectoryCorrelationResolver _trajectoryCorrelationResolver;
 
     public FinishConsultationHandler(
         IWaitingQueueRepository queueRepository,
@@ -254,7 +263,8 @@ public class FinishConsultationHandler : IRequestHandler<FinishConsultationComma
         IEventPublisher eventPublisher,
         IAuditStore auditStore,
         IPersistenceSession persistenceSession,
-        PatientTrajectoryOrchestrator trajectoryOrchestrator)
+        PatientTrajectoryOrchestrator trajectoryOrchestrator,
+        PatientTrajectoryCorrelationResolver trajectoryCorrelationResolver)
     {
         _queueRepository = queueRepository;
         _roomRepository = roomRepository;
@@ -262,6 +272,7 @@ public class FinishConsultationHandler : IRequestHandler<FinishConsultationComma
         _auditStore = auditStore;
         _persistenceSession = persistenceSession;
         _trajectoryOrchestrator = trajectoryOrchestrator;
+        _trajectoryCorrelationResolver = trajectoryCorrelationResolver;
     }
 
     public async Task<CommandResult> Handle(FinishConsultationCommand command, CancellationToken cancellationToken)
@@ -290,16 +301,22 @@ public class FinishConsultationHandler : IRequestHandler<FinishConsultationComma
                 return CommandResult.Failure("Queue not found", command.CorrelationId);
             }
 
+            var trajectoryId = await _trajectoryCorrelationResolver.ResolveRequiredAsync(
+                command.PatientId,
+                targetQueueId,
+                cancellationToken);
+
             queue.CompletePatientAttention(
                 command.PatientId,
                 command.RoomId,
                 command.TurnId,
                 command.Outcome,
-                command.CorrelationId);
+                command.CorrelationId,
+                trajectoryId);
             await _queueRepository.UpdateAsync(queue, cancellationToken);
 
             var room = await _roomRepository.GetByIdAsync(command.RoomId, cancellationToken);
-            room.CompleteAttention(command.TurnId, command.Outcome, command.CorrelationId);
+            room.CompleteAttention(command.TurnId, command.Outcome, command.CorrelationId, trajectoryId);
             await _roomRepository.UpdateAsync(room, cancellationToken);
 
             var queueEvents = queue.GetUnraisedEvents();

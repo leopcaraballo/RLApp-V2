@@ -64,11 +64,11 @@ public class WaitingQueue : DomainEntity
     /// Register a patient arrival (check-in).
     /// </summary>
     public void CheckInPatient(
-        string patientId, 
-        string patientName, 
-        string? appointmentReference, 
-        int priority, 
-        string? notes, 
+        string patientId,
+        string patientName,
+        string? appointmentReference,
+        int priority,
+        string? notes,
         string correlationId)
     {
         if (!IsOpen)
@@ -110,12 +110,15 @@ public class WaitingQueue : DomainEntity
     /// <summary>
     /// Call a patient for consultation.
     /// </summary>
-    public void CallPatient(string patientId, string roomId, string correlationId)
+    public void CallPatient(string patientId, string roomId, string correlationId, string trajectoryId)
     {
         if (!PatientIds.Contains(patientId))
             throw new DomainException("Patient is not in the queue");
 
-        RaiseDomainEvent(new PatientCalled(Id, patientId, roomId, correlationId));
+        if (string.IsNullOrWhiteSpace(trajectoryId))
+            throw new DomainException("Trajectory ID cannot be empty");
+
+        RaiseDomainEvent(new PatientCalled(Id, patientId, roomId, correlationId, trajectoryId));
     }
 
     /// <summary>
@@ -157,27 +160,33 @@ public class WaitingQueue : DomainEntity
     /// <summary>
     /// Mark patient attention as completed.
     /// </summary>
-    public void CompletePatientAttention(string patientId, string roomId, string? turnId, string? outcome, string correlationId)
+    public void CompletePatientAttention(string patientId, string roomId, string? turnId, string? outcome, string correlationId, string trajectoryId)
     {
         if (!PatientIds.Contains(patientId))
             throw new DomainException("Patient is not in the queue");
 
+        if (string.IsNullOrWhiteSpace(trajectoryId))
+            throw new DomainException("Trajectory ID cannot be empty");
+
         PatientIds.Remove(patientId);
         PatientRoomAssignments.Remove(patientId);
-        RaiseDomainEvent(new PatientAttentionCompleted(Id, patientId, roomId, turnId, outcome, correlationId));
+        RaiseDomainEvent(new PatientAttentionCompleted(Id, patientId, roomId, turnId, outcome, correlationId, trajectoryId));
     }
 
     /// <summary>
     /// Mark patient as absent.
     /// </summary>
-    public void MarkPatientAbsent(string patientId, string? turnId, string? reason, string correlationId)
+    public void MarkPatientAbsent(string patientId, string? turnId, string? reason, string correlationId, string trajectoryId)
     {
         if (!PatientIds.Contains(patientId))
             throw new DomainException("Patient is not in the queue");
 
+        if (string.IsNullOrWhiteSpace(trajectoryId))
+            throw new DomainException("Trajectory ID cannot be empty");
+
         PatientIds.Remove(patientId);
         PatientRoomAssignments.Remove(patientId);
-        RaiseDomainEvent(new PatientAbsentAtConsultation(Id, patientId, turnId, reason, correlationId));
+        RaiseDomainEvent(new PatientAbsentAtConsultation(Id, patientId, turnId, reason, correlationId, trajectoryId));
     }
 
     /// <summary>

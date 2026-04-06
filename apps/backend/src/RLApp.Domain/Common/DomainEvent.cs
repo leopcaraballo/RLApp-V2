@@ -20,6 +20,9 @@ public abstract class DomainEvent
     [JsonPropertyName("aggregateId")]
     public string AggregateId { get; set; }
 
+    [JsonPropertyName("trajectoryId")]
+    public string? TrajectoryId { get; set; }
+
     protected DomainEvent(string eventType, string aggregateId, string correlationId)
     {
         EventType = eventType;

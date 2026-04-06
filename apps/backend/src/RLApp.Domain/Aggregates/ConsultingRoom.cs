@@ -100,7 +100,7 @@ public class ConsultingRoom : DomainEntity
     /// Raises: PatientCalled
     /// Reference: UC-006
     /// </summary>
-    public void CallPatient(string patientId, string roomId, string correlationId)
+    public void CallPatient(string patientId, string roomId, string correlationId, string trajectoryId)
     {
         if (!IsActive)
             throw new DomainException("Consulting room is not active");
@@ -108,7 +108,10 @@ public class ConsultingRoom : DomainEntity
         if (CurrentPatientId != patientId)
             throw new DomainException($"Patient {patientId} is not assigned to this room");
 
-        RaiseDomainEvent(new PatientCalled(Id, patientId, roomId ?? Id, correlationId));
+        if (string.IsNullOrWhiteSpace(trajectoryId))
+            throw new DomainException("Trajectory ID cannot be empty");
+
+        RaiseDomainEvent(new PatientCalled(Id, patientId, roomId ?? Id, correlationId, trajectoryId));
     }
 
     /// <summary>
@@ -117,16 +120,19 @@ public class ConsultingRoom : DomainEntity
     /// Raises: PatientAttentionCompleted
     /// Reference: UC-006
     /// </summary>
-    public void CompleteAttention(string? turnId, string? outcome, string correlationId)
+    public void CompleteAttention(string? turnId, string? outcome, string correlationId, string trajectoryId)
     {
         if (CurrentPatientId == null)
             throw new DomainException("No patient is currently being attended");
+
+        if (string.IsNullOrWhiteSpace(trajectoryId))
+            throw new DomainException("Trajectory ID cannot be empty");
 
         var patientId = CurrentPatientId;
         CurrentPatientId = null;
         CurrentConsultantId = null;
 
-        RaiseDomainEvent(new PatientAttentionCompleted(Id, patientId, Id, turnId, outcome, correlationId));
+        RaiseDomainEvent(new PatientAttentionCompleted(Id, patientId, Id, turnId, outcome, correlationId, trajectoryId));
     }
 
     /// <summary>
@@ -135,15 +141,18 @@ public class ConsultingRoom : DomainEntity
     /// Raises: PatientAbsentAtConsultation
     /// Reference: UC-006
     /// </summary>
-    public void MarkPatientAbsent(string? turnId, string? reason, string correlationId)
+    public void MarkPatientAbsent(string? turnId, string? reason, string correlationId, string trajectoryId)
     {
         if (CurrentPatientId == null)
             throw new DomainException("No patient is currently being attended");
+
+        if (string.IsNullOrWhiteSpace(trajectoryId))
+            throw new DomainException("Trajectory ID cannot be empty");
 
         var patientId = CurrentPatientId;
         CurrentPatientId = null;
         CurrentConsultantId = null;
 
-        RaiseDomainEvent(new PatientAbsentAtConsultation(Id, patientId, turnId, reason, correlationId));
+        RaiseDomainEvent(new PatientAbsentAtConsultation(Id, patientId, turnId, reason, correlationId, trajectoryId));
     }
 }

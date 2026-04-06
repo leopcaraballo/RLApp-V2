@@ -4,9 +4,12 @@
 
 Esta documentación cubre la superficie HTTP implementada hoy en `apps/backend/src/RLApp.Adapters.Http/Controllers` y los endpoints de salud definidos en `apps/backend/src/RLApp.Api/Program.cs`.
 
-La especificación OpenAPI fuente de verdad de esta carpeta es:
+Los artefactos machine-readable vigentes de esta carpeta son:
 
 - [openapi.yaml](./openapi.yaml)
+- [asyncapi.yaml](./asyncapi.yaml)
+
+`openapi.yaml` cubre la superficie HTTP y `asyncapi.yaml` formaliza los eventos de correlacion longitudinal usados por `ConsultationSaga` en Fase 4.
 
 Esta guía **no** asume que la documentación objetivo del proyecto esté implementada; cuando hay divergencias, se documenta el comportamiento real y se deja el hallazgo explícito.
 

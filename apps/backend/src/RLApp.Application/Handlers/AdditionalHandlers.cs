@@ -332,6 +332,7 @@ public class MarkAbsenceAtConsultationHandler : IRequestHandler<MarkAbsenceAtCon
     private readonly IAuditStore _auditStore;
     private readonly IPersistenceSession _persistenceSession;
     private readonly PatientTrajectoryOrchestrator _trajectoryOrchestrator;
+    private readonly PatientTrajectoryCorrelationResolver _trajectoryCorrelationResolver;
 
     public MarkAbsenceAtConsultationHandler(
         IWaitingQueueRepository queueRepository,
@@ -339,7 +340,8 @@ public class MarkAbsenceAtConsultationHandler : IRequestHandler<MarkAbsenceAtCon
         IEventPublisher eventPublisher,
         IAuditStore auditStore,
         IPersistenceSession persistenceSession,
-        PatientTrajectoryOrchestrator trajectoryOrchestrator)
+        PatientTrajectoryOrchestrator trajectoryOrchestrator,
+        PatientTrajectoryCorrelationResolver trajectoryCorrelationResolver)
     {
         _queueRepository = queueRepository;
         _roomRepository = roomRepository;
@@ -347,6 +349,7 @@ public class MarkAbsenceAtConsultationHandler : IRequestHandler<MarkAbsenceAtCon
         _auditStore = auditStore;
         _persistenceSession = persistenceSession;
         _trajectoryOrchestrator = trajectoryOrchestrator;
+        _trajectoryCorrelationResolver = trajectoryCorrelationResolver;
     }
 
     public async Task<CommandResult> Handle(MarkAbsenceAtConsultationCommand command, CancellationToken cancellationToken)
@@ -355,11 +358,16 @@ public class MarkAbsenceAtConsultationHandler : IRequestHandler<MarkAbsenceAtCon
         {
             var queue = await _queueRepository.GetByIdAsync(command.QueueId, cancellationToken);
 
-            queue.MarkPatientAbsent(command.PatientId, command.TurnId, command.Reason, command.CorrelationId);
+            var trajectoryId = await _trajectoryCorrelationResolver.ResolveRequiredAsync(
+                command.PatientId,
+                command.QueueId,
+                cancellationToken);
+
+            queue.MarkPatientAbsent(command.PatientId, command.TurnId, command.Reason, command.CorrelationId, trajectoryId);
             await _queueRepository.UpdateAsync(queue, cancellationToken);
 
             var room = await _roomRepository.GetByIdAsync(command.RoomId, cancellationToken);
-            room.MarkPatientAbsent(command.TurnId, command.Reason, command.CorrelationId);
+            room.MarkPatientAbsent(command.TurnId, command.Reason, command.CorrelationId, trajectoryId);
             await _roomRepository.UpdateAsync(room, cancellationToken);
 
             var queueEvents = queue.GetUnraisedEvents();

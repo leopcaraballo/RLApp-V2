@@ -56,6 +56,7 @@ public static class DependencyInjection
         services.AddScoped<IProjectionStore, ProjectionStoreRepository>(); // Read model projections
         services.AddScoped<IPersistenceSession, EfPersistenceSession>();
         services.AddScoped<IPatientTrajectoryRepository, PatientTrajectoryRepository>();
+        services.AddScoped<PatientTrajectoryCorrelationResolver>();
         services.AddScoped<PatientTrajectoryOrchestrator>();
         services.AddScoped<PatientTrajectoryProjectionWriter>();
 
@@ -98,7 +99,11 @@ public static class DependencyInjection
 
                 // Register Sagas
                 x.AddSagaStateMachine<RLApp.Adapters.Messaging.Sagas.ConsultationSaga, RLApp.Adapters.Messaging.Sagas.ConsultationState>()
-                    .InMemoryRepository();
+                    .EntityFrameworkRepository(repository =>
+                    {
+                        repository.ExistingDbContext<AppDbContext>();
+                        repository.UsePostgres();
+                    });
 
                 // Apply extra config (e.g. from API layer)
                 extraMassTransitConfig?.Invoke(x);
