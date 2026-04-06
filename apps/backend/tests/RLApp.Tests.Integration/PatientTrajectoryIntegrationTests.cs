@@ -122,6 +122,7 @@ public class PatientTrajectoryIntegrationTests : IClassFixture<CustomWebApplicat
         using var scope = _factory.Services.CreateScope();
         var eventStore = scope.ServiceProvider.GetRequiredService<IEventStore>();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var trajectoryId = PatientTrajectoryIdFactory.Create(queueId, patientId, checkInAt);
 
         var events = new DomainEvent[]
         {
@@ -133,11 +134,11 @@ public class PatientTrajectoryIntegrationTests : IClassFixture<CustomWebApplicat
             {
                 OccurredAt = paymentAt
             },
-            new PatientAttentionCompleted(queueId, patientId, "ROOM-01", turnId, "Completed", "corr-complete")
+            new PatientAttentionCompleted(queueId, patientId, "ROOM-01", turnId, "Completed", "corr-complete", trajectoryId)
             {
                 OccurredAt = completedAt
             },
-            new PatientAttentionCompleted("ROOM-01", patientId, "ROOM-01", turnId, "Completed", "corr-complete")
+            new PatientAttentionCompleted("ROOM-01", patientId, "ROOM-01", turnId, "Completed", "corr-complete", trajectoryId)
             {
                 OccurredAt = completedAt.AddMilliseconds(1)
             }

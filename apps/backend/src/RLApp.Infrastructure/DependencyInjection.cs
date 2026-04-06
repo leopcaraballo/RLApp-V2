@@ -56,6 +56,7 @@ public static class DependencyInjection
         services.AddScoped<IProjectionStore, ProjectionStoreRepository>(); // Read model projections
         services.AddScoped<IPersistenceSession, EfPersistenceSession>();
         services.AddScoped<IPatientTrajectoryRepository, PatientTrajectoryRepository>();
+        services.AddScoped<PatientTrajectoryCorrelationResolver>();
         services.AddScoped<PatientTrajectoryOrchestrator>();
         services.AddScoped<PatientTrajectoryProjectionWriter>();
 
