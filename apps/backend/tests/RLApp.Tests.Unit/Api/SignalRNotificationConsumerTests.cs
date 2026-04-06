@@ -16,12 +16,14 @@ public class SignalRNotificationConsumerTests
     {
         var hubContext = Substitute.For<IHubContext<NotificationHub>>();
         var clients = Substitute.For<IHubClients>();
-        var proxy = Substitute.For<IClientProxy>();
+        var dashboardProxy = Substitute.For<IClientProxy>();
+        var queueProxy = Substitute.For<IClientProxy>();
         var logger = Substitute.For<ILogger<SignalRNotificationConsumer>>();
         var realtimeChannelStatus = new RealtimeChannelStatus();
 
         hubContext.Clients.Returns(clients);
-        clients.All.Returns(proxy);
+        clients.Group("dashboard").Returns(dashboardProxy);
+        clients.Group("queue-queue-1").Returns(queueProxy);
 
         var consumer = new SignalRNotificationConsumer(hubContext, realtimeChannelStatus, logger);
         var context = Substitute.For<ConsumeContext<PatientCheckedIn>>();
@@ -33,9 +35,10 @@ public class SignalRNotificationConsumerTests
         var snapshot = realtimeChannelStatus.GetSnapshot();
         Assert.NotNull(snapshot.LastPublishSucceededAt);
         Assert.Equal("PatientCheckedIn", snapshot.LastEventType);
-        Assert.Equal("all", snapshot.LastDeliveryScope);
+        Assert.Equal("queue-queue-1", snapshot.LastDeliveryScope);
         Assert.Equal(0, snapshot.ConsecutivePublishFailures);
-        await proxy.Received(1).SendCoreAsync("PatientCheckedIn", Arg.Any<object?[]>(), CancellationToken.None);
+        await dashboardProxy.Received(1).SendCoreAsync("PatientCheckedIn", Arg.Any<object?[]>(), CancellationToken.None);
+        await queueProxy.Received(1).SendCoreAsync("PatientCheckedIn", Arg.Any<object?[]>(), CancellationToken.None);
     }
 
     [Fact]
@@ -43,13 +46,15 @@ public class SignalRNotificationConsumerTests
     {
         var hubContext = Substitute.For<IHubContext<NotificationHub>>();
         var clients = Substitute.For<IHubClients>();
-        var proxy = Substitute.For<IClientProxy>();
+        var dashboardProxy = Substitute.For<IClientProxy>();
+        var queueProxy = Substitute.For<IClientProxy>();
         var logger = Substitute.For<ILogger<SignalRNotificationConsumer>>();
         var realtimeChannelStatus = new RealtimeChannelStatus();
 
         hubContext.Clients.Returns(clients);
-        clients.All.Returns(proxy);
-        proxy.SendCoreAsync("PatientCheckedIn", Arg.Any<object?[]>(), CancellationToken.None)
+        clients.Group("dashboard").Returns(dashboardProxy);
+        clients.Group("queue-queue-1").Returns(queueProxy);
+        queueProxy.SendCoreAsync("PatientCheckedIn", Arg.Any<object?[]>(), CancellationToken.None)
             .Returns<Task>(_ => throw new InvalidOperationException("socket closed"));
 
         var consumer = new SignalRNotificationConsumer(hubContext, realtimeChannelStatus, logger);
@@ -62,8 +67,10 @@ public class SignalRNotificationConsumerTests
         var snapshot = realtimeChannelStatus.GetSnapshot();
         Assert.NotNull(snapshot.LastPublishFailedAt);
         Assert.Equal("PatientCheckedIn", snapshot.LastEventType);
-        Assert.Equal("all", snapshot.LastDeliveryScope);
+        Assert.Equal("queue-queue-1", snapshot.LastDeliveryScope);
         Assert.Equal(1, snapshot.ConsecutivePublishFailures);
         Assert.Equal("InvalidOperationException", snapshot.LastFailureType);
+        await dashboardProxy.Received(1).SendCoreAsync("PatientCheckedIn", Arg.Any<object?[]>(), CancellationToken.None);
+        await queueProxy.Received(1).SendCoreAsync("PatientCheckedIn", Arg.Any<object?[]>(), CancellationToken.None);
     }
 }
