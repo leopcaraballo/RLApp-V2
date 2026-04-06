@@ -111,12 +111,6 @@
       "namedRegex": "^/staff(?:/)?$"
     },
     {
-      "page": "/trajectory",
-      "regex": "^/trajectory(?:/)?$",
-      "routeKeys": {},
-      "namedRegex": "^/trajectory(?:/)?$"
-    },
-    {
       "page": "/waiting-room",
       "regex": "^/waiting\\-room(?:/)?$",
       "routeKeys": {},

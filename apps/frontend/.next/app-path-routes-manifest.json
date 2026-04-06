@@ -5,7 +5,6 @@
   "/(workspace)/page": "/",
   "/(workspace)/reception/page": "/reception",
   "/(workspace)/staff/page": "/staff",
-  "/(workspace)/trajectory/page": "/trajectory",
   "/(workspace)/waiting-room/page": "/waiting-room",
   "/_global-error/page": "/_global-error",
   "/_not-found/page": "/_not-found",
