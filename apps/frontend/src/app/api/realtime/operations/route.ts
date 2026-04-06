@@ -96,43 +96,6 @@ function validateScopes(role: StaffRole, scopes: RequestedScopes): NextResponse 
   return null;
 }
 
-async function resolveDashboardQueueIds(
-  accessToken: string,
-  scopes: RequestedScopes
-): Promise<string[]> {
-  if (!scopes.dashboard || scopes.queueIds.length > 0) {
-    return scopes.queueIds;
-  }
-
-  try {
-    const response = await fetch(`${getBackendApiBaseUrl()}/api/v1/operations/dashboard`, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'X-Correlation-Id': crypto.randomUUID(),
-      },
-      cache: 'no-store',
-    });
-
-    if (!response.ok) {
-      return scopes.queueIds;
-    }
-
-    const payload = (await response.json()) as {
-      queueSnapshots?: Array<{ queueId?: string }>;
-    };
-
-    return Array.from(
-      new Set(
-        (payload.queueSnapshots ?? [])
-          .map((item) => item.queueId?.trim())
-          .filter((queueId): queueId is string => Boolean(queueId))
-      )
-    );
-  } catch {
-    return scopes.queueIds;
-  }
-}
-
 function buildHubConnection(accessToken: string): HubConnection {
   return new HubConnectionBuilder()
     .withUrl(`${getBackendApiBaseUrl()}/hubs/notifications`, {
@@ -214,11 +177,7 @@ export async function GET(request: NextRequest) {
     return scopeError;
   }
 
-  const queueIds = await resolveDashboardQueueIds(session.accessToken, requestedScopes);
-  const effectiveScopes: RequestedScopes = {
-    ...requestedScopes,
-    queueIds,
-  };
+  const effectiveScopes = requestedScopes;
 
   const connection = buildHubConnection(session.accessToken);
   const encoder = new TextEncoder();
@@ -290,8 +249,16 @@ export async function GET(request: NextRequest) {
       try {
         await connection.start();
 
+        if (effectiveScopes.dashboard) {
+          await connection.invoke('JoinDashboardGroup');
+        }
+
         for (const queueId of effectiveScopes.queueIds) {
           await connection.invoke('JoinQueueGroup', queueId);
+        }
+
+        if (effectiveScopes.trajectoryId) {
+          await connection.invoke('JoinTrajectoryGroup', effectiveScopes.trajectoryId);
         }
 
         sendChunk(`retry: ${RETRY_INTERVAL_MS}\n\n`);

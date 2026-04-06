@@ -37,7 +37,7 @@ public class SignalRNotificationConsumer :
     public async Task Consume(ConsumeContext<PatientCheckedIn> context)
     {
         var ev = context.Message;
-        await PublishAsync(context, clients => clients.All, "all", "PatientCheckedIn", new
+        var payload = new
         {
             ev.EventType,
             ev.AggregateId,
@@ -48,13 +48,15 @@ public class SignalRNotificationConsumer :
             ev.PatientName,
             QueueId = ev.AggregateId,
             Status = "Waiting"
-        });
+        };
+
+        await PublishScopedAsync(context, "PatientCheckedIn", payload, ev.AggregateId, ev.TrajectoryId);
     }
 
     public async Task Consume(ConsumeContext<PatientCalled> context)
     {
         var ev = context.Message;
-        await PublishAsync(context, clients => clients.All, "all", "PatientCalled", new
+        var payload = new
         {
             ev.EventType,
             ev.AggregateId,
@@ -65,14 +67,15 @@ public class SignalRNotificationConsumer :
             ev.RoomId,
             QueueId = ev.AggregateId,
             Status = "Called"
-        });
+        };
+
+        await PublishScopedAsync(context, "PatientCalled", payload, ev.AggregateId, ev.TrajectoryId);
     }
 
     public async Task Consume(ConsumeContext<PatientClaimedForAttention> context)
     {
         var ev = context.Message;
-        var deliveryScope = $"queue-{ev.AggregateId}";
-        await PublishAsync(context, clients => clients.Group(deliveryScope), deliveryScope, "PatientAtConsultation", new
+        var payload = new
         {
             ev.EventType,
             ev.AggregateId,
@@ -83,13 +86,15 @@ public class SignalRNotificationConsumer :
             ev.RoomId,
             QueueId = ev.AggregateId,
             Status = "InConsultation"
-        });
+        };
+
+        await PublishScopedAsync(context, "PatientAtConsultation", payload, ev.AggregateId, ev.TrajectoryId);
     }
 
     public async Task Consume(ConsumeContext<PatientAttentionCompleted> context)
     {
         var ev = context.Message;
-        await PublishAsync(context, clients => clients.All, "all", "PatientAttentionCompleted", new
+        var payload = new
         {
             ev.EventType,
             ev.AggregateId,
@@ -99,7 +104,44 @@ public class SignalRNotificationConsumer :
             ev.PatientId,
             QueueId = ev.AggregateId,
             Status = "Completed"
-        });
+        };
+
+        await PublishScopedAsync(context, "PatientAttentionCompleted", payload, ev.AggregateId, ev.TrajectoryId);
+    }
+
+    private async Task PublishScopedAsync<TEvent>(
+        ConsumeContext<TEvent> context,
+        string methodName,
+        object payload,
+        string queueId,
+        string? trajectoryId)
+        where TEvent : DomainEvent
+    {
+        await PublishAsync(
+            context,
+            clients => clients.Group(NotificationHub.DashboardGroup),
+            NotificationHub.DashboardGroup,
+            methodName,
+            payload);
+
+        var queueGroup = NotificationHub.QueueGroup(queueId);
+        await PublishAsync(
+            context,
+            clients => clients.Group(queueGroup),
+            queueGroup,
+            methodName,
+            payload);
+
+        if (!string.IsNullOrWhiteSpace(trajectoryId))
+        {
+            var trajectoryGroup = NotificationHub.TrajectoryGroup(trajectoryId);
+            await PublishAsync(
+                context,
+                clients => clients.Group(trajectoryGroup),
+                trajectoryGroup,
+                methodName,
+                payload);
+        }
     }
 
     private async Task PublishAsync<TEvent>(
