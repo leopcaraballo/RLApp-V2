@@ -17,6 +17,7 @@ Definir la estructura y reglas del repositorio como sistema de desarrollo gobern
 - `.github/` como execution layer canonica para Copilot
 - `.github/copilot/` como compatibility layer derivada
 - enforcement de Git Flow y Conventional Commits sobre la capa AI-first
+- higiene repo-wide para outputs generados, caches locales y diffs no canonicos del frontend
 
 ## Required behavior
 
@@ -27,12 +28,16 @@ Definir la estructura y reglas del repositorio como sistema de desarrollo gobern
 - Los mirrors deben referenciar assets canonicos en `.github/{agents,prompts,instructions,skills}` y no redefinir comportamiento.
 - Git Flow debe seguir bloqueando trabajo directo sobre `main` y `develop`, y exigir `feature/*` como rama de trabajo.
 - La automatizacion de commit debe seguir validando Conventional Commits antes de `git commit`.
+- Los artefactos generados por build local, en especial `apps/frontend/.next/`, deben permanecer fuera del versionado mediante la politica repo-wide de `.gitignore`.
+- Si se detectan artefactos generados trackeados, la remediacion debe ejecutarse desde una rama `feature/*` alineada con `develop` y revisarse antes de cualquier promocion de `develop` hacia `main`.
+- Un cleanup repo-wide no debe mezclar cambios funcionales ajenos al saneamiento de gobierno y versionado.
 
 ## Contract dependencies
 
 - `/.ai-entrypoint.md` no reemplaza `.github/copilot-instructions.md`.
 - `ai/*` no introduce reglas nuevas; solo agrega navegacion, contexto y agrupacion operativa.
 - Los workflows de CI y PR deben validar la coherencia entre manifests, mirrors y assets canonicos.
+- `/.gitignore` debe materializar la exclusion de outputs generados y caches locales que no son fuente de verdad del producto.
 
 ## State and event impact
 
@@ -44,3 +49,5 @@ Definir la estructura y reglas del repositorio como sistema de desarrollo gobern
 - Un intento de trabajo en `main` o `develop` sigue bloqueado por instrucciones y workflows.
 - Un commit con mensaje invalido sigue siendo rechazado local o remotamente.
 - Los manifests de `.github/copilot/` quedan alineados con el set completo de agentes, skills y guardrails activos.
+- Un build local del frontend no reintroduce `apps/frontend/.next/` al versionado del repositorio.
+- Un saneamiento repo-wide puede proponerse por `feature/* -> develop` y dejar `develop -> main` como promocion posterior consolidada.

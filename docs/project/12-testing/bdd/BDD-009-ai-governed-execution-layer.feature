@@ -24,3 +24,13 @@ Feature: AI governed execution layer
     Given a feature branch contains older commits before the merge-base with the target branch
     When the workflow validates Conventional Commit subjects for the pull request
     Then only the commits after the merge-base are evaluated
+
+  Scenario: Generated frontend output stays out of version control
+    Given frontend build artifacts exist under apps/frontend/.next
+    When the repository hygiene rules are enforced
+    Then the generated output remains ignored and is not part of the governed change set
+
+  Scenario: Repository cleanup flows through develop before main
+    Given a repository cleanup changes only governance and hygiene assets
+    When the pull request strategy is prepared
+    Then the change is proposed from a feature branch into develop before any develop to main promotion
