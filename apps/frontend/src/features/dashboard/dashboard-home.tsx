@@ -28,12 +28,14 @@ const roleBoundaryCopy: Record<string, { title: string; detail: string; status: 
   Doctor: [
     {
       title: 'Consultation Queue',
-      detail: 'Claim-next and call-patient continue to live in Waiting Room for doctor flow.',
+      detail:
+        'Waiting Room keeps claim-next and call-patient so turns remain queued and visible before consultation starts.',
       status: 'Command access',
     },
     {
       title: 'Medical Operations',
-      detail: 'Room lifecycle and consultation completion remain in the Medical workspace.',
+      detail:
+        'Medical now owns call-next shortcut, start-consultation, room lifecycle, and consultation completion.',
       status: 'Command access',
     },
   ],

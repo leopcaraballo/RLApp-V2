@@ -5,8 +5,6 @@ export type LoginRequest = components['schemas']['LoginRequest'];
 export type ChangeRoleRequest = components['schemas']['ChangeRoleRequest'];
 export type ReceptionRegisterRequest = components['schemas']['ReceptionRegisterRequest'];
 export type CheckInRequest = components['schemas']['CheckInRequest'];
-export type CallPatientRequest = components['schemas']['CallPatientRequest'];
-export type ClaimNextPatientRequest = components['schemas']['ClaimNextPatientRequest'];
 export type CallNextAtCashierRequest = components['schemas']['CallNextAtCashierRequest'];
 export type ValidatePaymentRequest = components['schemas']['ValidatePaymentRequest'];
 export type MarkPaymentPendingRequest = components['schemas']['MarkPaymentPendingRequest'];
@@ -14,12 +12,8 @@ export type CashierMarkAbsentRequest = components['schemas']['CashierMarkAbsentR
 export type ActivateConsultingRoomRequest = components['schemas']['ActivateConsultingRoomRequest'];
 export type DeactivateConsultingRoomRequest =
   components['schemas']['DeactivateConsultingRoomRequest'];
-export type FinishConsultationRequest = components['schemas']['FinishConsultationRequest'];
-export type MedicalMarkAbsentRequest = components['schemas']['MedicalMarkAbsentRequest'];
 export type AuthenticationResult = components['schemas']['AuthenticationResult'];
 export type CommandResult = components['schemas']['CommandResult'];
-export type PatientCallResult = components['schemas']['PatientCallResult'];
-export type ClaimedPatientResult = components['schemas']['ClaimedPatientResult'];
 export type InlineCommandError = components['schemas']['InlineCommandError'];
 export type ValidationProblemDetails = components['schemas']['ValidationProblemDetails'];
 export type ProblemDetails = components['schemas']['ProblemDetails'];
@@ -36,6 +30,68 @@ export type RebuildPatientTrajectoriesRequest =
 export type RebuildPatientTrajectoriesResult =
   components['schemas']['RebuildPatientTrajectoriesResult'];
 export type TrajectoryOperationError = components['schemas']['TrajectoryOperationError'];
+
+export interface ClaimNextPatientRequest {
+  queueId: string;
+  consultingRoomId: string;
+}
+
+export interface CallPatientRequest {
+  queueId: string;
+  turnId: string;
+  consultingRoomId: string;
+  patientId?: string;
+}
+
+export interface MedicalCallNextRequest {
+  queueId: string;
+  consultingRoomId: string;
+}
+
+export interface StartConsultationRequest {
+  turnId: string;
+  consultingRoomId: string;
+}
+
+export interface FinishConsultationRequest {
+  turnId: string;
+  queueId: string;
+  patientId: string;
+  consultingRoomId: string;
+  outcome: string;
+}
+
+export interface MedicalMarkAbsentRequest {
+  turnId: string;
+  queueId: string;
+  patientId: string;
+  consultingRoomId: string;
+  reason: string;
+}
+
+export interface PatientCallResult {
+  turnId: string;
+  turnNumber: string;
+  patientId: string;
+  currentState: string;
+  cashierStationId?: string | null;
+  consultingRoomId?: string | null;
+  correlationId?: string;
+  calledAt: string;
+  queuePosition: number;
+}
+
+export interface ClaimedPatientResult {
+  queueId: string;
+  turnId: string;
+  turnNumber: string;
+  patientId: string;
+  consultingRoomId: string;
+  currentState: string;
+  claimStatus: string;
+  correlationId?: string;
+  claimedAt: string;
+}
 
 export interface OperationalStatusCount {
   status: string;

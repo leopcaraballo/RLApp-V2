@@ -62,6 +62,36 @@ public sealed class PatientTrajectoryOrchestrator
         await PersistAndPublishAsync(trajectory, isNew, cancellationToken);
     }
 
+    public async Task TrackConsultationStartedAsync(string queueId, PatientClaimedForAttention @event, CancellationToken cancellationToken)
+    {
+        if (!@event.RepresentsStartedAttention)
+        {
+            return;
+        }
+
+        var (trajectory, isNew) = await GetOrCreateActiveTrajectoryAsync(
+            queueId,
+            @event.PatientId,
+            PatientTrajectory.ConsultationStage,
+            @event.EventType,
+            "EnConsulta",
+            @event.OccurredAt,
+            @event.CorrelationId,
+            cancellationToken);
+
+        if (!isNew && !trajectory.RecordStage(
+                PatientTrajectory.ConsultationStage,
+                @event.EventType,
+                "EnConsulta",
+                @event.OccurredAt,
+                @event.CorrelationId))
+        {
+            return;
+        }
+
+        await PersistAndPublishAsync(trajectory, isNew, cancellationToken);
+    }
+
     public async Task TrackCompletionAsync(string queueId, PatientAttentionCompleted @event, CancellationToken cancellationToken)
     {
         var (trajectory, isNew) = await GetOrCreateActiveTrajectoryAsync(

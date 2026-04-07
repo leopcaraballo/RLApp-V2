@@ -11,6 +11,7 @@ public abstract class Command<TResult> : IRequest<TResult>
 {
     public string CorrelationId { get; set; }
     public string UserId { get; set; }
+    public string? IdempotencyKey { get; set; }
 
     protected Command(string correlationId, string userId)
     {
@@ -185,6 +186,24 @@ public class ClaimNextPatientCommand : Command<CommandResult<ClaimedPatientResul
 }
 
 /// <summary>
+/// UC-011: Call Next Patient From Medical Console
+/// Shortcut command that claims and calls the next patient for consultation.
+/// Reference: S-005 Consultation Flow
+/// </summary>
+public class MedicalCallNextCommand : Command<CommandResult<PatientCallResultDto>>
+{
+    public string QueueId { get; set; }
+    public string RoomId { get; set; }
+
+    public MedicalCallNextCommand(string queueId, string roomId, string correlationId, string userId)
+        : base(correlationId, userId)
+    {
+        QueueId = queueId;
+        RoomId = roomId;
+    }
+}
+
+/// <summary>
 /// UC-012: Call Patient To Consultation
 /// Command to call patient for consultation.
 /// Reference: S-005 Consultation Flow
@@ -200,6 +219,24 @@ public class CallPatientCommand : Command
     {
         QueueId = queueId;
         PatientId = patientId;
+        RoomId = roomId;
+    }
+}
+
+/// <summary>
+/// UC-012: Start Consultation
+/// Marks a called patient as actively in consultation.
+/// Reference: S-005 Consultation Flow
+/// </summary>
+public class StartConsultationCommand : Command
+{
+    public string TurnId { get; set; }
+    public string RoomId { get; set; }
+
+    public StartConsultationCommand(string turnId, string roomId, string correlationId, string userId)
+        : base(correlationId, userId)
+    {
+        TurnId = turnId;
         RoomId = roomId;
     }
 }
@@ -359,7 +396,6 @@ public class RebuildPatientTrajectoriesCommand : Command<CommandResult<RebuildPa
     public string? QueueId { get; set; }
     public string? PatientId { get; set; }
     public bool DryRun { get; set; }
-    public string IdempotencyKey { get; set; }
 
     public RebuildPatientTrajectoriesCommand(
         string? queueId,

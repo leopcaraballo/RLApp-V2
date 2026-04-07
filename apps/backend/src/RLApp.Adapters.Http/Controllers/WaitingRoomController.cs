@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using RLApp.Adapters.Http.Requests;
 using RLApp.Adapters.Http.Security;
 using RLApp.Application.Commands;
+using RLApp.Application.Services;
 
 namespace RLApp.Adapters.Http.Controllers;
 
@@ -57,8 +58,25 @@ public class WaitingRoomController : RLAppControllerBase
         CancellationToken cancellationToken)
     {
         var activeCorrelationId = correlationId ?? Guid.NewGuid().ToString();
+        var consultingRoomId = request.ResolveConsultingRoomId();
 
-        var command = new CallPatientCommand(request.QueueId, request.PatientId, request.RoomId, activeCorrelationId, CurrentUserId);
+        if (string.IsNullOrWhiteSpace(consultingRoomId))
+        {
+            return BadRequest(new { Error = "consultingRoomId is required", CorrelationId = activeCorrelationId });
+        }
+
+        var patientId = !string.IsNullOrWhiteSpace(request.PatientId)
+            ? request.PatientId
+            : TurnReferenceParser.TryExtractPatientId(request.TurnId ?? string.Empty, request.QueueId, out var extractedPatientId)
+                ? extractedPatientId
+                : string.Empty;
+
+        if (string.IsNullOrWhiteSpace(patientId))
+        {
+            return BadRequest(new { Error = "turnId must match queueId or patientId must be supplied", CorrelationId = activeCorrelationId });
+        }
+
+        var command = new CallPatientCommand(request.QueueId, patientId, consultingRoomId, activeCorrelationId, CurrentUserId);
         var result = await _mediator.Send(command, cancellationToken);
         return FromCommandResult(result);
     }
@@ -74,8 +92,38 @@ public class WaitingRoomController : RLAppControllerBase
         CancellationToken cancellationToken)
     {
         var activeCorrelationId = correlationId ?? Guid.NewGuid().ToString();
+        var consultingRoomId = request.ResolveConsultingRoomId();
 
-        var command = new ClaimNextPatientCommand(request.QueueId, request.RoomId, activeCorrelationId, CurrentUserId);
+        if (string.IsNullOrWhiteSpace(consultingRoomId))
+        {
+            return BadRequest(new { Error = "consultingRoomId is required", CorrelationId = activeCorrelationId });
+        }
+
+        var command = new ClaimNextPatientCommand(request.QueueId, consultingRoomId, activeCorrelationId, CurrentUserId);
+        var result = await _mediator.Send(command, cancellationToken);
+        return FromCommandResult(result);
+    }
+
+    /// <summary>
+    /// POST /api/waiting-room/complete-attention
+    /// </summary>
+    [Authorize(Policy = AuthorizationPolicies.DoctorOperations)]
+    [HttpPost("complete-attention")]
+    public async Task<IActionResult> CompleteAttention(
+        [FromBody] FinishConsultationRequest request,
+        [FromHeader(Name = "X-Correlation-Id")] string? correlationId,
+        CancellationToken cancellationToken)
+    {
+        var activeCorrelationId = correlationId ?? Guid.NewGuid().ToString();
+
+        var command = new FinishConsultationCommand(
+            request.QueueId,
+            request.PatientId,
+            request.ConsultingRoomId,
+            request.TurnId,
+            request.Outcome,
+            activeCorrelationId,
+            CurrentUserId);
         var result = await _mediator.Send(command, cancellationToken);
         return FromCommandResult(result);
     }

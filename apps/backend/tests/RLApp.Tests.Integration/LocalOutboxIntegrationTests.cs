@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using RLApp.Adapters.Persistence.Data;
 using RLApp.Adapters.Persistence.Data.Models;
 using RLApp.Application.Commands;
+using RLApp.Ports.Outbound;
 
 namespace RLApp.Tests.Integration;
 
@@ -122,6 +123,65 @@ public class LocalOutboxIntegrationTests : IClassFixture<LocalOutboxWebApplicati
     }
 
     [Fact]
+    public async Task CashierFlow_WhenExternalMessagingIsDisabled_ShouldAdvanceVisibleMonitorStates()
+    {
+        const string queueId = "Q-LOCAL-OUTBOX-CASHIER-001";
+        const string patientId = "PAT-LOCAL-OUTBOX-CASHIER-001";
+        const string userId = "cashier-1";
+        var turnId = $"{queueId}-{patientId}";
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+
+            var registerResult = await mediator.Send(new RegisterPatientArrivalCommand(
+                queueId,
+                patientId,
+                "Paciente Caja Local",
+                null,
+                1,
+                null,
+                "CORR-local-cashier-register",
+                "reception-1"));
+
+            registerResult.Success.Should().BeTrue();
+
+            var callResult = await mediator.Send(new CallNextAtCashierCommand(
+                queueId,
+                "CASH-01",
+                "CORR-local-cashier-call",
+                userId));
+
+            callResult.Success.Should().BeTrue();
+
+            await WaitForMonitorStatusAsync(turnId, OperationalVisibleStatuses.AtCashier);
+
+            var pendingResult = await mediator.Send(new MarkPaymentPendingCommand(
+                queueId,
+                patientId,
+                "CORR-local-cashier-pending",
+                userId));
+
+            pendingResult.Success.Should().BeTrue();
+
+            await WaitForMonitorStatusAsync(turnId, OperationalVisibleStatuses.PaymentPending);
+
+            var validateResult = await mediator.Send(new ValidatePaymentCommand(
+                queueId,
+                patientId,
+                25m,
+                turnId,
+                "PAY-LOCAL-001",
+                "CORR-local-cashier-validated",
+                userId));
+
+            validateResult.Success.Should().BeTrue();
+        }
+
+        await WaitForMonitorStatusAsync(turnId, OperationalVisibleStatuses.WaitingForConsultation);
+    }
+
+    [Fact]
     public async Task UnknownOutboxMessage_WhenExternalMessagingIsDisabled_ShouldMoveToDeadLetterStorage()
     {
         const string correlationId = "CORR-local-deadletter-001";
@@ -175,5 +235,30 @@ public class LocalOutboxIntegrationTests : IClassFixture<LocalOutboxWebApplicati
         deadLetter.Type.Should().Be("UnknownOutboxEvent");
         deadLetter.FailureReason.Should().Contain("Unknown event type");
         outboxMessageStillPending.Should().BeFalse();
+    }
+
+    private async Task WaitForMonitorStatusAsync(string turnId, string expectedStatus)
+    {
+        WaitingRoomMonitorView? projection = null;
+
+        for (var attempt = 0; attempt < 20; attempt++)
+        {
+            await using var verificationScope = _factory.Services.CreateAsyncScope();
+            var db = verificationScope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+            projection = await db.WaitingRoomMonitors
+                .AsNoTracking()
+                .SingleOrDefaultAsync(item => item.TurnId == turnId);
+
+            if (projection is not null && projection.Status == expectedStatus)
+            {
+                break;
+            }
+
+            await Task.Delay(250);
+        }
+
+        projection.Should().NotBeNull();
+        projection!.Status.Should().Be(expectedStatus);
     }
 }

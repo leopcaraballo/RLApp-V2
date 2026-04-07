@@ -81,6 +81,7 @@ public class WaitingQueueRepository : IWaitingQueueRepository
 
         var patientIds = queue.PatientIds;
         var roomAssignments = queue.PatientRoomAssignments;
+        var attentionStates = queue.PatientAttentionStates;
 
         foreach (var @event in events)
         {
@@ -94,26 +95,38 @@ public class WaitingQueueRepository : IWaitingQueueRepository
                     break;
                 case PatientClaimedForAttention claimed:
                     roomAssignments[claimed.PatientId] = claimed.RoomId;
+                    attentionStates[claimed.PatientId] = claimed.RepresentsStartedAttention
+                        ? "InConsultation"
+                        : "Claimed";
+                    break;
+                case PatientCalled called:
+                    roomAssignments[called.PatientId] = called.RoomId;
+                    attentionStates[called.PatientId] = "Called";
                     break;
                 case PatientAttentionCompleted completed:
                     patientIds.Remove(completed.PatientId);
                     roomAssignments.Remove(completed.PatientId);
+                    attentionStates.Remove(completed.PatientId);
                     break;
                 case PatientAbsentAtConsultation absentConsultation:
                     patientIds.Remove(absentConsultation.PatientId);
                     roomAssignments.Remove(absentConsultation.PatientId);
+                    attentionStates.Remove(absentConsultation.PatientId);
                     break;
                 case PatientAbsentAtCashier absentCashier:
                     patientIds.Remove(absentCashier.PatientId);
                     roomAssignments.Remove(absentCashier.PatientId);
+                    attentionStates.Remove(absentCashier.PatientId);
                     break;
                 case PatientCancelledByAbsence cancelledByAbsence:
                     patientIds.Remove(cancelledByAbsence.PatientId);
                     roomAssignments.Remove(cancelledByAbsence.PatientId);
+                    attentionStates.Remove(cancelledByAbsence.PatientId);
                     break;
                 case PatientCancelledByPayment cancelledByPayment:
                     patientIds.Remove(cancelledByPayment.PatientId);
                     roomAssignments.Remove(cancelledByPayment.PatientId);
+                    attentionStates.Remove(cancelledByPayment.PatientId);
                     break;
             }
         }

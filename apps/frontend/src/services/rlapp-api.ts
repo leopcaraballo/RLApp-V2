@@ -16,6 +16,7 @@ import type {
   LoginRequest,
   OperationsDashboardSnapshot,
   MarkPaymentPendingRequest,
+  MedicalCallNextRequest,
   MedicalMarkAbsentRequest,
   PatientTrajectoryDiscoveryResponse,
   PatientTrajectoryResponse,
@@ -23,6 +24,7 @@ import type {
   ReceptionRegisterRequest,
   RebuildPatientTrajectoriesRequest,
   RebuildPatientTrajectoriesResult,
+  StartConsultationRequest,
   ValidatePaymentRequest,
   WaitingRoomMonitorSnapshot,
 } from '@/types/api';
@@ -150,6 +152,13 @@ export const rlappApi = {
     });
   },
 
+  medicalCallNext(payload: MedicalCallNextRequest): Promise<PatientCallResult> {
+    return httpRequest<PatientCallResult>(buildPath('/medical/call-next'), {
+      method: 'POST',
+      json: payload,
+    });
+  },
+
   callNextAtCashier(payload: CallNextAtCashierRequest): Promise<PatientCallResult> {
     return httpRequest<PatientCallResult>(buildPath('/cashier/call-next'), {
       method: 'POST',
@@ -192,8 +201,15 @@ export const rlappApi = {
     });
   },
 
+  startConsultation(payload: StartConsultationRequest): Promise<CommandResult> {
+    return httpRequest<CommandResult>(buildPath('/medical/start-consultation'), {
+      method: 'POST',
+      json: payload,
+    });
+  },
+
   finishConsultation(payload: FinishConsultationRequest): Promise<CommandResult> {
-    return httpRequest<CommandResult>(buildPath('/medical/finish-consultation'), {
+    return httpRequest<CommandResult>(buildPath('/waiting-room/complete-attention'), {
       method: 'POST',
       json: payload,
     });

@@ -161,7 +161,12 @@ public class CallNextAtCashierHandler : IRequestHandler<CallNextAtCashierCommand
 
             var result = new PatientCallResultDto
             {
+                TurnId = TurnReferenceParser.Build(targetQueueId, patientId),
+                TurnNumber = TurnReferenceParser.Build(targetQueueId, patientId),
                 PatientId = patientId,
+                CurrentState = OperationalVisibleStatuses.AtCashier,
+                CashierStationId = command.CashierStationId,
+                CorrelationId = command.CorrelationId,
                 CalledAt = DateTime.UtcNow,
                 QueuePosition = 1
             };

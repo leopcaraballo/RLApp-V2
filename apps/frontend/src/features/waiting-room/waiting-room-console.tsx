@@ -27,13 +27,13 @@ const checkInSchema = z.object({
 
 const claimNextSchema = z.object({
   queueId: z.string().default(DEFAULT_QUEUE_ID),
-  roomId: z.string().default('ROOM-01'),
+  consultingRoomId: z.string().default('ROOM-01'),
 });
 
 const callPatientSchema = z.object({
   queueId: z.string().default(DEFAULT_QUEUE_ID),
-  patientId: z.string().min(1),
-  roomId: z.string().default('ROOM-01'),
+  turnId: z.string().min(1),
+  consultingRoomId: z.string().default('ROOM-01'),
 });
 
 function readErrorMessage(error: unknown): string {
@@ -86,7 +86,7 @@ export function WaitingRoomConsole({ role }: { role: StaffRole }) {
     <>
       <SectionIntro
         badge={role}
-        description="Reception and consultation commands stay in place, while eligible roles now get a persisted waiting room monitor that re-syncs through the BFF realtime stream."
+        description="Reception keeps check-in here, doctor flow keeps claim and call here, and active consultation starts only once Medical confirms start-consultation."
         eyebrow="Waiting room"
         title="Queue monitor and consultation flow"
       />
@@ -126,7 +126,7 @@ export function WaitingRoomConsole({ role }: { role: StaffRole }) {
                 </label>
                 <p className="inline-note">
                   Snapshot generated for the selected queue only. Commands continue using their own
-                  backend contracts and defaults.
+                  backend contracts, while Medical owns consultation start and completion.
                 </p>
               </div>
 
@@ -295,16 +295,23 @@ export function WaitingRoomConsole({ role }: { role: StaffRole }) {
 
         {canConsult ? (
           <ActionFormCard
-            contractWarnings={[
-              'queueId is passed through query string here, unlike most other commands.',
-              'The backend returns only patientId, roomId and claimedAt.',
-            ]}
             defaultValues={{
               queueId: DEFAULT_QUEUE_ID,
-              roomId: 'ROOM-01',
+              consultingRoomId: 'ROOM-01',
             }}
-            description="POST /api/waiting-room/claim-next?queueId=..."
-            fields={[]}
+            description="POST /api/waiting-room/claim-next"
+            fields={[
+              { name: 'queueId', label: 'Queue ID', placeholder: DEFAULT_QUEUE_ID },
+              {
+                name: 'consultingRoomId',
+                label: 'Consulting room ID',
+                placeholder: 'ROOM-01',
+              },
+            ]}
+            notes={[
+              'Use this step to reserve the next eligible turn for the consulting room.',
+              'The patient remains visible as waiting until call-patient and start-consultation are completed.',
+            ]}
             onSettled={(entry) =>
               journal.pushEntry({ ...entry, timestamp: new Date().toISOString() })
             }
@@ -317,20 +324,28 @@ export function WaitingRoomConsole({ role }: { role: StaffRole }) {
 
         {canConsult ? (
           <ActionFormCard
-            contractWarnings={[
-              'queueId is provided via query string, which breaks consistency with the rest of the API.',
-              'The endpoint operates on patientId, not turnId.',
-            ]}
             defaultValues={{
               queueId: DEFAULT_QUEUE_ID,
-              patientId: 'PAT-0045',
-              roomId: 'ROOM-01',
+              turnId: `${DEFAULT_QUEUE_ID}-PAT-0045`,
+              consultingRoomId: 'ROOM-01',
             }}
-            description="POST /api/waiting-room/call-patient?queueId=..."
+            description="POST /api/waiting-room/call-patient"
             fields={[
               { name: 'queueId', label: 'Queue ID', placeholder: DEFAULT_QUEUE_ID },
-              { name: 'patientId', label: 'Patient ID', placeholder: 'PAT-0045' },
-              { name: 'roomId', label: 'Room ID', placeholder: 'ROOM-01' },
+              {
+                name: 'turnId',
+                label: 'Turn ID',
+                placeholder: `${DEFAULT_QUEUE_ID}-PAT-0045`,
+              },
+              {
+                name: 'consultingRoomId',
+                label: 'Consulting room ID',
+                placeholder: 'ROOM-01',
+              },
+            ]}
+            notes={[
+              'Use the turn ID from the monitor or from the claim-next response.',
+              'Medical will start the consultation explicitly after the patient enters the room.',
             ]}
             onSettled={(entry) =>
               journal.pushEntry({ ...entry, timestamp: new Date().toISOString() })
@@ -338,7 +353,7 @@ export function WaitingRoomConsole({ role }: { role: StaffRole }) {
             onSubmit={(values) => rlappApi.callPatient(values)}
             schema={callPatientSchema}
             submitLabel="Call patient"
-            title="Call specific patient"
+            title="Call claimed patient"
           />
         ) : null}
 

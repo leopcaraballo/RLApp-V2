@@ -33,6 +33,8 @@ Definir la visibilidad operacional sincronizada para staff a traves de monitor, 
 - tras una desconexion, la UI debe reconectar y resincronizarse consultando otra vez los snapshots autorizados
 - monitor y dashboard deben reflejar el estado operacional mas reciente disponible en proyecciones, incluyendo conteos, estados visibles y lag operativo
 - la autorizacion del stream realtime no puede ampliar permisos: cada rol solo puede suscribirse a vistas que ya puede consultar por contrato
+- monitor y dashboard deben compartir una taxonomia visible unica para espera, caja, consulta y cierres operativos; la trayectoria conserva el detalle longitudinal sin reemplazar esa taxonomia
+- `waitingCount` y `currentWaitingCount` solo pueden sumar estados visibles de espera, no estados de caja, consulta activa ni cierres
 
 ## Contract dependencies
 

@@ -18,6 +18,8 @@ Proveer una vista maestra de la estructura documental y de la dependencia entre 
   - 02-as-is-audit/19-FASE-4-KICKOFF.md: Fase 4 — inicio documental de correlacion de sagas y state machines por `trajectoryId`
   - 02-as-is-audit/20-FASE-4-CIERRE.md: Fase 4 — cierre tecnico de correlacion longitudinal de sagas y persistencia durable
   - 02-as-is-audit/21-FASE-5-KICKOFF.md: Fase 5 — inicio documental de discovery operacional de trayectorias desde proyecciones persistidas
+  - 02-as-is-audit/22-FASE-6-KICKOFF.md: Fase 6 — inicio documental de visibilidad operacional sincronizada y realtime mediado por BFF
+  - 02-as-is-audit/23-FASE-6-AUDITORIA-CODIGO-REAL-TRAYECTORIAS.md: Fase 6 — auditoria basada en codigo real del estado actual de trayectorias, CQRS, proyecciones y realtime
 - 03-target-architecture: arquitectura objetivo del proyecto nuevo
 - 04-adr: decisiones formales
 - 05-domain: modelo de dominio, estados y eventos

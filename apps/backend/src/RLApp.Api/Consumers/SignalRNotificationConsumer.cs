@@ -7,6 +7,7 @@ using RLApp.Adapters.Messaging.Observability;
 using RLApp.Domain.Common;
 using RLApp.Domain.Events;
 using RLApp.Infrastructure.Realtime;
+using RLApp.Ports.Outbound;
 
 namespace RLApp.Api.Consumers;
 
@@ -18,7 +19,14 @@ public class SignalRNotificationConsumer :
     IConsumer<PatientCheckedIn>,
     IConsumer<PatientCalled>,
     IConsumer<PatientClaimedForAttention>,
-    IConsumer<PatientAttentionCompleted>
+    IConsumer<PatientAttentionCompleted>,
+    IConsumer<PatientCalledAtCashier>,
+    IConsumer<PatientPaymentValidated>,
+    IConsumer<PatientPaymentPending>,
+    IConsumer<PatientAbsentAtCashier>,
+    IConsumer<PatientAbsentAtConsultation>,
+    IConsumer<PatientCancelledByPayment>,
+    IConsumer<PatientCancelledByAbsence>
 {
     private readonly IHubContext<NotificationHub> _hubContext;
     private readonly RealtimeChannelStatus _realtimeChannelStatus;
@@ -47,7 +55,7 @@ public class SignalRNotificationConsumer :
             ev.PatientId,
             ev.PatientName,
             QueueId = ev.AggregateId,
-            Status = "Waiting"
+            Status = OperationalVisibleStatuses.Waiting
         };
 
         await PublishScopedAsync(context, "PatientCheckedIn", payload, ev.AggregateId, ev.TrajectoryId);
@@ -66,7 +74,7 @@ public class SignalRNotificationConsumer :
             ev.PatientId,
             ev.RoomId,
             QueueId = ev.AggregateId,
-            Status = "Called"
+            Status = OperationalVisibleStatuses.Called
         };
 
         await PublishScopedAsync(context, "PatientCalled", payload, ev.AggregateId, ev.TrajectoryId);
@@ -75,6 +83,11 @@ public class SignalRNotificationConsumer :
     public async Task Consume(ConsumeContext<PatientClaimedForAttention> context)
     {
         var ev = context.Message;
+        if (!ev.RepresentsStartedAttention)
+        {
+            return;
+        }
+
         var payload = new
         {
             ev.EventType,
@@ -85,7 +98,7 @@ public class SignalRNotificationConsumer :
             ev.PatientId,
             ev.RoomId,
             QueueId = ev.AggregateId,
-            Status = "InConsultation"
+            Status = OperationalVisibleStatuses.InConsultation
         };
 
         await PublishScopedAsync(context, "PatientAtConsultation", payload, ev.AggregateId, ev.TrajectoryId);
@@ -103,10 +116,136 @@ public class SignalRNotificationConsumer :
             ev.OccurredAt,
             ev.PatientId,
             QueueId = ev.AggregateId,
-            Status = "Completed"
+            Status = OperationalVisibleStatuses.Completed
         };
 
         await PublishScopedAsync(context, "PatientAttentionCompleted", payload, ev.AggregateId, ev.TrajectoryId);
+    }
+
+    public async Task Consume(ConsumeContext<PatientCalledAtCashier> context)
+    {
+        var ev = context.Message;
+        var payload = new
+        {
+            ev.EventType,
+            ev.AggregateId,
+            ev.CorrelationId,
+            ev.TrajectoryId,
+            ev.OccurredAt,
+            ev.PatientId,
+            QueueId = ev.AggregateId,
+            Status = OperationalVisibleStatuses.AtCashier
+        };
+
+        await PublishScopedAsync(context, "PatientCalledAtCashier", payload, ev.AggregateId, ev.TrajectoryId);
+    }
+
+    public async Task Consume(ConsumeContext<PatientPaymentValidated> context)
+    {
+        var ev = context.Message;
+        var payload = new
+        {
+            ev.EventType,
+            ev.AggregateId,
+            ev.CorrelationId,
+            ev.TrajectoryId,
+            ev.OccurredAt,
+            ev.PatientId,
+            QueueId = ev.AggregateId,
+            Status = OperationalVisibleStatuses.WaitingForConsultation
+        };
+
+        await PublishScopedAsync(context, "PatientPaymentValidated", payload, ev.AggregateId, ev.TrajectoryId);
+    }
+
+    public async Task Consume(ConsumeContext<PatientPaymentPending> context)
+    {
+        var ev = context.Message;
+        var payload = new
+        {
+            ev.EventType,
+            ev.AggregateId,
+            ev.CorrelationId,
+            ev.TrajectoryId,
+            ev.OccurredAt,
+            ev.PatientId,
+            QueueId = ev.AggregateId,
+            Status = OperationalVisibleStatuses.PaymentPending
+        };
+
+        await PublishScopedAsync(context, "PatientPaymentPending", payload, ev.AggregateId, ev.TrajectoryId);
+    }
+
+    public async Task Consume(ConsumeContext<PatientAbsentAtCashier> context)
+    {
+        var ev = context.Message;
+        var payload = new
+        {
+            ev.EventType,
+            ev.AggregateId,
+            ev.CorrelationId,
+            ev.TrajectoryId,
+            ev.OccurredAt,
+            ev.PatientId,
+            QueueId = ev.AggregateId,
+            Status = OperationalVisibleStatuses.Absent
+        };
+
+        await PublishScopedAsync(context, "PatientAbsentAtCashier", payload, ev.AggregateId, ev.TrajectoryId);
+    }
+
+    public async Task Consume(ConsumeContext<PatientAbsentAtConsultation> context)
+    {
+        var ev = context.Message;
+        var payload = new
+        {
+            ev.EventType,
+            ev.AggregateId,
+            ev.CorrelationId,
+            ev.TrajectoryId,
+            ev.OccurredAt,
+            ev.PatientId,
+            QueueId = ev.AggregateId,
+            Status = OperationalVisibleStatuses.Absent
+        };
+
+        await PublishScopedAsync(context, "PatientAbsentAtConsultation", payload, ev.AggregateId, ev.TrajectoryId);
+    }
+
+    public async Task Consume(ConsumeContext<PatientCancelledByPayment> context)
+    {
+        var ev = context.Message;
+        var payload = new
+        {
+            ev.EventType,
+            ev.AggregateId,
+            ev.CorrelationId,
+            ev.TrajectoryId,
+            ev.OccurredAt,
+            ev.PatientId,
+            QueueId = ev.AggregateId,
+            Status = OperationalVisibleStatuses.Cancelled
+        };
+
+        await PublishScopedAsync(context, "PatientCancelledByPayment", payload, ev.AggregateId, ev.TrajectoryId);
+    }
+
+    public async Task Consume(ConsumeContext<PatientCancelledByAbsence> context)
+    {
+        var ev = context.Message;
+        var payload = new
+        {
+            ev.EventType,
+            ev.AggregateId,
+            ev.CorrelationId,
+            ev.TrajectoryId,
+            ev.OccurredAt,
+            ev.PatientId,
+            QueueId = ev.AggregateId,
+            Status = OperationalVisibleStatuses.Cancelled
+        };
+
+        await PublishScopedAsync(context, "PatientCancelledByAbsence", payload, ev.AggregateId, ev.TrajectoryId);
     }
 
     private async Task PublishScopedAsync<TEvent>(

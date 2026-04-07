@@ -27,6 +27,32 @@
 | `roomAssigned` | `string` | No | Consultorio visible cuando aplique. |
 | `updatedAt` | `string(date-time)` | Yes | Ultima actualizacion observada para la entrada. |
 
+### Monitor visible status taxonomy
+
+Los snapshots de monitor y sus agregados usan un vocabulario visible estable para no exponer todo el detalle del write-side en la UI:
+
+- `Waiting`: turno en espera operativa antes de caja.
+- `AtCashier`: turno atendido actualmente en caja.
+- `PaymentPending`: turno retenido por pago pendiente.
+- `WaitingForConsultation`: turno listo y visible en espera de consulta.
+- `Called`: turno llamado hacia consulta.
+- `InConsultation`: turno actualmente materializado como atencion activa en consulta.
+- `Completed`: turno finalizado y retenido en monitor segun la politica visible vigente.
+- `Absent`: turno cancelado por ausencia visible.
+- `Cancelled`: turno cancelado por politica de pago visible.
+
+### Visible status mapping rules
+
+- `ST-001 EnEsperaTaquilla` se expone como `Waiting`.
+- `ST-002 EnTaquilla` se expone como `AtCashier`.
+- `ST-003 PagoPendiente` se expone como `PaymentPending`.
+- `ST-005 EnEsperaConsulta` se expone como `WaitingForConsultation`.
+- `ST-006 LlamadoConsulta` se expone como `Called`.
+- `ST-007 EnConsulta` o su materializacion operacional equivalente se expone como `InConsultation`.
+- `ST-008 Finalizado` se expone como `Completed`.
+- `ST-009 CanceladoPorAusencia` se expone como `Absent`.
+- `ST-004 CanceladoPorPago` se expone como `Cancelled`.
+
 ### MonitorStatusCount schema
 
 | Field | Type | Required | Notes |
@@ -278,3 +304,6 @@ Exponer el historial reciente visible para recepcion, monitor y display sanitiza
 - el monitor lee desde `v_queue_state` y `v_waiting_room_monitor` o equivalentes persistidos; no consulta el write-side
 - las `entries` del monitor se ordenan por `updatedAt` descendente
 - `waitingCount` y `averageWaitTimeMinutes` deben reflejar el snapshot de queue persistido mas reciente
+- `waitingCount` contabiliza solo entradas con estado visible `Waiting` o `WaitingForConsultation`
+- `activeConsultationRooms` contabiliza solo entradas visibles en `InConsultation`
+- `statusBreakdown` y `entries[*].status` deben seguir exactamente la taxonomia visible definida en este contrato
