@@ -21,3 +21,4 @@
 - UC-019 Protect Aggregate Writes With Optimistic Concurrency
 - UC-020 Correlate Sagas With Patient Trajectory
 - UC-021 Consume Synchronized Operational Views
+- UC-022 Mark Absence At Cashier

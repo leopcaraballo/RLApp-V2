@@ -124,16 +124,25 @@ Marcar el turno como pago pendiente manteniendolo bajo la politica de reintentos
 
 ### Mark absent purpose
 
-Cancelar por ausencia un turno que fue llamado en caja y no comparecio segun politica vigente.
+Registrar una ausencia operativa en caja y retirar el turno del flujo sin reutilizar la politica de reintentos de pago.
 
 ### Mark absent method and path
 
 - `POST /api/cashier/mark-absent`
 
+### Mark absent authorization and headers
+
+| Header | Required | Notes |
+| --- | --- | --- |
+| `Authorization` | Yes | Rol `Cashier`. |
+| `X-Correlation-Id` | No | Si se omite, el backend genera uno. |
+
 ### Mark absent request schema
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
+| `queueId` | `string` | Yes | Cola operativa del dia. |
+| `patientId` | `string` | Yes | Paciente actualmente en flujo de caja. |
 | `turnId` | `string` | Yes | Turno marcado como ausente. |
 | `reason` | `string` | Yes | Justificacion operativa. |
 
@@ -141,9 +150,26 @@ Cancelar por ausencia un turno que fue llamado en caja y no comparecio segun pol
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
-| `turnId` | `string` | Yes | Turno afectado. |
-| `currentState` | `string(enum: TurnState)` | Yes | Debe quedar en `CanceladoPorAusencia`. |
-| `correlationId` | `string` | Yes | Identificador de trazabilidad. |
+| `success` | `boolean` | Yes | `true` cuando la operacion se registra correctamente. |
+| `message` | `string` | Yes | Mensaje operativo de exito. |
+| `correlationId` | `string` | Yes | Header recibido o generado por servidor. |
+| `executedAt` | `string(date-time)` | Yes | Timestamp UTC de ejecucion. |
+
+### Mark absent operational outcome
+
+- Resultado canonico: `EnTaquilla` o `PagoPendiente` terminan en `CanceladoPorAusencia`.
+- La verificacion del estado terminal se hace por auditoria y proyecciones visibles; el endpoint actual no devuelve `currentState`.
+
+### Mark absent example response
+
+```json
+{
+  "success": true,
+  "message": "Patient PAT-001 marked as absent",
+  "correlationId": "CORR-19ac0dfe",
+  "executedAt": "2026-04-07T16:15:00Z"
+}
+```
 
 ## Cancel by payment policy
 

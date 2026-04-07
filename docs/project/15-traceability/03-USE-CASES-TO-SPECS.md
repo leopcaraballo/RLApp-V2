@@ -12,6 +12,7 @@
 | UC-008 Validate Payment | S-004 | S-009 | US-013 |
 | UC-009 Mark Payment Pending | S-004 | S-009 | US-014 |
 | UC-010 Cancel By Payment Policy | S-004 | S-009 | US-015 |
+| UC-022 Mark Absence At Cashier | S-004 | S-009 | US-008 |
 | UC-011 Claim Next Patient For Consultation | S-005 | S-009 | US-007, US-009 |
 | UC-012 Call Patient To Consultation | S-005 | S-006, S-009 | US-007, US-008 |
 | UC-013 Finish Consultation | S-005 | S-006, S-009 | US-010 |

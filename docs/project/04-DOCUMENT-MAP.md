@@ -30,6 +30,7 @@ Proveer una vista maestra de la estructura documental y de la dependencia entre 
 - 10-product: actores, journeys e historias
 - 11-specifications: requisitos funcionales y tecnicos
 - 12-testing: estrategia y artefactos de prueba
+  - 12-testing/06-OPERATIONAL-FLOW-TEST-PLAN.md: plan integrado de pruebas para pacientes, staff, consultorios, trayectoria, monitor, dashboard y realtime
 - 13-operations: operacion y observabilidad
 - 14-diagrams: soporte visual
 - 15-traceability: matrices formales

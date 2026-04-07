@@ -182,6 +182,103 @@ public class LocalOutboxIntegrationTests : IClassFixture<LocalOutboxWebApplicati
     }
 
     [Fact]
+    public async Task CashierAbsence_WhenExternalMessagingIsDisabled_ShouldMaterializeAbsentMonitorStatus()
+    {
+        const string queueId = "Q-LOCAL-OUTBOX-CASHIER-ABSENT-001";
+        const string patientId = "PAT-LOCAL-OUTBOX-CASHIER-ABSENT-001";
+        const string userId = "cashier-1";
+        const string absenceCorrelationId = "CORR-local-cashier-absent-mark";
+        var turnId = $"{queueId}-{patientId}";
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+
+            var registerResult = await mediator.Send(new RegisterPatientArrivalCommand(
+                queueId,
+                patientId,
+                "Paciente Caja Ausente",
+                null,
+                1,
+                null,
+                "CORR-local-cashier-absent-register",
+                "reception-1"));
+
+            registerResult.Success.Should().BeTrue();
+
+            var callResult = await mediator.Send(new CallNextAtCashierCommand(
+                queueId,
+                "CASH-01",
+                "CORR-local-cashier-absent-call",
+                userId));
+
+            callResult.Success.Should().BeTrue();
+
+            await WaitForMonitorStatusAsync(turnId, OperationalVisibleStatuses.AtCashier);
+
+            var pendingResult = await mediator.Send(new MarkPaymentPendingCommand(
+                queueId,
+                patientId,
+                "CORR-local-cashier-absent-pending",
+                userId));
+
+            pendingResult.Success.Should().BeTrue();
+
+            await WaitForMonitorStatusAsync(turnId, OperationalVisibleStatuses.PaymentPending);
+
+            var absentResult = await mediator.Send(new MarkAbsenceCommand(
+                queueId,
+                patientId,
+                "ROOM-CASHIER",
+                turnId,
+                "cashier-no-show",
+                absenceCorrelationId,
+                userId));
+
+            absentResult.Success.Should().BeTrue();
+        }
+
+        await WaitForMonitorStatusAsync(turnId, OperationalVisibleStatuses.Absent);
+
+        PatientTrajectoryView? trajectoryProjection = null;
+        OutboxMessage? cancelledTrajectoryMessage = null;
+
+        for (var attempt = 0; attempt < 20; attempt++)
+        {
+            await using var verificationScope = _factory.Services.CreateAsyncScope();
+            var db = verificationScope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+            trajectoryProjection = await db.PatientTrajectories
+                .AsNoTracking()
+                .SingleOrDefaultAsync(item => item.PatientId == patientId && item.QueueId == queueId);
+
+            cancelledTrajectoryMessage = await db.OutboxMessages
+                .AsNoTracking()
+                .Where(message => message.CorrelationId == absenceCorrelationId && message.Type == "PatientTrajectoryCancelled")
+                .OrderByDescending(message => message.OccurredAt)
+                .FirstOrDefaultAsync();
+
+            if (trajectoryProjection?.CurrentState == "TrayectoriaCancelada" && cancelledTrajectoryMessage?.ProcessedAt is not null)
+            {
+                break;
+            }
+
+            await Task.Delay(250);
+        }
+
+        trajectoryProjection.Should().NotBeNull();
+        trajectoryProjection!.CurrentState.Should().Be("TrayectoriaCancelada");
+
+        cancelledTrajectoryMessage.Should().NotBeNull();
+        cancelledTrajectoryMessage!.ProcessedAt.Should().NotBeNull();
+
+        var cancelledPayload = JsonSerializer.Deserialize<JsonElement>(cancelledTrajectoryMessage.Payload);
+        cancelledPayload.GetProperty("sourceEvent").GetString().Should().Be("PatientAbsentAtCashier");
+        cancelledPayload.GetProperty("sourceState").GetString().Should().Be("CanceladoPorAusencia");
+        cancelledPayload.GetProperty("reason").GetString().Should().Be("cashier-no-show");
+    }
+
+    [Fact]
     public async Task UnknownOutboxMessage_WhenExternalMessagingIsDisabled_ShouldMoveToDeadLetterStorage()
     {
         const string correlationId = "CORR-local-deadletter-001";

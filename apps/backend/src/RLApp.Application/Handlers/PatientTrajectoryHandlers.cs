@@ -369,11 +369,11 @@ public sealed class RebuildPatientTrajectoriesHandler : IRequestHandler<RebuildP
                             absentAtCashier.OccurredAt,
                             PatientTrajectory.CashierStage,
                             absentAtCashier.EventType,
-                            "CanceladoPorPago",
+                            "CanceladoPorAusencia",
                             absentAtCashier.CorrelationId);
                         trajectory.Cancel(
                             absentAtCashier.EventType,
-                            "CanceladoPorPago",
+                            "CanceladoPorAusencia",
                             absentAtCashier.Reason,
                             absentAtCashier.OccurredAt,
                             absentAtCashier.CorrelationId);

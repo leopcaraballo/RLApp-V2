@@ -164,6 +164,28 @@ public class WaitingQueueTests
         Assert.Throws<DomainException>(() => queue.MarkPatientAbsent("unknown", null, null, CorrelationId, TrajectoryId));
     }
 
+    [Fact]
+    public void MarkPatientAbsentAtCashier_ExistingPatient_RemovesFromQueueAndRaisesEvent()
+    {
+        var queue = CreateOpenQueue();
+        queue.CheckInPatient("p-1", "Alice", null, 1, null, CorrelationId);
+        queue.ClearUnraisedEvents();
+
+        queue.MarkPatientAbsentAtCashier("p-1", null, "cashier-no-show", CorrelationId);
+
+        Assert.Equal(0, queue.GetQueueSize());
+        var events = queue.GetUnraisedEvents();
+        Assert.Single(events);
+        Assert.IsType<PatientAbsentAtCashier>(events[0]);
+    }
+
+    [Fact]
+    public void MarkPatientAbsentAtCashier_UnknownPatient_ThrowsDomainException()
+    {
+        var queue = CreateOpenQueue();
+        Assert.Throws<DomainException>(() => queue.MarkPatientAbsentAtCashier("unknown", null, null, CorrelationId));
+    }
+
     // -------------------------------------------------------------------------
     // CompletePatientAttention
     // -------------------------------------------------------------------------

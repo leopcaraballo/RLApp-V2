@@ -7,7 +7,7 @@ Definir restricciones transversales de disponibilidad, RPO, RTO, performance, ob
 ## Traceability
 
 - User stories: aplica a todas las historias implementadas del sistema
-- Use cases: aplica a `UC-001` a `UC-021`
+- Use cases: aplica a `UC-001` a `UC-022`
 - Tests: `TDD-S-009`, `SEC-TEST-001`, `SEC-TEST-002`, `SEC-TEST-003`, `SEC-TEST-004`, `RES-TEST-001`, `RES-TEST-002`, `RES-TEST-003`, `RES-TEST-004`
 
 ## Scope

@@ -7,7 +7,7 @@ Definir llamada de caja, validacion de pago, pago pendiente, ausencia operativa 
 ## Traceability
 
 - User stories: `US-007`, `US-008`, `US-013`, `US-014`, `US-015`
-- Use cases: `UC-007`, `UC-008`, `UC-009`, `UC-010`
+- Use cases: `UC-007`, `UC-008`, `UC-009`, `UC-010`, `UC-022`
 - Tests: `BDD-004`, `TDD-S-004`
 
 ## Scope
@@ -22,8 +22,8 @@ Definir llamada de caja, validacion de pago, pago pendiente, ausencia operativa 
 
 - Staff autenticado y autorizado como cashier.
 - El turno debe ser el actual o elegible en flujo de caja.
-- `X-Correlation-Id` obligatorio.
-- `X-Idempotency-Key` obligatorio para comandos mutantes.
+- `X-Correlation-Id` obligatorio para `call-next`; `validate-payment`, `mark-payment-pending` y `mark-absent` aceptan generacion server-side cuando el header no se envia.
+- `X-Idempotency-Key` obligatorio para `call-next`; el resto de comandos de caja no lo exige en la implementacion actual.
 
 ## Required behavior
 
@@ -31,7 +31,7 @@ Definir llamada de caja, validacion de pago, pago pendiente, ausencia operativa 
 - `validate-payment` solo es valido para el turno actual en caja y mueve `ST-002` o `ST-003` a `ST-005 EnEsperaConsulta`.
 - `mark-payment-pending` mueve `ST-002 EnTaquilla` a `ST-003 PagoPendiente`.
 - La politica de pago admite maximo tres intentos antes de cancelacion funcional.
-- La ausencia en caja debe registrarse como evento operativo y contribuir a la politica de cancelacion.
+- `mark-absent` mueve un turno activo de caja de `ST-002 EnTaquilla` o `ST-003 PagoPendiente` a `ST-009 CanceladoPorAusencia`, lo retira del flujo operativo y no acumula nuevos intentos de pago.
 - `cancel-payment` puede cancelar desde `ST-002` o `ST-003` hacia `ST-004 CanceladoPorPago` cuando la politica lo requiera.
 
 ## Contracts
@@ -41,11 +41,12 @@ Definir llamada de caja, validacion de pago, pago pendiente, ausencia operativa 
 
 ## State and event impact
 
-- Transiciones: `ST-001 -> ST-002`, `ST-002 -> ST-003`, `ST-002 -> ST-005`, `ST-003 -> ST-005`, `ST-002 -> ST-004`, `ST-003 -> ST-004`
+- Transiciones: `ST-001 -> ST-002`, `ST-002 -> ST-003`, `ST-002 -> ST-005`, `ST-003 -> ST-005`, `ST-002 -> ST-009`, `ST-003 -> ST-009`, `ST-002 -> ST-004`, `ST-003 -> ST-004`
 - Eventos canonicos: `EV-003 PatientCalledAtCashier`, `EV-004 PatientPaymentValidated`, `EV-005 PatientPaymentPending`, `EV-006 PatientAbsentAtCashier`, `EV-007 PatientCancelledByPayment`
 
 ## Validation criteria
 
 - No se puede validar pago para un turno distinto al actual en caja.
+- La ausencia en caja debe quedar auditada como cierre terminal distinto de `CanceladoPorPago`.
 - El turno cancelado por pago no puede reingresar al flujo operativo.
 - Los intentos y ausencias deben ser auditables y consistentes con la politica de negocio.

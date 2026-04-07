@@ -17,6 +17,7 @@
 - UC-008 Validate Payment
 - UC-009 Mark Payment Pending
 - UC-010 Cancel By Payment Policy
+- UC-022 Mark Absence At Cashier
 
 ## Consultation
 

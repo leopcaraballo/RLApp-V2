@@ -82,6 +82,56 @@ public class PatientTrajectoryIntegrationTests : IClassFixture<CustomWebApplicat
     }
 
     [Fact]
+    public async Task Rebuild_ShouldPreserveCashierAbsenceAsCanceladoPorAusencia()
+    {
+        var queueId = $"QUEUE-{Guid.NewGuid():N}";
+        var patientId = $"PAT-{Guid.NewGuid():N}";
+        var turnId = $"{queueId}-{patientId}";
+        var checkInAt = new DateTime(2026, 4, 3, 9, 10, 0, DateTimeKind.Utc);
+        var absenceAt = checkInAt.AddMinutes(11);
+        var trajectoryId = PatientTrajectoryIdFactory.Create(queueId, patientId, checkInAt);
+
+        await SeedHistoricalCashierAbsenceEventsAsync(queueId, patientId, turnId, checkInAt, absenceAt);
+
+        var rebuildRequest = new HttpRequestMessage(HttpMethod.Post, "/api/patient-trajectories/rebuild")
+        {
+            Content = JsonContent.Create(new
+            {
+                queueId,
+                patientId,
+                dryRun = false
+            })
+        };
+        rebuildRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", CreateToken("support-user", "support", "Support"));
+        rebuildRequest.Headers.Add("X-Correlation-Id", "corr-rebuild-cashier-absence");
+        rebuildRequest.Headers.Add("X-Idempotency-Key", $"idem-{Guid.NewGuid():N}");
+
+        var rebuildResponse = await _client.SendAsync(rebuildRequest);
+        rebuildResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var queryRequest = new HttpRequestMessage(HttpMethod.Get, $"/api/patient-trajectories/{trajectoryId}");
+        queryRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", CreateToken("supervisor-user", "supervisor", "Supervisor"));
+        queryRequest.Headers.Add("X-Correlation-Id", "corr-query-cashier-absence");
+
+        var queryResponse = await _client.SendAsync(queryRequest);
+        queryResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var payload = await queryResponse.Content.ReadFromJsonAsync<JsonElement>();
+        payload.GetProperty("currentState").GetString().Should().Be("TrayectoriaCancelada");
+        payload.GetProperty("stages").GetArrayLength().Should().Be(1);
+        payload.GetProperty("stages")[0].GetProperty("stage").GetString().Should().Be("Recepcion");
+
+        using var scope = _factory.Services.CreateScope();
+        var eventStore = scope.ServiceProvider.GetRequiredService<IEventStore>();
+        var rebuiltEvents = await eventStore.GetEventsByAggregateIdAsync(trajectoryId);
+        var cancelledEvent = rebuiltEvents.OfType<PatientTrajectoryCancelled>().Single();
+
+        cancelledEvent.SourceEvent.Should().Be(nameof(PatientAbsentAtCashier));
+        cancelledEvent.SourceState.Should().Be("CanceladoPorAusencia");
+        cancelledEvent.Reason.Should().Be("cashier-no-show");
+    }
+
+    [Fact]
     public async Task Discover_ShouldReturnOrderedTrajectoryCandidates_AndAllowQueueFiltering()
     {
         var patientId = $"PAT-{Guid.NewGuid():N}";
@@ -263,6 +313,33 @@ public class PatientTrajectoryIntegrationTests : IClassFixture<CustomWebApplicat
                 OccurredAt = completedAt.Value.AddMilliseconds(1)
             });
         }
+
+        await eventStore.SaveBatchAsync(events);
+        await db.SaveChangesAsync();
+    }
+
+    private async Task SeedHistoricalCashierAbsenceEventsAsync(
+        string queueId,
+        string patientId,
+        string turnId,
+        DateTime checkInAt,
+        DateTime absenceAt)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var eventStore = scope.ServiceProvider.GetRequiredService<IEventStore>();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var events = new List<DomainEvent>
+        {
+            new PatientCheckedIn(queueId, patientId, patientId, null, 0, null, $"corr-checkin-{queueId}")
+            {
+                OccurredAt = checkInAt
+            },
+            new PatientAbsentAtCashier(queueId, patientId, turnId, "cashier-no-show", $"corr-absent-{queueId}")
+            {
+                OccurredAt = absenceAt
+            }
+        };
 
         await eventStore.SaveBatchAsync(events);
         await db.SaveChangesAsync();

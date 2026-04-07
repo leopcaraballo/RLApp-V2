@@ -90,6 +90,66 @@ public class OperationalReadModelsIntegrationTests : IClassFixture<CustomWebAppl
         forbiddenDashboardResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
+    [Fact]
+    public async Task OperationalCommandEndpoints_ShouldEnforceReceptionCashierAndSupervisorPolicies()
+    {
+        var queueId = $"QUEUE-{Guid.NewGuid():N}";
+
+        var checkInPayload = new
+        {
+            queueId,
+            appointmentReference = "APPT-001",
+            patientId = "PAT-SEC-001",
+            patientName = "Paciente Seguridad",
+            consultationType = "General",
+            priority = "1"
+        };
+
+        var receptionUnauthorized = await _client.PostAsJsonAsync("/api/waiting-room/check-in", checkInPayload);
+        receptionUnauthorized.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+
+        var forbiddenReception = new HttpRequestMessage(HttpMethod.Post, "/api/waiting-room/check-in")
+        {
+            Content = JsonContent.Create(checkInPayload)
+        };
+        forbiddenReception.Headers.Authorization = new AuthenticationHeaderValue("Bearer", CreateToken("cashier-user", "cashier", "Cashier"));
+        forbiddenReception.Headers.Add("X-Correlation-Id", "corr-reception-forbidden");
+        forbiddenReception.Headers.Add("X-Idempotency-Key", "idem-reception-forbidden");
+        var forbiddenReceptionResponse = await _client.SendAsync(forbiddenReception);
+        forbiddenReceptionResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        var cashierPayload = new
+        {
+            queueId,
+            cashierStationId = "CASH-01"
+        };
+
+        var cashierUnauthorized = await _client.PostAsJsonAsync("/api/cashier/call-next", cashierPayload);
+        cashierUnauthorized.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+
+        var forbiddenCashier = new HttpRequestMessage(HttpMethod.Post, "/api/cashier/call-next")
+        {
+            Content = JsonContent.Create(cashierPayload)
+        };
+        forbiddenCashier.Headers.Authorization = new AuthenticationHeaderValue("Bearer", CreateToken("reception-user", "reception", "Receptionist"));
+        forbiddenCashier.Headers.Add("X-Correlation-Id", "corr-cashier-forbidden");
+        forbiddenCashier.Headers.Add("X-Idempotency-Key", "idem-cashier-forbidden");
+        var forbiddenCashierResponse = await _client.SendAsync(forbiddenCashier);
+        forbiddenCashierResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        var roomUnauthorized = await _client.PostAsJsonAsync("/api/medical/consulting-room/deactivate", new { roomId = "ROOM-SEC-001" });
+        roomUnauthorized.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+
+        var forbiddenRoom = new HttpRequestMessage(HttpMethod.Post, "/api/medical/consulting-room/deactivate")
+        {
+            Content = JsonContent.Create(new { roomId = "ROOM-SEC-001" })
+        };
+        forbiddenRoom.Headers.Authorization = new AuthenticationHeaderValue("Bearer", CreateToken("doctor-user", "doctor", "Doctor"));
+        forbiddenRoom.Headers.Add("X-Correlation-Id", "corr-room-forbidden");
+        var forbiddenRoomResponse = await _client.SendAsync(forbiddenRoom);
+        forbiddenRoomResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
     private async Task SeedOperationalReadModelsAsync(string queueId)
     {
         await using var scope = _factory.Services.CreateAsyncScope();

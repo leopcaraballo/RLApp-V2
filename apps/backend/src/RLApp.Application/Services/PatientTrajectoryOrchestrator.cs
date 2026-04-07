@@ -124,12 +124,12 @@ public sealed class PatientTrajectoryOrchestrator
             @event.PatientId,
             PatientTrajectory.CashierStage,
             @event.EventType,
-            "CanceladoPorPago",
+            "CanceladoPorAusencia",
             @event.OccurredAt,
             @event.CorrelationId,
             cancellationToken);
 
-        if (!trajectory.Cancel(@event.EventType, "CanceladoPorPago", @event.Reason, @event.OccurredAt, @event.CorrelationId))
+        if (!trajectory.Cancel(@event.EventType, "CanceladoPorAusencia", @event.Reason, @event.OccurredAt, @event.CorrelationId))
         {
             return;
         }
