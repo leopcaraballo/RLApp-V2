@@ -31,3 +31,6 @@ test-results/
 
 # Logs
 *.log
+
+# Temporary runtime validation artifacts
+.tmp/rlapp-patient-simulation*.json
