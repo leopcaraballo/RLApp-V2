@@ -357,6 +357,35 @@ public sealed class RebuildPatientTrajectoriesHandler : IRequestHandler<RebuildP
                         break;
                     }
 
+                case PatientCalled called:
+                    {
+                        var queueId = called.AggregateId;
+                        lastKnownQueueByPatient[patientId] = queueId;
+                        var trajectory = GetOrCreateHistoricalTrajectory(
+                            trajectories,
+                            activeTrajectories,
+                            patientId,
+                            queueId,
+                            called.OccurredAt,
+                            PatientTrajectory.ConsultationStage,
+                            called.EventType,
+                            "LlamadoConsulta",
+                            called.CorrelationId);
+
+                        if (string.Equals(trajectory.CurrentStage, PatientTrajectory.ReceptionStage, StringComparison.Ordinal))
+                        {
+                            break;
+                        }
+
+                        trajectory.RecordStage(
+                            PatientTrajectory.ConsultationStage,
+                            called.EventType,
+                            "LlamadoConsulta",
+                            called.OccurredAt,
+                            called.CorrelationId);
+                        break;
+                    }
+
                 case PatientAbsentAtCashier absentAtCashier:
                     {
                         var queueId = absentAtCashier.AggregateId;
@@ -521,6 +550,7 @@ public sealed class RebuildPatientTrajectoriesHandler : IRequestHandler<RebuildP
     {
         PatientCheckedIn => true,
         PatientPaymentValidated => true,
+        PatientCalled => true,
         PatientAttentionCompleted => true,
         PatientAbsentAtCashier => true,
         PatientAbsentAtConsultation => true,
@@ -543,6 +573,7 @@ public sealed class RebuildPatientTrajectoriesHandler : IRequestHandler<RebuildP
         {
             PatientCheckedIn checkedIn => string.Equals(checkedIn.AggregateId, queueId, StringComparison.Ordinal),
             PatientPaymentValidated paymentValidated => string.Equals(paymentValidated.AggregateId, queueId, StringComparison.Ordinal),
+            PatientCalled called => string.Equals(called.AggregateId, queueId, StringComparison.Ordinal),
             PatientAbsentAtCashier absentAtCashier => string.Equals(absentAtCashier.AggregateId, queueId, StringComparison.Ordinal),
             PatientAttentionCompleted completed => string.Equals(completed.AggregateId, queueId, StringComparison.Ordinal),
             PatientAbsentAtConsultation absentAtConsultation => string.Equals(absentAtConsultation.AggregateId, queueId, StringComparison.Ordinal),
@@ -556,6 +587,7 @@ public sealed class RebuildPatientTrajectoriesHandler : IRequestHandler<RebuildP
         {
             PatientCheckedIn checkedIn => checkedIn.PatientId,
             PatientPaymentValidated paymentValidated => paymentValidated.PatientId,
+            PatientCalled called => called.PatientId,
             PatientAttentionCompleted completed => completed.PatientId,
             PatientAbsentAtCashier absentAtCashier => absentAtCashier.PatientId,
             PatientAbsentAtConsultation absentAtConsultation => absentAtConsultation.PatientId,

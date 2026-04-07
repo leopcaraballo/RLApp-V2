@@ -536,13 +536,63 @@ async function getMonitor() {
   );
 }
 
-async function pollOperationalReadModels(totalPatients, completedPatients) {
+function extractDashboardCounters(dashboard) {
+  return {
+    currentWaitingCount: Number(dashboard?.currentWaitingCount ?? 0),
+    totalPatientsToday: Number(dashboard?.totalPatientsToday ?? 0),
+    totalCompleted: Number(dashboard?.totalCompleted ?? 0),
+  };
+}
+
+function dashboardCountersEqual(left, right) {
+  return (
+    left.currentWaitingCount === right.currentWaitingCount &&
+    left.totalPatientsToday === right.totalPatientsToday &&
+    left.totalCompleted === right.totalCompleted
+  );
+}
+
+async function captureOperationalBaseline() {
+  const timeoutAt = Date.now() + 15000;
+  let lastSnapshot = null;
+  let stableSince = 0;
+
+  while (Date.now() < timeoutAt) {
+    const currentSnapshot = extractDashboardCounters(await getDashboard());
+
+    if (lastSnapshot && dashboardCountersEqual(lastSnapshot, currentSnapshot)) {
+      if (stableSince === 0) {
+        stableSince = Date.now();
+      }
+
+      if (Date.now() - stableSince >= 1000) {
+        return { dashboard: currentSnapshot };
+      }
+    } else {
+      stableSince = 0;
+      lastSnapshot = currentSnapshot;
+    }
+
+    await delay(250);
+  }
+
+  return {
+    dashboard: lastSnapshot ?? extractDashboardCounters(await getDashboard()),
+  };
+}
+
+async function pollOperationalReadModels(
+  totalPatients,
+  completedPatients,
+  baseline,
+) {
   const timeoutAt = Date.now() + 60000;
   let last = null;
 
   while (Date.now() < timeoutAt) {
     const dashboard = await getDashboard();
     const monitor = await getMonitor();
+    const dashboardCounters = extractDashboardCounters(dashboard);
     const nonTerminalEntries = (monitor?.entries ?? []).filter(
       (entry) => !terminalMonitorStatuses.has(entry.status),
     );
@@ -554,9 +604,12 @@ async function pollOperationalReadModels(totalPatients, completedPatients) {
     };
 
     const dashboardReady =
-      dashboard?.currentWaitingCount === 0 &&
-      dashboard?.totalPatientsToday >= totalPatients &&
-      dashboard?.totalCompleted === completedPatients;
+      dashboardCounters.currentWaitingCount ===
+        baseline.dashboard.currentWaitingCount &&
+      dashboardCounters.totalPatientsToday ===
+        baseline.dashboard.totalPatientsToday + totalPatients &&
+      dashboardCounters.totalCompleted ===
+        baseline.dashboard.totalCompleted + completedPatients;
     const monitorReady =
       monitor?.waitingCount === 0 && nonTerminalEntries.length === 0;
 
@@ -652,7 +705,7 @@ async function runCase(caseItem) {
   };
 }
 
-function buildSummary(results, operational) {
+function buildSummary(results, operational, baseline) {
   const finalStates = results.reduce((accumulator, item) => {
     accumulator[item.finalTrajectoryState] =
       (accumulator[item.finalTrajectoryState] ?? 0) + 1;
@@ -670,9 +723,19 @@ function buildSummary(results, operational) {
     finalStates,
     outcomes,
     dashboard: {
+      baseline: baseline.dashboard,
       currentWaitingCount: operational.dashboard.currentWaitingCount,
+      currentWaitingCountDelta:
+        operational.dashboard.currentWaitingCount -
+        baseline.dashboard.currentWaitingCount,
       totalPatientsToday: operational.dashboard.totalPatientsToday,
+      totalPatientsTodayDelta:
+        operational.dashboard.totalPatientsToday -
+        baseline.dashboard.totalPatientsToday,
       totalCompleted: operational.dashboard.totalCompleted,
+      totalCompletedDelta:
+        operational.dashboard.totalCompleted -
+        baseline.dashboard.totalCompleted,
       activeRooms: operational.dashboard.activeRooms,
       projectionLagSeconds: operational.dashboard.projectionLagSeconds,
       statusBreakdown: operational.dashboard.statusBreakdown,
@@ -718,6 +781,7 @@ async function main() {
 
   await login();
   await ensureConsultingRooms();
+  const operationalBaseline = await captureOperationalBaseline();
 
   for (const caseItem of casePlan) {
     const result = await runCase(caseItem);
@@ -732,8 +796,9 @@ async function main() {
   const operational = await pollOperationalReadModels(
     totalPatients,
     completedPatients,
+    operationalBaseline,
   );
-  report.summary = buildSummary(report.cases, operational);
+  report.summary = buildSummary(report.cases, operational, operationalBaseline);
 
   const allTerminal = report.cases.every((item) =>
     terminalTrajectoryStates.has(item.finalTrajectoryState),
@@ -756,21 +821,21 @@ async function main() {
     );
   }
 
-  if (report.summary.dashboard.currentWaitingCount !== 0) {
+  if (report.summary.dashboard.currentWaitingCountDelta !== 0) {
     throw new Error(
-      `Dashboard currentWaitingCount expected 0 but received ${report.summary.dashboard.currentWaitingCount}`,
+      `Dashboard currentWaitingCount delta expected 0 but received ${report.summary.dashboard.currentWaitingCountDelta} (baseline ${report.summary.dashboard.baseline.currentWaitingCount}, current ${report.summary.dashboard.currentWaitingCount})`,
     );
   }
 
-  if (report.summary.dashboard.totalCompleted !== completedPatients) {
+  if (report.summary.dashboard.totalCompletedDelta !== completedPatients) {
     throw new Error(
-      `Dashboard totalCompleted expected ${completedPatients} but received ${report.summary.dashboard.totalCompleted}`,
+      `Dashboard totalCompleted delta expected ${completedPatients} but received ${report.summary.dashboard.totalCompletedDelta} (baseline ${report.summary.dashboard.baseline.totalCompleted}, current ${report.summary.dashboard.totalCompleted})`,
     );
   }
 
-  if (report.summary.dashboard.totalPatientsToday < totalPatients) {
+  if (report.summary.dashboard.totalPatientsTodayDelta !== totalPatients) {
     throw new Error(
-      `Dashboard totalPatientsToday expected at least ${totalPatients} but received ${report.summary.dashboard.totalPatientsToday}`,
+      `Dashboard totalPatientsToday delta expected ${totalPatients} but received ${report.summary.dashboard.totalPatientsTodayDelta} (baseline ${report.summary.dashboard.baseline.totalPatientsToday}, current ${report.summary.dashboard.totalPatientsToday})`,
     );
   }
 

@@ -76,7 +76,7 @@ function readError(error: unknown): { message: string; correlationId?: string } 
     return { message: error.message };
   }
 
-  return { message: 'Unexpected frontend error while calling the backend.' };
+  return { message: 'Se produjo un error inesperado al comunicarse con el backend.' };
 }
 
 function readSuccess(result: unknown): { message: string; correlationId?: string } {
@@ -84,7 +84,7 @@ function readSuccess(result: unknown): { message: string; correlationId?: string
     const message =
       'message' in result && typeof result.message === 'string'
         ? result.message
-        : 'Operation completed successfully';
+        : 'La accion se completo correctamente';
     const correlationId =
       'correlationId' in result && typeof result.correlationId === 'string'
         ? result.correlationId
@@ -93,7 +93,7 @@ function readSuccess(result: unknown): { message: string; correlationId?: string
     return { message, correlationId };
   }
 
-  return { message: 'Operation completed successfully' };
+  return { message: 'La accion se completo correctamente' };
 }
 
 export function ActionFormCard<TForm extends FieldValues, TResult>({
@@ -140,14 +140,14 @@ export function ActionFormCard<TForm extends FieldValues, TResult>({
     <section className="operation-card">
       <div className="operation-card__header">
         <div>
-          <div className="panel__eyebrow">Backend command</div>
+          <div className="panel__eyebrow">Accion operativa</div>
           <h2>{title}</h2>
           <p>{description}</p>
         </div>
-        <StatusBadge tone="neutral">POST</StatusBadge>
+        <StatusBadge tone="neutral">Accion</StatusBadge>
       </div>
 
-      <ContractAlert title="Contract caveats" items={contractWarnings} />
+      <ContractAlert title="Importante antes de continuar" items={contractWarnings} />
 
       <form
         className="form-grid"
@@ -171,7 +171,7 @@ export function ActionFormCard<TForm extends FieldValues, TResult>({
                 <textarea {...baseProps} rows={4} />
               ) : field.kind === 'select' ? (
                 <select {...baseProps}>
-                  <option value="">Select an option</option>
+                  <option value="">Selecciona una opcion</option>
                   {field.options?.map((option) => (
                     <option key={option.value} value={option.value}>
                       {option.label}
@@ -190,7 +190,7 @@ export function ActionFormCard<TForm extends FieldValues, TResult>({
               {field.description ? <small>{field.description}</small> : null}
               {fieldError ? (
                 <strong className="form-field__error">
-                  {String(fieldError.message ?? 'Invalid value')}
+                  {String(fieldError.message ?? 'Valor no valido')}
                 </strong>
               ) : null}
             </label>
@@ -199,7 +199,7 @@ export function ActionFormCard<TForm extends FieldValues, TResult>({
 
         {notes.length > 0 ? (
           <div className="form-notes">
-            <div className="panel__eyebrow">Implementation notes</div>
+            <div className="panel__eyebrow">Ayuda rapida</div>
             <ul>
               {notes.map((note) => (
                 <li key={note}>{note}</li>
@@ -210,22 +210,29 @@ export function ActionFormCard<TForm extends FieldValues, TResult>({
 
         <div className="form-actions">
           <button className="primary-button" disabled={mutation.isPending} type="submit">
-            {mutation.isPending ? 'Submitting...' : submitLabel}
+            {mutation.isPending ? 'Enviando...' : submitLabel}
           </button>
         </div>
       </form>
 
       {mutation.isError ? (
         <div className="response-card response-card--error">
-          <div className="response-card__title">Backend rejected the operation</div>
+          <div className="response-card__title">No se pudo completar la accion</div>
           <p>{readError(mutation.error).message}</p>
         </div>
       ) : null}
 
       {mutation.isSuccess && mutation.data ? (
         <div className="response-card response-card--success">
-          <div className="response-card__title">Backend response</div>
-          {renderResult ? renderResult(mutation.data) : <pre>{JSON.stringify(mutation.data, null, 2)}</pre>}
+          <div className="response-card__title">Resultado recibido</div>
+          {renderResult ? (
+            renderResult(mutation.data)
+          ) : (
+            <details>
+              <summary>Ver detalle tecnico</summary>
+              <pre>{JSON.stringify(mutation.data, null, 2)}</pre>
+            </details>
+          )}
         </div>
       ) : null}
     </section>

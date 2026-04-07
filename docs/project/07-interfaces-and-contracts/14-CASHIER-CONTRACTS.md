@@ -7,7 +7,6 @@
 - `EnTaquilla`
 - `PagoPendiente`
 - `EnEsperaConsulta`
-- `CanceladoPorPago`
 - `CanceladoPorAusencia`
 
 ## Call next at cashier
@@ -97,7 +96,7 @@ Confirmar que el pago fue validado y mover el turno a espera de consulta.
 
 ### Mark payment pending purpose
 
-Marcar el turno como pago pendiente manteniendolo bajo la politica de reintentos.
+Marcar el turno como pago pendiente manteniendolo en el flujo operativo de caja hasta su siguiente accion valida.
 
 ### Mark payment pending method and path
 
@@ -109,7 +108,7 @@ Marcar el turno como pago pendiente manteniendolo bajo la politica de reintentos
 | --- | --- | --- | --- |
 | `turnId` | `string` | Yes | Turno afectado. |
 | `reason` | `string` | Yes | Motivo operativo del pendiente. |
-| `attemptNumber` | `integer` | Yes | Numero de intento acumulado. |
+| `attemptNumber` | `integer` | Yes | Dato operativo provisto por el cliente; no activa una cancelacion automatica en el runtime vigente. |
 
 ### Mark payment pending response schema
 
@@ -117,7 +116,7 @@ Marcar el turno como pago pendiente manteniendolo bajo la politica de reintentos
 | --- | --- | --- | --- |
 | `turnId` | `string` | Yes | Turno afectado. |
 | `currentState` | `string(enum: TurnState)` | Yes | Debe quedar en `PagoPendiente`. |
-| `attemptNumber` | `integer` | Yes | Intento persistido tras la operacion. |
+| `attemptNumber` | `integer` | Yes | Valor reflejado por el contrato actual para trazabilidad operativa del cliente. |
 | `correlationId` | `string` | Yes | Identificador de trazabilidad. |
 
 ## Mark absent at cashier
@@ -168,45 +167,5 @@ Registrar una ausencia operativa en caja y retirar el turno del flujo sin reutil
   "message": "Patient PAT-001 marked as absent",
   "correlationId": "CORR-19ac0dfe",
   "executedAt": "2026-04-07T16:15:00Z"
-}
-```
-
-## Cancel by payment policy
-
-### Cancel by payment purpose
-
-Cancelar el turno cuando la politica de pago determina que no puede continuar.
-
-### Cancel by payment method and path
-
-- `POST /api/cashier/cancel-payment`
-
-### Cancel by payment request schema
-
-| Field | Type | Required | Notes |
-| --- | --- | --- | --- |
-| `turnId` | `string` | Yes | Turno afectado. |
-| `reason` | `string` | Yes | Motivo operativo de la cancelacion. |
-| `attemptNumber` | `integer` | Yes | Numero de intento que dispara la politica. |
-
-### Cancel by payment response schema
-
-| Field | Type | Required | Notes |
-| --- | --- | --- | --- |
-| `turnId` | `string` | Yes | Turno afectado. |
-| `previousState` | `string(enum: TurnState)` | Yes | `EnTaquilla` o `PagoPendiente`. |
-| `currentState` | `string(enum: TurnState)` | Yes | Debe quedar en `CanceladoPorPago`. |
-| `policyOutcome` | `string` | Yes | Resultado funcional de la politica aplicada. |
-| `correlationId` | `string` | Yes | Identificador de trazabilidad. |
-
-### Cancel by payment example response
-
-```json
-{
-  "turnId": "TURN-00041",
-  "previousState": "PagoPendiente",
-  "currentState": "CanceladoPorPago",
-  "policyOutcome": "max-payment-attempts-exceeded",
-  "correlationId": "CORR-12ab09ef"
 }
 ```

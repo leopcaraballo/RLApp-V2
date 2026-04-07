@@ -7,10 +7,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "smoke:roles": "node tests/e2e/role-smoke.mjs",
     "typecheck": "tsc --noEmit",
     "generate:api-types": "openapi-typescript ../backend/docs/api/openapi.yaml -o src/generated/backend-api.ts",
-    "lint": "ESLINT_USE_FLAT_CONFIG=false eslint . --ext .ts,.tsx",
-    "lint:fix": "ESLINT_USE_FLAT_CONFIG=false eslint . --ext .ts,.tsx --fix",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
     "format": "prettier --write \"src/**/*.{ts,tsx,json}\""
   },
   "dependencies": {

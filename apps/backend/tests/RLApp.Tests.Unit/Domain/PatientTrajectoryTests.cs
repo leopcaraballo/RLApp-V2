@@ -150,13 +150,46 @@ public class PatientTrajectoryTests
 
         var added = trajectory.RecordStage(
             PatientTrajectory.ConsultationStage,
-            nameof(PatientClaimedForAttention),
-            "EnEsperaConsulta",
+            nameof(PatientCalled),
+            "LlamadoConsulta",
             occurredAt.AddMinutes(10),
             "corr-013");
 
         Assert.True(added);
         Assert.Equal(PatientTrajectory.ConsultationStage, trajectory.CurrentStage);
+    }
+
+    [Fact]
+    public void RecordStage_ConsultationCanAdvanceFromCalledToStarted_Succeeds()
+    {
+        var occurredAt = new DateTime(2026, 4, 1, 9, 10, 0, DateTimeKind.Utc);
+        var trajectory = CreateTrajectory(occurredAt);
+        trajectory.ClearUnraisedEvents();
+
+        trajectory.RecordStage(
+            PatientTrajectory.CashierStage,
+            nameof(PatientPaymentValidated),
+            "EnEsperaConsulta",
+            occurredAt.AddMinutes(5),
+            "corr-012");
+
+        trajectory.RecordStage(
+            PatientTrajectory.ConsultationStage,
+            nameof(PatientCalled),
+            "LlamadoConsulta",
+            occurredAt.AddMinutes(10),
+            "corr-013");
+
+        var started = trajectory.RecordStage(
+            PatientTrajectory.ConsultationStage,
+            nameof(PatientClaimedForAttention),
+            "EnConsulta",
+            occurredAt.AddMinutes(11),
+            "corr-014");
+
+        Assert.True(started);
+        Assert.Equal(4, trajectory.Stages.Count);
+        Assert.Equal("EnConsulta", trajectory.Stages[^1].SourceState);
     }
 
     [Fact]

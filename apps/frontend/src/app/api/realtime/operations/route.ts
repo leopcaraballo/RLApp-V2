@@ -31,8 +31,6 @@ const REALTIME_METHODS = [
   'PatientAttentionCompleted',
   'PatientAbsentAtCashier',
   'PatientAbsentAtConsultation',
-  'PatientCancelledByPayment',
-  'PatientCancelledByAbsence',
 ] as const;
 
 interface RequestedScopes {
@@ -74,28 +72,28 @@ function readRequestedScopes(request: NextRequest): RequestedScopes {
 function validateScopes(role: StaffRole, scopes: RequestedScopes): NextResponse | null {
   if (!scopes.dashboard && scopes.queueIds.length === 0 && !scopes.trajectoryId) {
     return NextResponse.json(
-      { message: 'At least one operational realtime scope must be requested.' },
+      { message: 'Debes solicitar al menos un alcance operativo de realtime.' },
       { status: 400 }
     );
   }
 
   if (scopes.dashboard && !DASHBOARD_ROLES.has(role)) {
     return NextResponse.json(
-      { message: 'Current role cannot subscribe to operations dashboard invalidations.' },
+      { message: 'Tu rol actual no puede suscribirse a invalidaciones del tablero operativo.' },
       { status: 403 }
     );
   }
 
   if (scopes.queueIds.length > 0 && !QUEUE_ROLES.has(role)) {
     return NextResponse.json(
-      { message: 'Current role cannot subscribe to waiting room invalidations.' },
+      { message: 'Tu rol actual no puede suscribirse a invalidaciones de sala de espera.' },
       { status: 403 }
     );
   }
 
   if (scopes.trajectoryId && !TRAJECTORY_ROLES.has(role)) {
     return NextResponse.json(
-      { message: 'Current role cannot subscribe to trajectory invalidations.' },
+      { message: 'Tu rol actual no puede suscribirse a invalidaciones de trayectoria.' },
       { status: 403 }
     );
   }
@@ -173,7 +171,7 @@ export async function GET(request: NextRequest) {
 
   if (!session) {
     return NextResponse.json(
-      { message: 'Authentication is required to access operational realtime.' },
+      { message: 'Debes iniciar sesion para acceder al realtime operativo.' },
       { status: 401 }
     );
   }

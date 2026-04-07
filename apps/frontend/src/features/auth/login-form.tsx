@@ -10,8 +10,8 @@ import { StatusBadge } from '@/components/shared/status-badge';
 import { rlappApi } from '@/services/rlapp-api';
 
 const loginSchema = z.object({
-  identifier: z.string().min(1, 'Username is required.'),
-  password: z.string().min(1, 'Password is required.'),
+  identifier: z.string().min(1, 'El usuario es obligatorio.'),
+  password: z.string().min(1, 'La contrasena es obligatoria.'),
 });
 
 type LoginValues = z.infer<typeof loginSchema>;
@@ -42,30 +42,30 @@ export function LoginForm() {
     <section className="auth-card">
       <div className="auth-layout">
         <div>
-          <div className="section-intro__eyebrow">RLApp access</div>
-          <h1>Authenticate against the backend contract that exists today.</h1>
+          <div className="section-intro__eyebrow">Acceso a RLApp</div>
+          <h1>Ingresa para continuar con la operacion diaria.</h1>
           <p>
-            This frontend uses a server-side session proxy so the browser never talks to the backend
-            with a raw JWT directly.
+            La sesion se protege desde el servidor para que el navegador no exponga credenciales
+            internas del backend.
           </p>
         </div>
 
         <div className="auth-grid">
-          <StatusBadge tone="warning">Backend caveat</StatusBadge>
+          <StatusBadge tone="warning">Importante</StatusBadge>
           <p>
-            The login payload says <code>identifier</code>, but the backend currently resolves it as
-            <code>username</code> only.
+            En el entorno actual, el campo <code>identifier</code> se resuelve como nombre de
+            usuario.
           </p>
         </div>
 
         <div className="auth-grid">
-          <StatusBadge tone="info">Docker local users</StatusBadge>
+          <StatusBadge tone="info">Usuarios de prueba</StatusBadge>
           <ul>
             <li>
               Supervisor: <code>superadmin</code> / <code>SuperAdmin@2026Dev!</code>
             </li>
             <li>
-              Support: <code>support</code> / <code>Support@2026Dev!</code>
+              Soporte: <code>support</code> / <code>Support@2026Dev!</code>
             </li>
           </ul>
         </div>
@@ -77,8 +77,8 @@ export function LoginForm() {
           })}
         >
           <label className="form-field" htmlFor="identifier">
-            <span>Username</span>
-            <input id="identifier" placeholder="admin" {...form.register('identifier')} />
+            <span>Usuario</span>
+            <input id="identifier" placeholder="superadmin" {...form.register('identifier')} />
             {form.formState.errors.identifier ? (
               <strong className="form-field__error">
                 {form.formState.errors.identifier.message}
@@ -87,10 +87,10 @@ export function LoginForm() {
           </label>
 
           <label className="form-field" htmlFor="password">
-            <span>Password</span>
+            <span>Contrasena</span>
             <input
               id="password"
-              placeholder="Password123!"
+              placeholder="Ingresa tu contrasena"
               type="password"
               {...form.register('password')}
             />
@@ -103,14 +103,14 @@ export function LoginForm() {
 
           <div className="form-actions">
             <button className="primary-button" disabled={loginMutation.isPending} type="submit">
-              {loginMutation.isPending ? 'Signing in...' : 'Login'}
+              {loginMutation.isPending ? 'Ingresando...' : 'Ingresar'}
             </button>
           </div>
         </form>
 
         {loginMutation.isError ? (
           <div className="response-card response-card--error">
-            <div className="response-card__title">Authentication failed</div>
+            <div className="response-card__title">No fue posible iniciar sesion</div>
             <p>{loginMutation.error.message}</p>
           </div>
         ) : null}

@@ -13,12 +13,10 @@ public class WaitingRoomMonitorConsumer :
     IConsumer<PatientPaymentValidated>,
     IConsumer<PatientPaymentPending>,
     IConsumer<PatientAbsentAtCashier>,
-    IConsumer<PatientCancelledByPayment>,
     IConsumer<PatientCalled>,
     IConsumer<PatientClaimedForAttention>,
     IConsumer<PatientAttentionCompleted>,
-    IConsumer<PatientAbsentAtConsultation>,
-    IConsumer<PatientCancelledByAbsence>
+    IConsumer<PatientAbsentAtConsultation>
 {
     private readonly IProjectionStore _projectionStore;
     private readonly ILogger<WaitingRoomMonitorConsumer> _logger;
@@ -97,18 +95,6 @@ public class WaitingRoomMonitorConsumer :
         await UpsertMonitorAsync(context, ev.PatientId, data, OperationalVisibleStatuses.Absent);
     }
 
-    public async Task Consume(ConsumeContext<PatientCancelledByPayment> context)
-    {
-        var ev = context.Message;
-        var data = new Dictionary<string, object>
-        {
-            { "PatientId", ev.PatientId },
-            { "UpdatedAt", ev.OccurredAt },
-            { "Status", OperationalVisibleStatuses.Cancelled }
-        };
-        await UpsertMonitorAsync(context, ev.PatientId, data, OperationalVisibleStatuses.Cancelled);
-    }
-
     public async Task Consume(ConsumeContext<PatientCalled> context)
     {
         var ev = context.Message;
@@ -169,18 +155,6 @@ public class WaitingRoomMonitorConsumer :
             { "Status", OperationalVisibleStatuses.Absent }
         };
         await UpsertMonitorAsync(context, ev.PatientId, data, OperationalVisibleStatuses.Absent);
-    }
-
-    public async Task Consume(ConsumeContext<PatientCancelledByAbsence> context)
-    {
-        var ev = context.Message;
-        var data = new Dictionary<string, object>
-        {
-            { "PatientId", ev.PatientId },
-            { "UpdatedAt", ev.OccurredAt },
-            { "Status", OperationalVisibleStatuses.Cancelled }
-        };
-        await UpsertMonitorAsync(context, ev.PatientId, data, OperationalVisibleStatuses.Cancelled);
     }
 
     private async Task UpsertMonitorAsync<TMessage>(ConsumeContext<TMessage> context, string projectionId, Dictionary<string, object> data, string monitorStatus)

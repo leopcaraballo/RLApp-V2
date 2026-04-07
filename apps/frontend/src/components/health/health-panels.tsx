@@ -2,6 +2,7 @@
 
 import { useQueries } from '@tanstack/react-query';
 import { StatusBadge } from '@/components/shared/status-badge';
+import { getHealthStatusDisplayName } from '@/lib/display-text';
 import { rlappApi } from '@/services/rlapp-api';
 import type { HealthStatusResponse } from '@/types/api';
 
@@ -40,7 +41,7 @@ function HealthCard({
           <h2>{description}</h2>
         </div>
         <StatusBadge tone={toneForHealth(data?.status)}>
-          {isLoading ? 'Loading' : data?.status ?? 'Unknown'}
+          {isLoading ? 'Cargando' : getHealthStatusDisplayName(data?.status)}
         </StatusBadge>
       </div>
 
@@ -48,8 +49,8 @@ function HealthCard({
         {data?.details?.map((detail) => (
           <div className="health-details__row" key={`${title}-${detail.key}`}>
             <strong>{detail.key}</strong>
-            <span>{detail.status}</span>
-            <small>{detail.description ?? 'No description provided by backend.'}</small>
+            <span>{getHealthStatusDisplayName(detail.status)}</span>
+            <small>{detail.description ?? 'El backend no entrego una descripcion.'}</small>
           </div>
         ))}
       </div>
@@ -70,19 +71,19 @@ export function HealthPanels() {
     <div className="grid grid--three">
       <HealthCard
         data={healthQuery.data}
-        description="Aggregated health checks"
+        description="Resumen general de salud"
         isLoading={healthQuery.isLoading}
         title="/health"
       />
       <HealthCard
         data={readyQuery.data}
-        description="Readiness dependencies"
+        description="Dependencias para iniciar"
         isLoading={readyQuery.isLoading}
         title="/health/ready"
       />
       <HealthCard
         data={liveQuery.data}
-        description="Process liveness"
+        description="Disponibilidad del proceso"
         isLoading={liveQuery.isLoading}
         title="/health/live"
       />

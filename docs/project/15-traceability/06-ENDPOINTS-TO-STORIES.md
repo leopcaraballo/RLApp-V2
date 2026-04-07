@@ -14,7 +14,6 @@
 | POST /api/cashier/validate-payment | Command | US-013 | S-004 |
 | POST /api/cashier/mark-payment-pending | Command | US-014 | S-004 |
 | POST /api/cashier/mark-absent | Command | US-008 | S-004 |
-| POST /api/cashier/cancel-payment | Command | US-015 | S-004 |
 | POST /api/medical/call-next | Command | US-007 | S-005 |
 | POST /api/medical/consulting-room/activate | Command | US-003 | S-002 |
 | POST /api/medical/consulting-room/deactivate | Command | US-004 | S-002 |

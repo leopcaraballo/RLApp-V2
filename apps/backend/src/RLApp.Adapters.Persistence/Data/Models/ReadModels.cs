@@ -30,26 +30,6 @@ public class QueueStateView
     public DateTime LastUpdatedAt { get; set; }
 }
 
-[Table("v_next_turn")]
-public class NextTurnView
-{
-    [Key]
-    public string QueueId { get; set; } = string.Empty;
-    public string TurnId { get; set; } = string.Empty;
-    public string PatientName { get; set; } = string.Empty;
-    public string TicketNumber { get; set; } = string.Empty;
-}
-
-[Table("v_recent_history")]
-public class RecentHistoryView
-{
-    [Key]
-    public string TurnId { get; set; } = string.Empty;
-    public DateTime StartTime { get; set; }
-    public DateTime? EndTime { get; set; }
-    public string Outcome { get; set; } = string.Empty;
-}
-
 [Table("v_operations_dashboard")]
 public class OperationsDashboardView
 {
@@ -82,8 +62,6 @@ public class ReadModelsConfiguration
     {
         modelBuilder.Entity<WaitingRoomMonitorView>().ToTable("v_waiting_room_monitor");
         modelBuilder.Entity<QueueStateView>().ToTable("v_queue_state");
-        modelBuilder.Entity<NextTurnView>().ToTable("v_next_turn");
-        modelBuilder.Entity<RecentHistoryView>().ToTable("v_recent_history");
         modelBuilder.Entity<OperationsDashboardView>().ToTable("v_operations_dashboard");
 
         modelBuilder.Entity<WaitingRoomMonitorView>(entity =>

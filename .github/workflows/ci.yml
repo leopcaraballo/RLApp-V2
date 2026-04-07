@@ -9,7 +9,6 @@ on:
       - main
       - develop
       - "feature/**"
-  pull_request:
 
 jobs:
   docs-traceability:
@@ -77,6 +76,7 @@ jobs:
             ".github/scripts/validate-conventional-commit.sh"
             ".github/scripts/generate-conventional-commit.sh"
             ".github/scripts/git-automation.sh"
+            ".github/scripts/validate-repo-hygiene.sh"
             ".githooks/commit-msg"
             ".githooks/pre-push"
             ".github/workflows/gitflow-governor.yml"
@@ -221,6 +221,18 @@ jobs:
             fi
           done
 
+  repo-hygiene:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Validate repository hygiene rules
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash .github/scripts/validate-repo-hygiene.sh
+
   lint-test-coverage:
     runs-on: ubuntu-latest
     steps:
@@ -274,3 +286,90 @@ jobs:
       - name: No executable project detected
         if: steps.detect.outputs.has_dotnet != 'true'
         run: echo "No .NET solution or project found. Lint, test and coverage are intentionally skipped in this template repository."
+
+  frontend-quality:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install frontend dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm --prefix apps/frontend ci
+
+      - name: Run frontend typecheck
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm --prefix apps/frontend run typecheck
+
+      - name: Run frontend lint
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm --prefix apps/frontend run lint
+
+      - name: Run frontend build
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm --prefix apps/frontend run build
+
+  frontend-role-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    needs:
+      - frontend-quality
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Validate Docker Compose config
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker compose config --quiet
+
+      - name: Start frontend validation stack
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker compose --profile frontend up --build -d --wait
+
+      - name: Run role-based frontend smoke
+        shell: bash
+        env:
+          RLAPP_SMOKE_BASE_URL: http://127.0.0.1:3000
+        run: |
+          set -euo pipefail
+          npm --prefix apps/frontend run smoke:roles
+
+      - name: Dump backend logs on failure
+        if: failure()
+        shell: bash
+        run: |
+          docker compose logs backend --tail=200 || true
+
+      - name: Dump frontend logs on failure
+        if: failure()
+        shell: bash
+        run: |
+          docker compose logs frontend --tail=200 || true
+
+      - name: Stop frontend validation stack
+        if: always()
+        shell: bash
+        run: |
+          docker compose --profile frontend down --remove-orphans || true

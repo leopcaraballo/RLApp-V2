@@ -62,7 +62,7 @@ public class ClaimNextPatientHandler : IRequestHandler<ClaimNextPatientCommand, 
                 return CommandResult<ClaimedPatientResultDto>.Failure("Queue not found", command.CorrelationId);
             }
 
-            var patientId = queue.GetNextPatient();
+            var patientId = queue.GetNextPatientForConsultation();
 
             queue.AssignPatientToRoom(patientId, command.RoomId, command.CorrelationId);
             await _queueRepository.UpdateAsync(queue, cancellationToken);
@@ -149,6 +149,7 @@ public class MedicalCallNextHandler : IRequestHandler<MedicalCallNextCommand, Co
     private readonly IAuditStore _auditStore;
     private readonly IPersistenceSession _persistenceSession;
     private readonly PatientTrajectoryCorrelationResolver _trajectoryCorrelationResolver;
+    private readonly PatientTrajectoryOrchestrator _trajectoryOrchestrator;
 
     public MedicalCallNextHandler(
         IWaitingQueueRepository queueRepository,
@@ -156,7 +157,8 @@ public class MedicalCallNextHandler : IRequestHandler<MedicalCallNextCommand, Co
         IEventPublisher eventPublisher,
         IAuditStore auditStore,
         IPersistenceSession persistenceSession,
-        PatientTrajectoryCorrelationResolver trajectoryCorrelationResolver)
+        PatientTrajectoryCorrelationResolver trajectoryCorrelationResolver,
+        PatientTrajectoryOrchestrator trajectoryOrchestrator)
     {
         _queueRepository = queueRepository;
         _roomRepository = roomRepository;
@@ -164,6 +166,7 @@ public class MedicalCallNextHandler : IRequestHandler<MedicalCallNextCommand, Co
         _auditStore = auditStore;
         _persistenceSession = persistenceSession;
         _trajectoryCorrelationResolver = trajectoryCorrelationResolver;
+        _trajectoryOrchestrator = trajectoryOrchestrator;
     }
 
     public async Task<CommandResult<PatientCallResultDto>> Handle(MedicalCallNextCommand command, CancellationToken cancellationToken)
@@ -192,7 +195,7 @@ public class MedicalCallNextHandler : IRequestHandler<MedicalCallNextCommand, Co
                 return CommandResult<PatientCallResultDto>.Failure("Queue not found", command.CorrelationId);
             }
 
-            var patientId = queue.GetNextPatient();
+            var patientId = queue.GetNextPatientForConsultation();
             queue.AssignPatientToRoom(patientId, command.RoomId, command.CorrelationId);
             var trajectoryId = await _trajectoryCorrelationResolver.ResolveRequiredAsync(patientId, targetQueueId, cancellationToken);
             queue.CallPatient(patientId, command.RoomId, command.CorrelationId, trajectoryId);
@@ -202,7 +205,10 @@ public class MedicalCallNextHandler : IRequestHandler<MedicalCallNextCommand, Co
             room.AssignPatient(patientId, command.UserId, command.CorrelationId);
             await _roomRepository.UpdateAsync(room, cancellationToken);
 
-            await _eventPublisher.PublishBatchAsync(queue.GetUnraisedEvents(), cancellationToken);
+            var queueEvents = queue.GetUnraisedEvents();
+            var calledEvent = queueEvents.OfType<RLApp.Domain.Events.PatientCalled>().Last();
+            await _trajectoryOrchestrator.TrackConsultationCalledAsync(targetQueueId, calledEvent, cancellationToken);
+            await _eventPublisher.PublishBatchAsync(queueEvents, cancellationToken);
             await _eventPublisher.PublishBatchAsync(room.GetUnraisedEvents(), cancellationToken);
 
             var turnId = TurnReferenceParser.Build(targetQueueId, patientId);
@@ -279,19 +285,22 @@ public class CallPatientToConsultationHandler : IRequestHandler<CallPatientComma
     private readonly IAuditStore _auditStore;
     private readonly IPersistenceSession _persistenceSession;
     private readonly PatientTrajectoryCorrelationResolver _trajectoryCorrelationResolver;
+    private readonly PatientTrajectoryOrchestrator _trajectoryOrchestrator;
 
     public CallPatientToConsultationHandler(
         IWaitingQueueRepository queueRepository,
         IEventPublisher eventPublisher,
         IAuditStore auditStore,
         IPersistenceSession persistenceSession,
-        PatientTrajectoryCorrelationResolver trajectoryCorrelationResolver)
+        PatientTrajectoryCorrelationResolver trajectoryCorrelationResolver,
+        PatientTrajectoryOrchestrator trajectoryOrchestrator)
     {
         _queueRepository = queueRepository;
         _eventPublisher = eventPublisher;
         _auditStore = auditStore;
         _persistenceSession = persistenceSession;
         _trajectoryCorrelationResolver = trajectoryCorrelationResolver;
+        _trajectoryOrchestrator = trajectoryOrchestrator;
     }
 
     public async Task<CommandResult> Handle(CallPatientCommand command, CancellationToken cancellationToken)
@@ -329,6 +338,8 @@ public class CallPatientToConsultationHandler : IRequestHandler<CallPatientComma
             await _queueRepository.UpdateAsync(queue, cancellationToken);
 
             var events = queue.GetUnraisedEvents();
+            var calledEvent = events.OfType<RLApp.Domain.Events.PatientCalled>().Last();
+            await _trajectoryOrchestrator.TrackConsultationCalledAsync(targetQueueId, calledEvent, cancellationToken);
             await _eventPublisher.PublishBatchAsync(events, cancellationToken);
             await HandlerPersistence.CommitSuccessAsync(
                 _persistenceSession,

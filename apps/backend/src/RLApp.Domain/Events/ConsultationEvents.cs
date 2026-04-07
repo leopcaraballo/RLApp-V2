@@ -169,21 +169,3 @@ public class PatientAbsentAtConsultation : DomainEvent
 
     protected PatientAbsentAtConsultation() { }
 }
-
-/// <summary>
-/// EV-014 PatientCancelledByAbsence
-/// Raised when a patient is cancelled due to absence.
-/// </summary>
-public class PatientCancelledByAbsence : DomainEvent
-{
-    [JsonPropertyName("patientId")]
-    public string PatientId { get; set; } = string.Empty;
-
-    public PatientCancelledByAbsence(string aggregateId, string patientId, string correlationId)
-        : base(nameof(PatientCancelledByAbsence), aggregateId, correlationId)
-    {
-        PatientId = patientId;
-    }
-
-    protected PatientCancelledByAbsence() { }
-}

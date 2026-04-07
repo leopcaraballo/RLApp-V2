@@ -10,6 +10,11 @@ import { OperationHistory } from '@/components/operations/operation-history';
 import { ContractAlert } from '@/components/shared/contract-alert';
 import { SectionIntro } from '@/components/shared/section-intro';
 import { StatusBadge } from '@/components/shared/status-badge';
+import {
+  formatDisplayDateTime,
+  getOperationalStatusDisplayName,
+  getRoleDisplayName,
+} from '@/lib/display-text';
 import { useOperationJournal } from '@/hooks/use-operation-journal';
 import { useOperationalRealtime } from '@/hooks/use-operational-realtime';
 import { ApiError } from '@/services/http-client';
@@ -24,12 +29,12 @@ import type {
 import type { SessionUser } from '@/types/session';
 
 const discoverySchema = z.object({
-  patientId: z.string().trim().min(1, 'Patient ID is required.'),
+  patientId: z.string().trim().min(1, 'El identificador del paciente es obligatorio.'),
   queueId: z.string().optional(),
 });
 
 const querySchema = z.object({
-  trajectoryId: z.string().trim().min(1, 'Trajectory ID is required.'),
+  trajectoryId: z.string().trim().min(1, 'El identificador de trayectoria es obligatorio.'),
 });
 
 const rebuildSchema = z.object({
@@ -64,7 +69,7 @@ function readError(error: unknown): { message: string; correlationId?: string } 
     return { message: error.message };
   }
 
-  return { message: 'Unexpected frontend error while querying patient trajectories.' };
+  return { message: 'Se produjo un error inesperado al consultar trayectorias.' };
 }
 
 function toneFromState(state: string): 'info' | 'success' | 'warning' | 'danger' {
@@ -83,14 +88,6 @@ function toneFromState(state: string): 'info' | 'success' | 'warning' | 'danger'
   return 'warning';
 }
 
-function formatTimestamp(value: string | null | undefined): string {
-  if (!value) {
-    return 'Pending';
-  }
-
-  return new Date(value).toLocaleString();
-}
-
 function TrajectoryDiscoveryResults({
   discovery,
   isLoading,
@@ -103,10 +100,10 @@ function TrajectoryDiscoveryResults({
   if (discovery.total === 0) {
     return (
       <div className="response-card" style={{ marginTop: '20px' }}>
-        <div className="response-card__title">No persisted trajectories found</div>
+        <div className="response-card__title">No se encontraron trayectorias persistidas</div>
         <p>
-          No candidate trajectories matched the current filters. Verify the patient has a
-          materialized trajectory or narrow the lookup with queueId.
+          Ninguna trayectoria coincide con los filtros actuales. Verifica si el paciente ya tiene
+          una trayectoria materializada o acota la busqueda con la cola.
         </p>
       </div>
     );
@@ -116,11 +113,11 @@ function TrajectoryDiscoveryResults({
     <section className="panel" style={{ marginTop: '20px' }}>
       <div className="panel__header">
         <div>
-          <div className="panel__eyebrow">Discovery candidates</div>
-          <h2>{discovery.total} candidate trajectory(s)</h2>
-          <p>Select the trajectory you want to inspect in full detail.</p>
+          <div className="panel__eyebrow">Coincidencias encontradas</div>
+          <h2>{discovery.total} trayectoria(s) candidata(s)</h2>
+          <p>Elige la trayectoria que quieres revisar en detalle.</p>
         </div>
-        <StatusBadge tone="info">Projection-backed</StatusBadge>
+        <StatusBadge tone="info">Persistida</StatusBadge>
       </div>
 
       <div className="history-list" style={{ marginTop: '20px' }}>
@@ -152,17 +149,19 @@ function TrajectoryDiscoveryItem({
         <div>
           <h3>{entry.trajectoryId}</h3>
           <p>
-            {entry.patientId} in {entry.queueId}
+            {entry.patientId} en {entry.queueId}
           </p>
         </div>
-        <StatusBadge tone={toneFromState(entry.currentState)}>{entry.currentState}</StatusBadge>
+        <StatusBadge tone={toneFromState(entry.currentState)}>
+          {getOperationalStatusDisplayName(entry.currentState)}
+        </StatusBadge>
       </div>
       <div className="history-item__meta">
-        <span>Opened: {formatTimestamp(entry.openedAt)}</span>
-        <span>Closed: {formatTimestamp(entry.closedAt)}</span>
+        <span>Apertura: {formatDisplayDateTime(entry.openedAt)}</span>
+        <span>Cierre: {formatDisplayDateTime(entry.closedAt)}</span>
       </div>
       <div className="history-item__meta" style={{ marginTop: '8px' }}>
-        <span>Last correlation: {entry.lastCorrelationId ?? 'Not captured yet'}</span>
+        <span>Ultima correlacion: {entry.lastCorrelationId ?? 'Aun no registrada'}</span>
       </div>
       <div className="form-actions" style={{ marginTop: '12px' }}>
         <button
@@ -173,7 +172,7 @@ function TrajectoryDiscoveryItem({
           }}
           type="button"
         >
-          {isLoading ? 'Loading...' : 'Load trajectory'}
+          {isLoading ? 'Cargando...' : 'Cargar trayectoria'}
         </button>
       </div>
     </article>
@@ -185,44 +184,46 @@ function TrajectorySummary({ trajectory }: { trajectory: PatientTrajectoryRespon
     <section className="panel">
       <div className="panel__header">
         <div>
-          <div className="panel__eyebrow">Persisted read model</div>
+          <div className="panel__eyebrow">Lectura persistida</div>
           <h2>{trajectory.trajectoryId}</h2>
           <p>
-            Projection state reconstructed from domain events and available to support workflows.
+            Estado longitudinal reconstruido desde eventos y disponible para consulta operativa.
           </p>
         </div>
         <StatusBadge tone={toneFromState(trajectory.currentState)}>
-          {trajectory.currentState}
+          {getOperationalStatusDisplayName(trajectory.currentState)}
         </StatusBadge>
       </div>
 
       <div className="grid grid--two" style={{ marginTop: '20px' }}>
         <div className="health-details">
           <div className="health-details__row">
-            <strong>Patient</strong>
+            <strong>Paciente</strong>
             <small>{trajectory.patientId}</small>
           </div>
           <div className="health-details__row">
-            <strong>Queue</strong>
+            <strong>Cola</strong>
             <small>{trajectory.queueId}</small>
           </div>
           <div className="health-details__row">
-            <strong>Opened at</strong>
-            <small>{formatTimestamp(trajectory.openedAt)}</small>
+            <strong>Apertura</strong>
+            <small>{formatDisplayDateTime(trajectory.openedAt)}</small>
           </div>
           <div className="health-details__row">
-            <strong>Closed at</strong>
-            <small>{formatTimestamp(trajectory.closedAt)}</small>
+            <strong>Cierre</strong>
+            <small>{formatDisplayDateTime(trajectory.closedAt)}</small>
           </div>
         </div>
 
         <div className="health-details">
           <div className="health-details__row">
-            <strong>Correlation IDs</strong>
-            <small>{trajectory.correlationIds.join(', ') || 'No correlation ids recorded.'}</small>
+            <strong>Correlaciones</strong>
+            <small>
+              {trajectory.correlationIds.join(', ') || 'No hay correlaciones registradas.'}
+            </small>
           </div>
           <div className="health-details__row">
-            <strong>Stages recorded</strong>
+            <strong>Hitos registrados</strong>
             <small>{trajectory.stages.length}</small>
           </div>
         </div>
@@ -239,11 +240,11 @@ function TrajectorySummary({ trajectory }: { trajectory: PatientTrajectoryRespon
               <StatusBadge tone="info">{stage.sourceEvent}</StatusBadge>
             </div>
             <p>
-              Source state: {stage.sourceState ?? 'State not captured by the originating event.'}
+              Estado de origen: {stage.sourceState ?? 'El evento original no capturo este dato.'}
             </p>
             <div className="history-item__meta">
-              <span>{formatTimestamp(stage.occurredAt)}</span>
-              <span>Correlation: {stage.correlationId}</span>
+              <span>{formatDisplayDateTime(stage.occurredAt)}</span>
+              <span>Correlacion: {stage.correlationId}</span>
             </div>
           </article>
         ))}
@@ -256,32 +257,32 @@ function RebuildResult({ result }: { result: RebuildPatientTrajectoriesResult })
   return (
     <div className="health-details">
       <div className="health-details__row">
-        <strong>Job</strong>
+        <strong>Trabajo</strong>
         <small>{result.jobId}</small>
       </div>
       <div className="health-details__row">
-        <strong>Status</strong>
+        <strong>Estado</strong>
         <small>{result.status}</small>
       </div>
       <div className="health-details__row">
-        <strong>Scope</strong>
+        <strong>Alcance</strong>
         <small>{result.scope}</small>
       </div>
       <div className="health-details__row">
-        <strong>Mode</strong>
-        <small>{result.dryRun ? 'Dry run' : 'Materialized rebuild'}</small>
+        <strong>Modo</strong>
+        <small>{result.dryRun ? 'Simulacion' : 'Reconstruccion materializada'}</small>
       </div>
       <div className="health-details__row">
-        <strong>Events processed</strong>
+        <strong>Eventos procesados</strong>
         <small>{result.eventsProcessed}</small>
       </div>
       <div className="health-details__row">
-        <strong>Trajectories processed</strong>
+        <strong>Trayectorias procesadas</strong>
         <small>{result.trajectoriesProcessed}</small>
       </div>
       <div className="health-details__row">
-        <strong>Accepted at</strong>
-        <small>{formatTimestamp(result.acceptedAt)}</small>
+        <strong>Aceptado</strong>
+        <small>{formatDisplayDateTime(result.acceptedAt)}</small>
       </div>
     </div>
   );
@@ -311,12 +312,12 @@ export function PatientTrajectoryConsole({ session }: { session: SessionUser }) 
       rlappApi.discoverPatientTrajectories(patientId.trim(), normalizeOptional(queueId)),
     onSuccess(result, variables) {
       pushEntry({
-        title: 'Discover patient trajectories',
+        title: 'Buscar trayectorias del paciente',
         status: 'success',
         message:
           result.total === 0
-            ? `No persisted trajectories found for patient ${variables.patientId}.`
-            : `${result.total} trajectory candidate(s) discovered for patient ${variables.patientId}.`,
+            ? `No se encontraron trayectorias para el paciente ${variables.patientId}.`
+            : `Se encontraron ${result.total} trayectoria(s) candidata(s) para el paciente ${variables.patientId}.`,
         correlationId: result.items[0]?.lastCorrelationId ?? undefined,
         timestamp: new Date().toISOString(),
       });
@@ -324,7 +325,7 @@ export function PatientTrajectoryConsole({ session }: { session: SessionUser }) 
     onError(error) {
       const failure = readError(error);
       pushEntry({
-        title: 'Discover patient trajectories',
+        title: 'Buscar trayectorias del paciente',
         status: 'error',
         message: failure.message,
         correlationId: failure.correlationId,
@@ -340,9 +341,9 @@ export function PatientTrajectoryConsole({ session }: { session: SessionUser }) 
       const lastCorrelationId = result.correlationIds[result.correlationIds.length - 1];
 
       pushEntry({
-        title: 'Query patient trajectory',
+        title: 'Consultar trayectoria del paciente',
         status: 'success',
-        message: `Trajectory ${result.trajectoryId} loaded in state ${result.currentState}.`,
+        message: `La trayectoria ${result.trajectoryId} se cargo en estado ${getOperationalStatusDisplayName(result.currentState)}.`,
         correlationId: lastCorrelationId,
         timestamp: new Date().toISOString(),
       });
@@ -350,7 +351,7 @@ export function PatientTrajectoryConsole({ session }: { session: SessionUser }) 
     onError(error) {
       const failure = readError(error);
       pushEntry({
-        title: 'Query patient trajectory',
+        title: 'Consultar trayectoria del paciente',
         status: 'error',
         message: failure.message,
         correlationId: failure.correlationId,
@@ -399,32 +400,32 @@ export function PatientTrajectoryConsole({ session }: { session: SessionUser }) 
   return (
     <>
       <SectionIntro
-        badge={session.role}
-        eyebrow="Support diagnostics"
-        title="Patient trajectory console"
-        description="Docker local now exposes trajectory discovery, audited trajectory query and controlled rebuild flow with silent resync when the active trajectory receives a realtime invalidation."
+        badge={getRoleDisplayName(session.role)}
+        eyebrow="Soporte y supervision"
+        title="Consola de trayectoria del paciente"
+        description="Busca trayectorias persistidas, revisa el historial longitudinal y, si tu rol lo permite, ejecuta reconstrucciones controladas."
       />
 
       <div className="grid grid--two">
         <section className="operation-card">
           <div className="operation-card__header">
             <div>
-              <div className="panel__eyebrow">Backend query</div>
-              <h2>Discover and inspect a persisted trajectory</h2>
+              <div className="panel__eyebrow">Consulta</div>
+              <h2>Buscar e inspeccionar una trayectoria persistida</h2>
               <p>
-                Start with patientId, optionally narrow by queueId, and load the exact event-derived
-                longitudinal projection when multiple histories exist.
+                Comienza con el paciente, acota por cola si hace falta y luego carga la trayectoria
+                correcta cuando existan varios historiales.
               </p>
             </div>
             <StatusBadge tone="info">GET</StatusBadge>
           </div>
 
           <ContractAlert
-            title="Contract caveats"
+            title="Puntos clave de la consulta"
             items={[
-              'Discovery requires patientId and can narrow by queueId when the operator knows the active context.',
-              'Full trajectory detail remains a second explicit query by trajectoryId after candidate selection.',
-              'Access is limited to Support and Supervisor roles.',
+              'La busqueda requiere patientId y puede filtrarse por queueId cuando conoces el contexto activo.',
+              'El detalle completo se consulta despues de elegir una trayectoria especifica.',
+              'El acceso esta restringido a Supervisor y Soporte.',
             ]}
           />
 
@@ -436,13 +437,13 @@ export function PatientTrajectoryConsole({ session }: { session: SessionUser }) 
             style={{ marginTop: '20px' }}
           >
             <label className="form-field" htmlFor="discoveryPatientId">
-              <span>Patient ID</span>
+              <span>Paciente</span>
               <input
                 id="discoveryPatientId"
                 placeholder="PAT-0045"
                 {...discoveryForm.register('patientId')}
               />
-              <small>Required. This lookup stays on the persisted read model.</small>
+              <small>Obligatorio. Esta busqueda se hace sobre la lectura persistida.</small>
               {discoveryForm.formState.errors.patientId ? (
                 <strong className="form-field__error">
                   {discoveryForm.formState.errors.patientId.message}
@@ -451,14 +452,15 @@ export function PatientTrajectoryConsole({ session }: { session: SessionUser }) 
             </label>
 
             <label className="form-field" htmlFor="discoveryQueueId">
-              <span>Queue ID</span>
+              <span>Cola</span>
               <input
                 id="discoveryQueueId"
                 placeholder="Q-2026-03-19-MAIN"
                 {...discoveryForm.register('queueId')}
               />
               <small>
-                Optional. Use it to narrow the lookup when the patient has multiple histories.
+                Opcional. Sirve para reducir resultados cuando el paciente tiene varias
+                trayectorias.
               </small>
             </label>
 
@@ -468,14 +470,14 @@ export function PatientTrajectoryConsole({ session }: { session: SessionUser }) 
                 disabled={discoveryMutation.isPending}
                 type="submit"
               >
-                {discoveryMutation.isPending ? 'Searching...' : 'Discover candidates'}
+                {discoveryMutation.isPending ? 'Buscando...' : 'Buscar trayectorias'}
               </button>
             </div>
           </form>
 
           {discoveryMutation.isError ? (
             <div className="response-card response-card--error" style={{ marginTop: '20px' }}>
-              <div className="response-card__title">Backend rejected the discovery</div>
+              <div className="response-card__title">No se pudo completar la busqueda</div>
               <p>{readError(discoveryMutation.error).message}</p>
             </div>
           ) : null}
@@ -495,17 +497,16 @@ export function PatientTrajectoryConsole({ session }: { session: SessionUser }) 
             })}
             style={{ marginTop: '24px' }}
           >
-            <div className="panel__eyebrow">Direct query</div>
+            <div className="panel__eyebrow">Consulta directa</div>
             <label className="form-field" htmlFor="trajectoryId">
-              <span>Trajectory ID</span>
+              <span>Trayectoria</span>
               <input
                 id="trajectoryId"
                 placeholder="TRJ-Q-2026-03-19-MAIN-PAT-0045-20260401091000000"
                 {...queryForm.register('trajectoryId')}
               />
               <small>
-                Use this when you already know the canonical trajectory identifier from support
-                evidence.
+                Usa este campo cuando ya conoces el identificador canonico de la trayectoria.
               </small>
               {queryForm.formState.errors.trajectoryId ? (
                 <strong className="form-field__error">
@@ -516,14 +517,14 @@ export function PatientTrajectoryConsole({ session }: { session: SessionUser }) 
 
             <div className="form-actions">
               <button className="primary-button" disabled={queryMutation.isPending} type="submit">
-                {queryMutation.isPending ? 'Loading...' : 'Fetch trajectory'}
+                {queryMutation.isPending ? 'Cargando...' : 'Consultar trayectoria'}
               </button>
             </div>
           </form>
 
           {queryMutation.isError ? (
             <div className="response-card response-card--error">
-              <div className="response-card__title">Backend rejected the query</div>
+              <div className="response-card__title">No se pudo completar la consulta</div>
               <p>{readError(queryMutation.error).message}</p>
             </div>
           ) : null}
@@ -531,8 +532,8 @@ export function PatientTrajectoryConsole({ session }: { session: SessionUser }) 
 
         {canRebuild ? (
           <ActionFormCard<RebuildFormValues, RebuildPatientTrajectoriesResult>
-            title="Controlled trajectory rebuild"
-            description="Replay historical events to validate or reconcile patient trajectory projections."
+            title="Reconstruccion controlada"
+            description="Reprocesa eventos historicos para validar o reconciliar las proyecciones de trayectoria."
             schema={rebuildSchema}
             defaultValues={{
               queueId: '',
@@ -542,36 +543,36 @@ export function PatientTrajectoryConsole({ session }: { session: SessionUser }) 
             fields={[
               {
                 name: 'queueId',
-                label: 'Queue ID',
+                label: 'Cola',
                 description:
-                  'Optional. Scope the rebuild to one queue when you do not want a global replay.',
+                  'Opcional. Limita la reconstruccion a una cola cuando no quieras un reproceso global.',
                 placeholder: 'Q-2026-03-19-MAIN',
               },
               {
                 name: 'patientId',
-                label: 'Patient ID',
-                description: 'Optional. Combine with queueId for the narrowest replay scope.',
+                label: 'Paciente',
+                description: 'Opcional. Combinalo con la cola para acotar al maximo el alcance.',
                 placeholder: 'PAT-0045',
               },
               {
                 name: 'dryRun',
-                label: 'Execution mode',
-                description: 'Dry run is the safe default before materializing rebuild changes.',
+                label: 'Modo de ejecucion',
+                description: 'La simulacion es la opcion segura antes de materializar cambios.',
                 kind: 'select',
                 options: [
-                  { label: 'Dry run only', value: 'true' },
-                  { label: 'Persist rebuild', value: 'false' },
+                  { label: 'Solo simulacion', value: 'true' },
+                  { label: 'Materializar reconstruccion', value: 'false' },
                 ],
               },
             ]}
-            submitLabel="Run rebuild"
+            submitLabel="Ejecutar reconstruccion"
             notes={[
-              'The proxy automatically injects correlation and idempotency headers.',
-              'Leave queueId and patientId empty to replay the full historical scope.',
+              'El proxy agrega automaticamente correlation e idempotency headers.',
+              'Deja queueId y patientId vacios si necesitas reconstruir todo el historico.',
             ]}
             contractWarnings={[
-              'Only Support can execute rebuild operations.',
-              'Use dryRun first; setting dryRun=false materializes projection changes.',
+              'Solo Soporte puede ejecutar reconstrucciones.',
+              'Usa simulacion primero; dryRun=false materializa cambios sobre proyecciones.',
             ]}
             onSubmit={(values) =>
               rlappApi.rebuildPatientTrajectories({
@@ -595,14 +596,14 @@ export function PatientTrajectoryConsole({ session }: { session: SessionUser }) 
           <section className="panel">
             <div className="panel__header">
               <div>
-                <div className="panel__eyebrow">Role boundary</div>
-                <h2>Controlled rebuild remains Support-only</h2>
+                <div className="panel__eyebrow">Acceso por rol</div>
+                <h2>La reconstruccion sigue siendo exclusiva de Soporte</h2>
                 <p>
-                  Supervisors can inspect persisted trajectories, but rebuild execution stays
-                  limited to the Support profile defined by the backend authorization policy.
+                  Supervisor puede consultar trayectorias persistidas, pero la reconstruccion queda
+                  reservada al perfil de Soporte.
                 </p>
               </div>
-              <StatusBadge tone="warning">Read-only</StatusBadge>
+              <StatusBadge tone="warning">Solo lectura</StatusBadge>
             </div>
           </section>
         )}
@@ -614,24 +615,24 @@ export function PatientTrajectoryConsole({ session }: { session: SessionUser }) 
         <section className="panel">
           <div className="panel__header">
             <div>
-              <div className="panel__eyebrow">Projection output</div>
-              <h2>No trajectory loaded yet</h2>
+              <div className="panel__eyebrow">Resultado longitudinal</div>
+              <h2>Aun no hay una trayectoria cargada</h2>
               <p>
-                Discover candidates by patientId or submit a known trajectoryId to inspect the
-                persisted longitudinal state.
+                Busca primero por paciente o usa un trajectoryId conocido para revisar el estado
+                persistido.
               </p>
             </div>
           </div>
           <div className="empty-state" style={{ marginTop: '20px' }}>
             <p>
-              This screen now stays backend-aligned by discovering candidate trajectoryIds first and
-              loading the full projection only after an explicit selection.
+              Esta pantalla carga primero coincidencias y luego el detalle completo, para evitar
+              errores cuando el paciente tiene varios historiales.
             </p>
           </div>
         </section>
       )}
 
-      <OperationHistory title="Trajectory journal" entries={entries} onClear={clearEntries} />
+      <OperationHistory title="Bitacora de trayectoria" entries={entries} onClear={clearEntries} />
     </>
   );
 }

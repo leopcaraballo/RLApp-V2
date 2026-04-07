@@ -182,6 +182,118 @@ public class LocalOutboxIntegrationTests : IClassFixture<LocalOutboxWebApplicati
     }
 
     [Fact]
+    public async Task ConsultationFlow_WhenExternalMessagingIsDisabled_ShouldStartFromValidatedCashierState()
+    {
+        const string queueId = "Q-LOCAL-OUTBOX-CONSULT-001";
+        const string patientId = "PAT-LOCAL-OUTBOX-CONSULT-001";
+        const string roomId = "ROOM-LOCAL-OUTBOX-001";
+        var turnId = $"{queueId}-{patientId}";
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+
+            var registerResult = await mediator.Send(new RegisterPatientArrivalCommand(
+                queueId,
+                patientId,
+                "Paciente Consulta Local",
+                null,
+                1,
+                null,
+                "CORR-local-consult-register",
+                "reception-1"));
+
+            registerResult.Success.Should().BeTrue();
+
+            var cashierCallResult = await mediator.Send(new CallNextAtCashierCommand(
+                queueId,
+                "CASH-01",
+                "CORR-local-consult-cashier-call",
+                "cashier-1"));
+
+            cashierCallResult.Success.Should().BeTrue();
+            cashierCallResult.Data.PatientId.Should().Be(patientId);
+
+            await WaitForMonitorStatusAsync(turnId, OperationalVisibleStatuses.AtCashier);
+
+            var validateResult = await mediator.Send(new ValidatePaymentCommand(
+                queueId,
+                patientId,
+                42m,
+                turnId,
+                "PAY-LOCAL-CONSULT-001",
+                "CORR-local-consult-validated",
+                "cashier-1"));
+
+            validateResult.Success.Should().BeTrue();
+
+            await WaitForMonitorStatusAsync(turnId, OperationalVisibleStatuses.WaitingForConsultation);
+
+            var activateRoomResult = await mediator.Send(new ActivateConsultingRoomCommand(
+                roomId,
+                "Consultorio Local 1",
+                "CORR-local-consult-room-activate",
+                "supervisor-1"));
+
+            activateRoomResult.Success.Should().BeTrue();
+
+            var medicalCallResult = await mediator.Send(new MedicalCallNextCommand(
+                queueId,
+                roomId,
+                "CORR-local-consult-call-next",
+                "doctor-1"));
+
+            medicalCallResult.Success.Should().BeTrue();
+            medicalCallResult.Data.PatientId.Should().Be(patientId);
+            medicalCallResult.Data.CurrentState.Should().Be(OperationalVisibleStatuses.Called);
+
+            await WaitForMonitorStatusAsync(turnId, OperationalVisibleStatuses.Called);
+
+            var startResult = await mediator.Send(new StartConsultationCommand(
+                turnId,
+                roomId,
+                "CORR-local-consult-start",
+                "doctor-1"));
+
+            startResult.Success.Should().BeTrue();
+        }
+
+        await WaitForMonitorStatusAsync(turnId, OperationalVisibleStatuses.InConsultation);
+
+        PatientTrajectoryView? trajectoryProjection = null;
+
+        for (var attempt = 0; attempt < 20; attempt++)
+        {
+            await using var verificationScope = _factory.Services.CreateAsyncScope();
+            var db = verificationScope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+            trajectoryProjection = await db.PatientTrajectories
+                .AsNoTracking()
+                .SingleOrDefaultAsync(item => item.PatientId == patientId && item.QueueId == queueId);
+
+            if (trajectoryProjection is not null)
+            {
+                var stages = JsonSerializer.Deserialize<List<TrajectoryStageRecord>>(trajectoryProjection.StagesJson);
+                if (stages is not null
+                    && stages.Any(stage => stage.SourceEvent == "PatientCalled" && stage.SourceState == "LlamadoConsulta")
+                    && stages.Any(stage => stage.SourceEvent == "PatientClaimedForAttention" && stage.SourceState == "EnConsulta"))
+                {
+                    break;
+                }
+            }
+
+            await Task.Delay(250);
+        }
+
+        trajectoryProjection.Should().NotBeNull();
+        var trajectoryStages = JsonSerializer.Deserialize<List<TrajectoryStageRecord>>(trajectoryProjection!.StagesJson);
+        trajectoryStages.Should().NotBeNull();
+        trajectoryStages!.Should().Contain(stage => stage.SourceEvent == "PatientPaymentValidated" && stage.SourceState == "EnEsperaConsulta");
+        trajectoryStages.Should().Contain(stage => stage.SourceEvent == "PatientCalled" && stage.SourceState == "LlamadoConsulta");
+        trajectoryStages.Should().Contain(stage => stage.SourceEvent == "PatientClaimedForAttention" && stage.SourceState == "EnConsulta");
+    }
+
+    [Fact]
     public async Task CashierAbsence_WhenExternalMessagingIsDisabled_ShouldMaterializeAbsentMonitorStatus()
     {
         const string queueId = "Q-LOCAL-OUTBOX-CASHIER-ABSENT-001";
@@ -357,5 +469,12 @@ public class LocalOutboxIntegrationTests : IClassFixture<LocalOutboxWebApplicati
 
         projection.Should().NotBeNull();
         projection!.Status.Should().Be(expectedStatus);
+    }
+
+    private sealed class TrajectoryStageRecord
+    {
+        public string Stage { get; set; } = string.Empty;
+        public string SourceEvent { get; set; } = string.Empty;
+        public string? SourceState { get; set; }
     }
 }

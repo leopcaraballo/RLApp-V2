@@ -186,28 +186,6 @@ namespace RLApp.Adapters.Persistence.Data.Migrations
                     b.ToTable("EventStore", (string)null);
                 });
 
-            modelBuilder.Entity("RLApp.Adapters.Persistence.Data.Models.NextTurnView", b =>
-                {
-                    b.Property<string>("QueueId")
-                        .HasColumnType("text");
-
-                    b.Property<string>("PatientName")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("TicketNumber")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("TurnId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("QueueId");
-
-                    b.ToTable("v_next_turn", (string)null);
-                });
-
             modelBuilder.Entity("RLApp.Adapters.Persistence.Data.Models.OperationsDashboardView", b =>
                 {
                     b.Property<string>("Id")
@@ -390,26 +368,6 @@ namespace RLApp.Adapters.Persistence.Data.Migrations
                     b.HasKey("QueueId");
 
                     b.ToTable("v_queue_state", (string)null);
-                });
-
-            modelBuilder.Entity("RLApp.Adapters.Persistence.Data.Models.RecentHistoryView", b =>
-                {
-                    b.Property<string>("TurnId")
-                        .HasColumnType("text");
-
-                    b.Property<DateTime?>("EndTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Outcome")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("StartTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("TurnId");
-
-                    b.ToTable("v_recent_history", (string)null);
                 });
 
             modelBuilder.Entity("RLApp.Adapters.Persistence.Data.Models.StaffUserRecord", b =>

@@ -37,7 +37,7 @@ Definir display publico, monitor de visibilidad, contrato sanitizado, latencia o
 
 - Consume estados y eventos generados por `S-003`, `S-004` y `S-005`.
 - Refleja principalmente `ST-001`, `ST-002`, `ST-005`, `ST-006`, `ST-007`, `ST-008`, `ST-009` segun proyeccion visible.
-- Eventos fuente: `EV-002`, `EV-003`, `EV-004`, `EV-010`, `EV-011`, `EV-012`, `EV-013`, `EV-014`.
+- Eventos fuente: `EV-002`, `EV-003`, `EV-004`, `EV-010`, `EV-011`, `EV-012`, `EV-013`.
 
 ## Validation criteria
 

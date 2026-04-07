@@ -4,12 +4,13 @@ import { z } from 'zod';
 import { ActionFormCard } from '@/components/operations/action-form-card';
 import { OperationHistory } from '@/components/operations/operation-history';
 import { SectionIntro } from '@/components/shared/section-intro';
+import { getRoleDisplayName } from '@/lib/display-text';
 import { useOperationJournal } from '@/hooks/use-operation-journal';
 import { rlappApi } from '@/services/rlapp-api';
 
 const receptionSchema = z.object({
   queueId: z.string().default('MAIN-QUEUE-001'),
-  patientId: z.string().min(1, 'Patient ID (NUIP) is required.'),
+  patientId: z.string().min(1, 'El documento o NUIP del paciente es obligatorio.'),
   patientName: z.string().optional(),
   appointmentReference: z.string().default('AUTO-APT-' + new Date().getTime()),
   priority: z.string().default('Standard'),
@@ -22,17 +23,17 @@ export function ReceptionConsole() {
   return (
     <>
       <SectionIntro
-        badge="Receptionist · Supervisor"
-        description="Reception currently exposes a single command alias for check-in. The backend returns a generic command result without queue or turn snapshots."
-        eyebrow="Reception operations"
-        title="Register patient arrival"
+        badge={`${getRoleDisplayName('Receptionist')} · ${getRoleDisplayName('Supervisor')}`}
+        description="Usa esta vista para registrar la llegada del paciente. La respuesta confirma la accion, pero no devuelve una foto completa de la cola ni del turno."
+        eyebrow="Recepcion"
+        title="Registrar llegada del paciente"
       />
 
       <div className="grid grid--two">
         <ActionFormCard
           contractWarnings={[
-            'appointmentReference, priority and notes are accepted but ignored by the backend handler.',
-            'The response does not return queueId or turnId; it only acknowledges the command.',
+            'appointmentReference, priority y notes se aceptan, pero hoy el backend no los usa.',
+            'La respuesta solo confirma la accion; no incluye queueId ni turnId materializados.',
           ]}
           defaultValues={{
             queueId: 'MAIN-QUEUE-001',
@@ -44,22 +45,32 @@ export function ReceptionConsole() {
           }}
           description="POST /api/reception/register"
           fields={[
-            { name: 'patientId', label: 'Patient ID (NUIP)', placeholder: 'Enter NUIP here...' },
+            {
+              name: 'patientId',
+              label: 'Documento o NUIP',
+              placeholder: 'Escribe el NUIP aqui...',
+            },
             {
               name: 'patientName',
-              label: 'Patient name',
-              description: 'Optional.',
+              label: 'Nombre del paciente',
+              description: 'Opcional.',
               placeholder: 'Ana Perez',
             },
           ]}
-          onSettled={(entry) => journal.pushEntry({ ...entry, timestamp: new Date().toISOString() })}
+          onSettled={(entry) =>
+            journal.pushEntry({ ...entry, timestamp: new Date().toISOString() })
+          }
           onSubmit={(values) => rlappApi.registerReceptionArrival(values)}
           schema={receptionSchema}
-          submitLabel="Register arrival"
-          title="Reception register"
+          submitLabel="Registrar llegada"
+          title="Ingreso por recepcion"
         />
 
-        <OperationHistory entries={journal.entries} onClear={journal.clearEntries} title="Reception journal" />
+        <OperationHistory
+          entries={journal.entries}
+          onClear={journal.clearEntries}
+          title="Bitacora de recepcion"
+        />
       </div>
     </>
   );

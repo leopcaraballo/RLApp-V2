@@ -27,6 +27,17 @@ export default [
       ...tsPlugin.configs.recommended.rules,
       ...nextPlugin.configs['core-web-vitals'].rules,
       '@typescript-eslint/no-explicit-any': 'error',
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "FunctionDeclaration[id.name='realtimeTone']",
+          message: 'Use getRealtimeTone from @/lib/realtime-status.',
+        },
+        {
+          selector: "FunctionDeclaration[id.name='realtimeLabel']",
+          message: 'Use getRealtimeLabel from @/lib/realtime-status.',
+        },
+      ],
     },
   },
 ];

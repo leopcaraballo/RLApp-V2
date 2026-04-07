@@ -24,9 +24,7 @@ public class SignalRNotificationConsumer :
     IConsumer<PatientPaymentValidated>,
     IConsumer<PatientPaymentPending>,
     IConsumer<PatientAbsentAtCashier>,
-    IConsumer<PatientAbsentAtConsultation>,
-    IConsumer<PatientCancelledByPayment>,
-    IConsumer<PatientCancelledByAbsence>
+    IConsumer<PatientAbsentAtConsultation>
 {
     private readonly IHubContext<NotificationHub> _hubContext;
     private readonly RealtimeChannelStatus _realtimeChannelStatus;
@@ -210,42 +208,6 @@ public class SignalRNotificationConsumer :
         };
 
         await PublishScopedAsync(context, "PatientAbsentAtConsultation", payload, ev.AggregateId, ev.TrajectoryId);
-    }
-
-    public async Task Consume(ConsumeContext<PatientCancelledByPayment> context)
-    {
-        var ev = context.Message;
-        var payload = new
-        {
-            ev.EventType,
-            ev.AggregateId,
-            ev.CorrelationId,
-            ev.TrajectoryId,
-            ev.OccurredAt,
-            ev.PatientId,
-            QueueId = ev.AggregateId,
-            Status = OperationalVisibleStatuses.Cancelled
-        };
-
-        await PublishScopedAsync(context, "PatientCancelledByPayment", payload, ev.AggregateId, ev.TrajectoryId);
-    }
-
-    public async Task Consume(ConsumeContext<PatientCancelledByAbsence> context)
-    {
-        var ev = context.Message;
-        var payload = new
-        {
-            ev.EventType,
-            ev.AggregateId,
-            ev.CorrelationId,
-            ev.TrajectoryId,
-            ev.OccurredAt,
-            ev.PatientId,
-            QueueId = ev.AggregateId,
-            Status = OperationalVisibleStatuses.Cancelled
-        };
-
-        await PublishScopedAsync(context, "PatientCancelledByAbsence", payload, ev.AggregateId, ev.TrajectoryId);
     }
 
     private async Task PublishScopedAsync<TEvent>(

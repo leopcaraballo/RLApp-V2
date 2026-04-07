@@ -5,7 +5,6 @@
 - ST-001 EnEsperaTaquilla
 - ST-002 EnTaquilla
 - ST-003 PagoPendiente
-- ST-004 CanceladoPorPago
 - ST-005 EnEsperaConsulta
 - ST-006 LlamadoConsulta
 - ST-007 EnConsulta

@@ -7,8 +7,8 @@ Definir un plan realista y ejecutable para validar el flujo operativo completo d
 ## Traceability
 
 - Specs: `S-002`, `S-003`, `S-004`, `S-005`, `S-007`, `S-009`, `S-011`, `S-013`
-- Use cases: `UC-003`, `UC-004`, `UC-005`, `UC-006`, `UC-007`, `UC-008`, `UC-009`, `UC-010`, `UC-011`, `UC-012`, `UC-013`, `UC-014`, `UC-015`, `UC-018`, `UC-021`, `UC-022`
-- User stories: `US-003`, `US-004`, `US-005`, `US-006`, `US-007`, `US-008`, `US-009`, `US-010`, `US-011`, `US-012`, `US-013`, `US-014`, `US-015`, `US-018`, `US-021`
+- Use cases: `UC-003`, `UC-004`, `UC-005`, `UC-006`, `UC-007`, `UC-008`, `UC-009`, `UC-010`, `UC-011`, `UC-012`, `UC-013`, `UC-014`, `UC-015`, `UC-018`, `UC-021`
+- User stories: `US-003`, `US-004`, `US-005`, `US-006`, `US-007`, `US-008`, `US-009`, `US-010`, `US-011`, `US-012`, `US-013`, `US-014`, `US-018`, `US-021`
 - BDD base: `BDD-002`, `BDD-003`, `BDD-004`, `BDD-005`, `BDD-010`, `BDD-012`
 - TDD base: `TDD-S-002`, `TDD-S-003`, `TDD-S-004`, `TDD-S-005`, `TDD-S-011`, `TDD-S-013`, `TDD-S-009`
 - Seguridad y resiliencia: `SEC-TEST-001`, `SEC-TEST-003`, `RES-TEST-002`, `RES-TEST-004`
@@ -16,7 +16,7 @@ Definir un plan realista y ejecutable para validar el flujo operativo completo d
 ## Validation objective
 
 - validar todas las transiciones documentadas de `ST-001` a `ST-012`
-- validar todos los cierres de paciente hoy soportados por contrato: finalizado, cancelado por pago y cancelado por ausencia
+- validar todos los cierres de paciente hoy soportados por contrato: finalizado y cancelado por ausencia
 - validar que recepcion, caja, doctor, supervisor y support solo puedan ejecutar lo permitido por rol
 - validar que monitor, dashboard y trayectoria converjan sobre snapshots persistidos sin leer replay en hot path
 - validar que la sesion web y el stream realtime same-origin no expongan `accessToken` al navegador
@@ -106,9 +106,9 @@ node .tmp/rlapp-patient-simulation.mjs
 - `CASH-01` call next nominal (`S-004`, `BDD-004`): `EnEsperaTaquilla -> EnTaquilla` para el siguiente turno elegible.
 - `CASH-02` validate payment nominal (`S-004`, `BDD-004`): `EnTaquilla -> EnEsperaConsulta` y el turno deja de contar como espera de caja.
 - `CASH-03` pending then validate (`S-004`): `EnTaquilla -> PagoPendiente -> EnEsperaConsulta` manteniendo trazabilidad e intentos auditables.
-- `CASH-04` max payment attempts (`S-004`, `05-domain/11-BUSINESS-RULES.md`): al tercer intento se ejecuta `cancel-payment` y el turno termina en `CanceladoPorPago`.
+- `CASH-04` pending remains operational (`S-004`, `05-domain/11-BUSINESS-RULES.md`): `PagoPendiente` no dispara cancelacion automatica y solo puede avanzar a `EnEsperaConsulta` o `CanceladoPorAusencia` mediante contratos soportados.
 - `CASH-05` invalid current turn (`S-004`): no se puede validar pago para un turno distinto al actual en caja.
-- `CASH-06` terminal turn rejection (`S-004`): un turno cancelado por pago no puede reingresar a caja ni volver a consulta.
+- `CASH-06` terminal absence rejection (`S-004`): un turno cancelado por ausencia en caja no puede reingresar a caja ni volver a consulta.
 - `CASH-07` cashier authorization (`S-004`, `S-009`): `401` sin autenticacion y `403` con rol distinto a caja.
 - `CASH-08` cashier absence terminal (`S-004`, `BDD-004`): `EnTaquilla` o `PagoPendiente` terminan en `CanceladoPorAusencia`, el monitor lo materializa como `Absent` y el turno sale del flujo de caja sin consumir nuevos intentos de pago.
 
@@ -130,15 +130,15 @@ node .tmp/rlapp-patient-simulation.mjs
 
 - `PAT-01` full nominal patient (`S-003`, `S-004`, `S-005`, `S-011`): check-in, caja validada, consulta finalizada y trayectoria cerrada en `TrayectoriaFinalizada`.
 - `PAT-02` patient with payment retry (`S-004`, `S-011`): pago pendiente una o dos veces antes de completar consulta.
-- `PAT-03` patient cancelled by payment (`S-004`, `S-011`): maximos intentos de pago disparan `CanceladoPorPago` y `TrayectoriaCancelada`.
+- `PAT-03` patient cancelled by cashier absence (`S-004`, `S-011`): una ausencia en caja dispara `CanceladoPorAusencia` y `TrayectoriaCancelada`.
 - `PAT-04` patient cancelled by consultation absence (`S-005`, `S-011`): llamado a consulta sin comparecencia termina en `CanceladoPorAusencia` y trayectoria cancelada.
 - `PAT-05` no duplicate active trajectory (`S-011`, `BDD-010`): un mismo paciente no puede sostener dos trayectorias activas en la misma `QueueId`.
 - `PAT-06` closed trajectory rejects new stages (`S-011`): una trayectoria finalizada o cancelada no admite nuevos hitos mutantes.
-- `PAT-07` no unsupported cancellation flow (`S-011`, `S-013`): no se debe validar una cancelacion de paciente fuera de contratos canonicos de pago o ausencia.
+- `PAT-07` no unsupported cancellation flow (`S-011`, `S-013`): no se debe validar una cancelacion de paciente fuera del contrato canonico de ausencia operativa.
 
 ### Synchronized visibility, trajectory and audit
 
-- `VIS-01` monitor taxonomy (`S-013`, `BDD-012`): `entries[*].status` y `statusBreakdown` usan exactamente `Waiting`, `AtCashier`, `PaymentPending`, `WaitingForConsultation`, `Called`, `InConsultation`, `Completed`, `Absent`, `Cancelled`.
+- `VIS-01` monitor taxonomy (`S-013`, `BDD-012`): `entries[*].status` y `statusBreakdown` usan exactamente `Waiting`, `AtCashier`, `PaymentPending`, `WaitingForConsultation`, `Called`, `InConsultation`, `Completed`, `Absent`.
 - `VIS-02` waiting count semantics (`S-013`, `TDD-S-013`): `waitingCount` y `currentWaitingCount` solo suman `Waiting` y `WaitingForConsultation`.
 - `VIS-03` active consultation rooms semantics (`S-013`): `activeConsultationRooms` y `activeRooms` solo reflejan entradas visibles en `InConsultation`.
 - `VIS-04` dashboard from projections (`S-007`, `S-013`): el dashboard no usa replay en hot path y expone `projectionLagSeconds`.
@@ -164,7 +164,7 @@ node .tmp/rlapp-patient-simulation.mjs
 - `REL-03` replay without side effects (`S-011`, `S-008`): el rebuild no reemite mensajes externos ni modifica eventos legacy.
 - `REL-04` projection update after messaging (`S-008`, `S-013`): eventos publicados terminan reflejados en monitor, dashboard y trayectoria.
 - `REL-05` deterministic docker smoke (`S-009`): flujo nominal de 1 a 10 pacientes con compose saludable y endpoints `200`.
-- `REL-06` mixed-flow volume run (`S-013`, `RES-TEST-004`): corrida de 100 pacientes con mezcla de finalizados y cancelados, 10 consultorios habilitados y 5 deshabilitados a mitad de la prueba.
+- `REL-06` mixed-flow volume run (`S-013`, `RES-TEST-004`): corrida de 100 pacientes con mezcla de finalizados y ausencias terminales, 10 consultorios habilitados y 5 deshabilitados a mitad de la prueba.
 - `REL-07` post-load cleanliness (`S-013`): despues de la corrida no quedan pacientes no terminales en monitor ni servicios degradados en compose.
 
 ## Blocking gaps to resolve before claiming perfect validation

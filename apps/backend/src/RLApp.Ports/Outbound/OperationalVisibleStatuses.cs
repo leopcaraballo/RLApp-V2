@@ -11,7 +11,6 @@ public static class OperationalVisibleStatuses
     public const string InConsultation = "InConsultation";
     public const string Completed = "Completed";
     public const string Absent = "Absent";
-    public const string Cancelled = "Cancelled";
 
     private static readonly HashSet<string> WaitingBuckets = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -28,7 +27,6 @@ public static class OperationalVisibleStatuses
     {
         Completed,
         Absent,
-        Cancelled,
     };
 
     private static readonly Dictionary<string, int> ProgressRanks = new(StringComparer.OrdinalIgnoreCase)
@@ -42,7 +40,6 @@ public static class OperationalVisibleStatuses
         [InConsultation] = 50,
         [Completed] = 60,
         [Absent] = 60,
-        [Cancelled] = 60,
     };
 
     public static bool CountsAsWaiting(string? status)

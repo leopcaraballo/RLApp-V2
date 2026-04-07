@@ -17,8 +17,6 @@ public class AppDbContext : DbContext
     // Read Models
     public DbSet<WaitingRoomMonitorView> WaitingRoomMonitors { get; set; } = null!;
     public DbSet<QueueStateView> QueueStates { get; set; } = null!;
-    public DbSet<NextTurnView> NextTurns { get; set; } = null!;
-    public DbSet<RecentHistoryView> RecentHistories { get; set; } = null!;
     public DbSet<OperationsDashboardView> OperationsDashboards { get; set; } = null!;
     public DbSet<PatientTrajectoryView> PatientTrajectories { get; set; } = null!;
 

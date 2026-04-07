@@ -53,7 +53,6 @@
 - `EnEsperaTaquilla`
 - `EnTaquilla`
 - `PagoPendiente`
-- `CanceladoPorPago`
 - `EnEsperaConsulta`
 - `LlamadoConsulta`
 - `EnConsulta`

@@ -16,7 +16,7 @@ async function proxyRequest(request: NextRequest, path: string[]) {
 
   if (!isPublicRoute && !session) {
     return NextResponse.json(
-      { message: 'Authentication is required to call backend operations.' },
+      { message: 'Debes iniciar sesion para ejecutar operaciones del backend.' },
       { status: 401 }
     );
   }
@@ -26,10 +26,7 @@ async function proxyRequest(request: NextRequest, path: string[]) {
   );
 
   const headers = new Headers();
-  headers.set(
-    'X-Correlation-Id',
-    request.headers.get('X-Correlation-Id') ?? crypto.randomUUID()
-  );
+  headers.set('X-Correlation-Id', request.headers.get('X-Correlation-Id') ?? crypto.randomUUID());
 
   if (request.method !== 'GET') {
     headers.set(
@@ -79,10 +76,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ pat
   return proxyRequest(request, path);
 }
 
-export async function POST(
-  request: NextRequest,
-  context: { params: Promise<{ path: string[] }> }
-) {
+export async function POST(request: NextRequest, context: { params: Promise<{ path: string[] }> }) {
   const { path } = await context.params;
   return proxyRequest(request, path);
 }

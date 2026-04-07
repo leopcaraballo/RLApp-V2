@@ -123,24 +123,6 @@ public sealed class LocalOutboxMessageDispatcher : IOutboxMessageDispatcher
                 }, cancellationToken);
                 break;
 
-            case PatientCancelledByPayment ev:
-                await _projectionStore.UpsertAsync(ev.PatientId, "WaitingRoomMonitor", new Dictionary<string, object>
-                {
-                    { "PatientId", ev.PatientId },
-                    { "UpdatedAt", ev.OccurredAt },
-                    { "Status", OperationalVisibleStatuses.Cancelled }
-                }, cancellationToken);
-                break;
-
-            case PatientCancelledByAbsence ev:
-                await _projectionStore.UpsertAsync(ev.PatientId, "WaitingRoomMonitor", new Dictionary<string, object>
-                {
-                    { "PatientId", ev.PatientId },
-                    { "UpdatedAt", ev.OccurredAt },
-                    { "Status", OperationalVisibleStatuses.Cancelled }
-                }, cancellationToken);
-                break;
-
             case PatientTrajectoryOpened ev:
                 await _trajectoryProjectionWriter.RefreshAsync(ev.AggregateId, cancellationToken);
                 break;

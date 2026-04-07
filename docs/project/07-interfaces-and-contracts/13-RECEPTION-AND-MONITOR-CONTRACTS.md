@@ -39,7 +39,6 @@ Los snapshots de monitor y sus agregados usan un vocabulario visible estable par
 - `InConsultation`: turno actualmente materializado como atencion activa en consulta.
 - `Completed`: turno finalizado y retenido en monitor segun la politica visible vigente.
 - `Absent`: turno cancelado por ausencia visible.
-- `Cancelled`: turno cancelado por politica de pago visible.
 
 ### Visible status mapping rules
 
@@ -51,7 +50,6 @@ Los snapshots de monitor y sus agregados usan un vocabulario visible estable par
 - `ST-007 EnConsulta` o su materializacion operacional equivalente se expone como `InConsultation`.
 - `ST-008 Finalizado` se expone como `Completed`.
 - `ST-009 CanceladoPorAusencia` se expone como `Absent`.
-- `ST-004 CanceladoPorPago` se expone como `Cancelled`.
 
 ### MonitorStatusCount schema
 
