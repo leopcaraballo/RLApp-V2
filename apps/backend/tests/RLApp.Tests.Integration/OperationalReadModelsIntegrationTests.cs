@@ -38,9 +38,11 @@ public class OperationalReadModelsIntegrationTests : IClassFixture<CustomWebAppl
 
         var payload = await response.Content.ReadFromJsonAsync<JsonElement>();
         payload.GetProperty("queueId").GetString().Should().Be(queueId);
-        payload.GetProperty("waitingCount").GetInt32().Should().Be(1);
-        payload.GetProperty("entries").GetArrayLength().Should().BeGreaterThanOrEqualTo(2);
+        payload.GetProperty("waitingCount").GetInt32().Should().Be(2);
+        payload.GetProperty("entries").GetArrayLength().Should().BeGreaterThanOrEqualTo(5);
         payload.GetProperty("statusBreakdown").EnumerateArray().Any(item => item.GetProperty("status").GetString() == "Waiting").Should().BeTrue();
+        payload.GetProperty("statusBreakdown").EnumerateArray().Any(item => item.GetProperty("status").GetString() == "AtCashier").Should().BeTrue();
+        payload.GetProperty("statusBreakdown").EnumerateArray().Any(item => item.GetProperty("status").GetString() == "WaitingForConsultation").Should().BeTrue();
     }
 
     [Fact]
@@ -58,10 +60,12 @@ public class OperationalReadModelsIntegrationTests : IClassFixture<CustomWebAppl
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var payload = await response.Content.ReadFromJsonAsync<JsonElement>();
+        payload.GetProperty("currentWaitingCount").GetInt32().Should().Be(2);
         payload.GetProperty("totalPatientsToday").GetInt32().Should().BeGreaterThanOrEqualTo(2);
         payload.GetProperty("activeRooms").GetInt32().Should().BeGreaterThanOrEqualTo(1);
         payload.GetProperty("queueSnapshots").GetArrayLength().Should().BeGreaterThanOrEqualTo(1);
         payload.GetProperty("statusBreakdown").EnumerateArray().Any(item => item.GetProperty("status").GetString() == "InConsultation").Should().BeTrue();
+        payload.GetProperty("statusBreakdown").EnumerateArray().Any(item => item.GetProperty("status").GetString() == "AtCashier").Should().BeTrue();
     }
 
     [Fact]
@@ -97,7 +101,7 @@ public class OperationalReadModelsIntegrationTests : IClassFixture<CustomWebAppl
         db.QueueStates.Add(new QueueStateView
         {
             QueueId = queueId,
-            TotalPending = 1,
+            TotalPending = 2,
             AverageWaitTimeMinutes = 12.5,
             LastUpdatedAt = DateTime.UtcNow.AddSeconds(-5)
         });
@@ -114,6 +118,30 @@ public class OperationalReadModelsIntegrationTests : IClassFixture<CustomWebAppl
                 RoomAssigned = null,
                 CheckedInAt = DateTime.UtcNow.AddMinutes(-20),
                 UpdatedAt = DateTime.UtcNow.AddSeconds(-10)
+            },
+            new WaitingRoomMonitorView
+            {
+                TurnId = $"{queueId}-PAT-CASHIER",
+                QueueId = queueId,
+                PatientId = "PAT-CASHIER",
+                PatientName = "Paciente Caja",
+                TicketNumber = "R-001A",
+                Status = "AtCashier",
+                RoomAssigned = null,
+                CheckedInAt = DateTime.UtcNow.AddMinutes(-18),
+                UpdatedAt = DateTime.UtcNow.AddSeconds(-9)
+            },
+            new WaitingRoomMonitorView
+            {
+                TurnId = $"{queueId}-PAT-WAITING-CONSULTATION",
+                QueueId = queueId,
+                PatientId = "PAT-WAITING-CONSULTATION",
+                PatientName = "Paciente Espera Consulta",
+                TicketNumber = "R-001B",
+                Status = "WaitingForConsultation",
+                RoomAssigned = null,
+                CheckedInAt = DateTime.UtcNow.AddMinutes(-17),
+                UpdatedAt = DateTime.UtcNow.AddSeconds(-8)
             },
             new WaitingRoomMonitorView
             {
@@ -145,7 +173,7 @@ public class OperationalReadModelsIntegrationTests : IClassFixture<CustomWebAppl
             db.OperationsDashboards.Add(new OperationsDashboardView
             {
                 Id = "SYSTEM_SINGLETON",
-                TotalPatientsToday = 3,
+                TotalPatientsToday = 5,
                 ActiveRooms = 1,
                 TotalCompleted = 1,
                 Date = DateTime.UtcNow.Date
@@ -153,7 +181,7 @@ public class OperationalReadModelsIntegrationTests : IClassFixture<CustomWebAppl
         }
         else
         {
-            existingDashboard.TotalPatientsToday = Math.Max(existingDashboard.TotalPatientsToday, 3);
+            existingDashboard.TotalPatientsToday = Math.Max(existingDashboard.TotalPatientsToday, 5);
             existingDashboard.ActiveRooms = Math.Max(existingDashboard.ActiveRooms, 1);
             existingDashboard.TotalCompleted = Math.Max(existingDashboard.TotalCompleted, 1);
             existingDashboard.Date = DateTime.UtcNow.Date;

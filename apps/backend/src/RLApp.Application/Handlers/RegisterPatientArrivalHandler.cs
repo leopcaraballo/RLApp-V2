@@ -21,23 +21,33 @@ public class RegisterPatientArrivalHandler : IRequestHandler<RegisterPatientArri
     private readonly IAuditStore _auditStore;
     private readonly IPersistenceSession _persistenceSession;
     private readonly PatientTrajectoryOrchestrator _trajectoryOrchestrator;
+    private readonly IdempotencyGuard _idempotencyGuard;
 
     public RegisterPatientArrivalHandler(
         IWaitingQueueRepository queueRepository,
         IEventPublisher eventPublisher,
         IAuditStore auditStore,
         IPersistenceSession persistenceSession,
-        PatientTrajectoryOrchestrator trajectoryOrchestrator)
+        PatientTrajectoryOrchestrator trajectoryOrchestrator,
+        IdempotencyGuard idempotencyGuard)
     {
         _queueRepository = queueRepository;
         _eventPublisher = eventPublisher;
         _auditStore = auditStore;
         _persistenceSession = persistenceSession;
         _trajectoryOrchestrator = trajectoryOrchestrator;
+        _idempotencyGuard = idempotencyGuard;
     }
 
     public async Task<CommandResult<RegisterPatientResultDto>> Handle(RegisterPatientArrivalCommand command, CancellationToken cancellationToken)
     {
+        if (!_idempotencyGuard.TryAcquire(command.IdempotencyKey, command.CorrelationId))
+        {
+            return CommandResult<RegisterPatientResultDto>.Failure(
+                "DUPLICATE_COMMAND",
+                command.CorrelationId);
+        }
+
         try
         {
             WaitingQueue queue;
@@ -129,6 +139,10 @@ public class RegisterPatientArrivalHandler : IRequestHandler<RegisterPatientArri
                 ex.Message,
                 cancellationToken);
             return CommandResult<RegisterPatientResultDto>.Failure($"Check-in failed: {ex.Message}", command.CorrelationId);
+        }
+        finally
+        {
+            _idempotencyGuard.Release(command.IdempotencyKey, command.CorrelationId);
         }
     }
 }

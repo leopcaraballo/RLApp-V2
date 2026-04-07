@@ -15,8 +15,6 @@ namespace RLApp.Adapters.Persistence.Repositories;
 public class ProjectionStoreRepository : IProjectionStore
 {
     private readonly AppDbContext _context;
-    private static readonly string[] WaitingStatuses = ["Waiting"];
-    private static readonly string[] ActiveConsultationStatuses = ["InConsultation"];
 
     public ProjectionStoreRepository(AppDbContext context)
     {
@@ -162,8 +160,8 @@ public class ProjectionStoreRepository : IProjectionStore
             ? queueState?.LastUpdatedAt ?? DateTime.UtcNow
             : MaxDate(queueState?.LastUpdatedAt, monitors.Max(monitor => monitor.UpdatedAt));
 
-        var waitingEntries = monitors.Where(monitor => WaitingStatuses.Contains(monitor.Status, StringComparer.OrdinalIgnoreCase)).ToArray();
-        var inConsultationEntries = monitors.Where(monitor => ActiveConsultationStatuses.Contains(monitor.Status, StringComparer.OrdinalIgnoreCase)).ToArray();
+        var waitingEntries = monitors.Where(monitor => OperationalVisibleStatuses.CountsAsWaiting(monitor.Status)).ToArray();
+        var inConsultationEntries = monitors.Where(monitor => OperationalVisibleStatuses.CountsAsActiveConsultation(monitor.Status)).ToArray();
 
         return new WaitingRoomMonitorProjection
         {
@@ -217,12 +215,12 @@ public class ProjectionStoreRepository : IProjectionStore
             {
                 var queue = queueStates.FirstOrDefault(item => string.Equals(item.QueueId, queueId, StringComparison.OrdinalIgnoreCase));
                 var queueMonitors = monitors.Where(monitor => string.Equals(monitor.QueueId, queueId, StringComparison.OrdinalIgnoreCase)).ToArray();
-                var waitingEntries = queueMonitors.Where(monitor => WaitingStatuses.Contains(monitor.Status, StringComparer.OrdinalIgnoreCase)).ToArray();
+                var waitingEntries = queueMonitors.Where(monitor => OperationalVisibleStatuses.CountsAsWaiting(monitor.Status)).ToArray();
 
                 return new DashboardQueueSnapshotProjection
                 {
                     QueueId = queueId,
-                    TotalPending = Math.Max(queue?.TotalPending ?? 0, waitingEntries.Length),
+                    TotalPending = waitingEntries.Length > 0 ? waitingEntries.Length : queue?.TotalPending ?? 0,
                     AverageWaitTimeMinutes = queue?.AverageWaitTimeMinutes > 0
                         ? queue.AverageWaitTimeMinutes
                         : CalculateAverageWaitMinutes(waitingEntries),
@@ -252,7 +250,7 @@ public class ProjectionStoreRepository : IProjectionStore
         var activeRooms = Math.Max(
             dashboard?.ActiveRooms ?? 0,
             monitors
-                .Where(monitor => ActiveConsultationStatuses.Contains(monitor.Status, StringComparer.OrdinalIgnoreCase))
+                .Where(monitor => OperationalVisibleStatuses.CountsAsActiveConsultation(monitor.Status))
                 .Select(monitor => monitor.RoomAssigned)
                 .Where(roomAssigned => !string.IsNullOrWhiteSpace(roomAssigned))
                 .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -260,7 +258,7 @@ public class ProjectionStoreRepository : IProjectionStore
 
         var today = DateTime.UtcNow.Date;
         var derivedTotalPatientsToday = monitors.Count(monitor => monitor.CheckedInAt.Date == today);
-        var derivedTotalCompleted = monitors.Count(monitor => string.Equals(monitor.Status, "Completed", StringComparison.OrdinalIgnoreCase) && monitor.UpdatedAt.Date == today);
+        var derivedTotalCompleted = monitors.Count(monitor => string.Equals(monitor.Status, OperationalVisibleStatuses.Completed, StringComparison.OrdinalIgnoreCase) && monitor.UpdatedAt.Date == today);
 
         return new OperationsDashboardProjection
         {
@@ -371,7 +369,10 @@ public class ProjectionStoreRepository : IProjectionStore
             existing.PatientId = patientId;
             if (dict.TryGetValue("PatientName", out var pn) && pn != null) existing.PatientName = pn.ToString()!;
             if (dict.TryGetValue("TicketNumber", out var tn) && tn != null) existing.TicketNumber = tn.ToString()!;
-            if (dict.TryGetValue("Status", out var s) && s != null) existing.Status = s.ToString()!;
+            if (dict.TryGetValue("Status", out var s) && s != null)
+            {
+                existing.Status = OperationalVisibleStatuses.ResolveNextStatus(existing.Status, s.ToString());
+            }
             if (dict.TryGetValue("RoomAssigned", out var ra)) existing.RoomAssigned = ra?.ToString();
 
             existing.CheckedInAt = checkedInAt;
@@ -387,7 +388,9 @@ public class ProjectionStoreRepository : IProjectionStore
                 PatientId = patientId,
                 PatientName = dict.TryGetValue("PatientName", out var pn) ? pn?.ToString() ?? "Unknown" : "Unknown",
                 TicketNumber = dict.TryGetValue("TicketNumber", out var tn) ? tn?.ToString() ?? effectiveTurnId : effectiveTurnId,
-                Status = dict.TryGetValue("Status", out var s) ? s?.ToString() ?? "Waiting" : "Waiting",
+                Status = dict.TryGetValue("Status", out var s)
+                    ? OperationalVisibleStatuses.Normalize(s?.ToString())
+                    : OperationalVisibleStatuses.Waiting,
                 RoomAssigned = dict.TryGetValue("RoomAssigned", out var ra) ? ra?.ToString() : null,
                 CheckedInAt = checkedInAt,
                 UpdatedAt = updatedAt
@@ -518,7 +521,7 @@ public class ProjectionStoreRepository : IProjectionStore
 
     private static IReadOnlyList<OperationalStatusCountProjection> BuildStatusBreakdown(IEnumerable<WaitingRoomMonitorView> monitors)
         => monitors
-            .GroupBy(monitor => NormalizeStatus(monitor.Status), StringComparer.OrdinalIgnoreCase)
+            .GroupBy(monitor => OperationalVisibleStatuses.Normalize(monitor.Status), StringComparer.OrdinalIgnoreCase)
             .OrderByDescending(group => group.Count())
             .ThenBy(group => group.Key, StringComparer.OrdinalIgnoreCase)
             .Select(group => new OperationalStatusCountProjection
@@ -527,9 +530,6 @@ public class ProjectionStoreRepository : IProjectionStore
                 Total = group.Count()
             })
             .ToArray();
-
-    private static string NormalizeStatus(string status)
-        => string.IsNullOrWhiteSpace(status) ? "Unknown" : status.Trim();
 
     private static double CalculateAverageWaitMinutes(IEnumerable<WaitingRoomMonitorView> entries)
     {

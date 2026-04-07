@@ -47,6 +47,12 @@ Exponer el estado operativo agregado de sala de espera, caja y consulta desde pr
 | `status` | `string` | Yes | Estado visible del monitor. |
 | `total` | `integer` | Yes | Cantidad de entradas materializadas en ese estado. |
 
+### Dashboard visible status rules
+
+- `statusBreakdown` reutiliza exactamente la taxonomia visible del monitor definida en `/docs/project/07-interfaces-and-contracts/13-RECEPTION-AND-MONITOR-CONTRACTS.md`.
+- `currentWaitingCount` solo suma entradas visibles en `Waiting` o `WaitingForConsultation`.
+- `activeRooms` solo suma consultorios con entradas visibles en `InConsultation`.
+
 ### Dashboard canonical errors
 
 | Code | When |
@@ -171,3 +177,4 @@ Reconstruir la secuencia auditable de acciones y eventos asociados a una correla
 - El timeline debe devolver los eventos en orden cronologico ascendente.
 - El dashboard compone su snapshot desde `v_operations_dashboard`, `v_queue_state` y `v_waiting_room_monitor` o equivalentes persistidos del mismo bounded context.
 - Toda respuesta debe incluir `correlationId` cuando aplique o permitir inferirlo desde la ruta.
+- El breakdown del dashboard no puede introducir estados visibles fuera de la taxonomia del monitor.

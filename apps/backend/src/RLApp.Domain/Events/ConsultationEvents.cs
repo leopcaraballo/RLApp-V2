@@ -49,17 +49,34 @@ public class ConsultingRoomDeactivated : DomainEvent
 /// </summary>
 public class PatientClaimedForAttention : DomainEvent
 {
+    public const string ClaimedPhase = "Claimed";
+    public const string StartedPhase = "Started";
+
     [JsonPropertyName("patientId")]
     public string PatientId { get; set; } = string.Empty;
 
     [JsonPropertyName("roomId")]
     public string RoomId { get; set; } = string.Empty;
 
-    public PatientClaimedForAttention(string aggregateId, string patientId, string roomId, string correlationId)
+    [JsonPropertyName("consultationPhase")]
+    public string? ConsultationPhase { get; set; }
+
+    [JsonIgnore]
+    public bool RepresentsStartedAttention => !string.Equals(ConsultationPhase, ClaimedPhase, StringComparison.OrdinalIgnoreCase);
+
+    public PatientClaimedForAttention(
+        string aggregateId,
+        string patientId,
+        string roomId,
+        string correlationId,
+        string? trajectoryId = null,
+        string consultationPhase = StartedPhase)
         : base(nameof(PatientClaimedForAttention), aggregateId, correlationId)
     {
         PatientId = patientId;
         RoomId = roomId;
+        TrajectoryId = trajectoryId;
+        ConsultationPhase = consultationPhase;
     }
 
     protected PatientClaimedForAttention() { }

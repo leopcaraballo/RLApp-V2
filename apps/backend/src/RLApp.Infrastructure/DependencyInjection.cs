@@ -61,6 +61,7 @@ public static class DependencyInjection
         services.AddScoped<PatientTrajectoryCorrelationResolver>();
         services.AddScoped<PatientTrajectoryOrchestrator>();
         services.AddScoped<PatientTrajectoryProjectionWriter>();
+        services.AddSingleton<IdempotencyGuard>();
 
         // Register aggregate repositories
         services.AddScoped<IConsultingRoomRepository, ConsultingRoomRepository>();
@@ -131,6 +132,8 @@ public static class DependencyInjection
                     });
                 }
             });
+
+            services.AddMassTransitHostedService();
         }
         else
         {

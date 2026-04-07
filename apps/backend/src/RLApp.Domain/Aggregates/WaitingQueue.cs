@@ -10,9 +10,14 @@ using Events;
 /// </summary>
 public class WaitingQueue : DomainEntity
 {
+    private const string ClaimedAttentionState = "Claimed";
+    private const string CalledAttentionState = "Called";
+    private const string InConsultationAttentionState = "InConsultation";
+
     public string Name { get; private set; }
     public List<string> PatientIds { get; private set; } = new();
     public Dictionary<string, string> PatientRoomAssignments { get; private set; } = new();
+    public Dictionary<string, string> PatientAttentionStates { get; private set; } = new();
     public bool IsOpen { get; private set; }
     public DateTime CreatedAt { get; private set; }
 
@@ -86,10 +91,11 @@ public class WaitingQueue : DomainEntity
     /// </summary>
     public string GetNextPatient()
     {
-        if (PatientIds.Count == 0)
-            throw new DomainException("No patients in queue");
+        var nextPatientId = PatientIds.FirstOrDefault(patientId => !PatientRoomAssignments.ContainsKey(patientId));
+        if (string.IsNullOrWhiteSpace(nextPatientId))
+            throw new DomainException("No unassigned patients in queue");
 
-        return PatientIds[0];
+        return nextPatientId;
     }
 
     /// <summary>
@@ -104,7 +110,13 @@ public class WaitingQueue : DomainEntity
             throw new DomainException("Patient is already assigned to a room");
 
         PatientRoomAssignments.Add(patientId, roomId);
-        RaiseDomainEvent(new PatientClaimedForAttention(Id, patientId, roomId, correlationId));
+        PatientAttentionStates[patientId] = ClaimedAttentionState;
+        RaiseDomainEvent(new PatientClaimedForAttention(
+            Id,
+            patientId,
+            roomId,
+            correlationId,
+            consultationPhase: PatientClaimedForAttention.ClaimedPhase));
     }
 
     /// <summary>
@@ -115,10 +127,45 @@ public class WaitingQueue : DomainEntity
         if (!PatientIds.Contains(patientId))
             throw new DomainException("Patient is not in the queue");
 
+        if (!PatientRoomAssignments.TryGetValue(patientId, out var assignedRoomId) || !string.Equals(assignedRoomId, roomId, StringComparison.Ordinal))
+            throw new DomainException("Patient must be claimed by the target consulting room before being called");
+
         if (string.IsNullOrWhiteSpace(trajectoryId))
             throw new DomainException("Trajectory ID cannot be empty");
 
+        if (string.Equals(GetAttentionState(patientId), InConsultationAttentionState, StringComparison.Ordinal))
+            throw new DomainException("Consultation has already started for this patient");
+
+        PatientAttentionStates[patientId] = CalledAttentionState;
+
         RaiseDomainEvent(new PatientCalled(Id, patientId, roomId, correlationId, trajectoryId));
+    }
+
+    /// <summary>
+    /// Mark the claimed and called patient as actively in consultation.
+    /// </summary>
+    public void StartPatientAttention(string patientId, string roomId, string correlationId, string trajectoryId)
+    {
+        if (!PatientIds.Contains(patientId))
+            throw new DomainException("Patient is not in the queue");
+
+        if (!PatientRoomAssignments.TryGetValue(patientId, out var assignedRoomId) || !string.Equals(assignedRoomId, roomId, StringComparison.Ordinal))
+            throw new DomainException("Patient is not assigned to the requested consulting room");
+
+        if (!string.Equals(GetAttentionState(patientId), CalledAttentionState, StringComparison.Ordinal))
+            throw new DomainException("Patient must be called before consultation can start");
+
+        if (string.IsNullOrWhiteSpace(trajectoryId))
+            throw new DomainException("Trajectory ID cannot be empty");
+
+        PatientAttentionStates[patientId] = InConsultationAttentionState;
+        RaiseDomainEvent(new PatientClaimedForAttention(
+            Id,
+            patientId,
+            roomId,
+            correlationId,
+            trajectoryId,
+            PatientClaimedForAttention.StartedPhase));
     }
 
     /// <summary>
@@ -165,11 +212,18 @@ public class WaitingQueue : DomainEntity
         if (!PatientIds.Contains(patientId))
             throw new DomainException("Patient is not in the queue");
 
+        if (!PatientRoomAssignments.TryGetValue(patientId, out var assignedRoomId) || !string.Equals(assignedRoomId, roomId, StringComparison.Ordinal))
+            throw new DomainException("Patient is not assigned to the requested consulting room");
+
+        if (!string.Equals(GetAttentionState(patientId), InConsultationAttentionState, StringComparison.Ordinal))
+            throw new DomainException("Consultation must be started before it can be completed");
+
         if (string.IsNullOrWhiteSpace(trajectoryId))
             throw new DomainException("Trajectory ID cannot be empty");
 
         PatientIds.Remove(patientId);
         PatientRoomAssignments.Remove(patientId);
+        PatientAttentionStates.Remove(patientId);
         RaiseDomainEvent(new PatientAttentionCompleted(Id, patientId, roomId, turnId, outcome, correlationId, trajectoryId));
     }
 
@@ -181,11 +235,20 @@ public class WaitingQueue : DomainEntity
         if (!PatientIds.Contains(patientId))
             throw new DomainException("Patient is not in the queue");
 
+        if (!PatientRoomAssignments.ContainsKey(patientId))
+            throw new DomainException("Patient is not assigned to a consulting room");
+
+        var attentionState = GetAttentionState(patientId);
+        if (!string.Equals(attentionState, CalledAttentionState, StringComparison.Ordinal)
+            && !string.Equals(attentionState, InConsultationAttentionState, StringComparison.Ordinal))
+            throw new DomainException("Patient must be called before marking consultation absence");
+
         if (string.IsNullOrWhiteSpace(trajectoryId))
             throw new DomainException("Trajectory ID cannot be empty");
 
         PatientIds.Remove(patientId);
         PatientRoomAssignments.Remove(patientId);
+        PatientAttentionStates.Remove(patientId);
         RaiseDomainEvent(new PatientAbsentAtConsultation(Id, patientId, turnId, reason, correlationId, trajectoryId));
     }
 
@@ -199,6 +262,7 @@ public class WaitingQueue : DomainEntity
 
         PatientIds.Remove(patientId);
         PatientRoomAssignments.Remove(patientId);
+        PatientAttentionStates.Remove(patientId);
         RaiseDomainEvent(new PatientAbsentAtCashier(Id, patientId, turnId, reason, correlationId));
     }
 
@@ -212,6 +276,7 @@ public class WaitingQueue : DomainEntity
 
         PatientIds.Remove(patientId);
         PatientRoomAssignments.Remove(patientId);
+        PatientAttentionStates.Remove(patientId);
         RaiseDomainEvent(new PatientCancelledByAbsence(Id, patientId, correlationId));
     }
 
@@ -219,4 +284,7 @@ public class WaitingQueue : DomainEntity
     /// Get the number of patients in the queue.
     /// </summary>
     public int GetQueueSize() => PatientIds.Count;
+
+    private string? GetAttentionState(string patientId)
+        => PatientAttentionStates.TryGetValue(patientId, out var state) ? state : null;
 }

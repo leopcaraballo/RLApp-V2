@@ -92,7 +92,12 @@ public class ConsultingRoom : DomainEntity
 
         CurrentPatientId = patientId;
         CurrentConsultantId = consultantId;
-        RaiseDomainEvent(new PatientClaimedForAttention(Id, patientId, Id, correlationId));
+        RaiseDomainEvent(new PatientClaimedForAttention(
+            Id,
+            patientId,
+            Id,
+            correlationId,
+            consultationPhase: PatientClaimedForAttention.ClaimedPhase));
     }
 
     /// <summary>

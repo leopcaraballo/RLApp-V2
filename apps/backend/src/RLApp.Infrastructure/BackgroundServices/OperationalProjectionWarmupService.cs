@@ -174,38 +174,55 @@ public sealed class OperationalProjectionWarmupService : IHostedService
                         checkedIn.PatientName,
                         turnId,
                         checkedIn.OccurredAt,
-                        "Waiting",
+                        OperationalVisibleStatuses.Waiting,
                         null,
                         checkedIn.OccurredAt);
                     break;
                 }
 
+                case PatientCalledAtCashier calledAtCashier:
+                    UpdateMonitor(activePatients, monitors, calledAtCashier.PatientId, OperationalVisibleStatuses.AtCashier, null, calledAtCashier.OccurredAt);
+                    break;
+
+                case PatientPaymentPending paymentPending:
+                    UpdateMonitor(activePatients, monitors, paymentPending.PatientId, OperationalVisibleStatuses.PaymentPending, null, paymentPending.OccurredAt);
+                    break;
+
+                case PatientPaymentValidated paymentValidated:
+                    UpdateMonitor(activePatients, monitors, paymentValidated.PatientId, OperationalVisibleStatuses.WaitingForConsultation, null, paymentValidated.OccurredAt);
+                    break;
+
                 case PatientCalled called:
-                    UpdateMonitor(activePatients, monitors, called.PatientId, "Called", called.RoomId, called.OccurredAt);
+                    UpdateMonitor(activePatients, monitors, called.PatientId, OperationalVisibleStatuses.Called, called.RoomId, called.OccurredAt);
                     break;
 
                 case PatientClaimedForAttention claimed:
-                    UpdateMonitor(activePatients, monitors, claimed.PatientId, "InConsultation", claimed.RoomId, claimed.OccurredAt);
+                    if (!claimed.RepresentsStartedAttention)
+                    {
+                        break;
+                    }
+
+                    UpdateMonitor(activePatients, monitors, claimed.PatientId, OperationalVisibleStatuses.InConsultation, claimed.RoomId, claimed.OccurredAt);
                     break;
 
                 case PatientAttentionCompleted completed:
-                    CompletePatient(activePatients, queueStates, monitors, completed.PatientId, completed.TurnId, "Completed", completed.RoomId, completed.OccurredAt);
+                    CompletePatient(activePatients, queueStates, monitors, completed.PatientId, completed.TurnId, OperationalVisibleStatuses.Completed, completed.RoomId, completed.OccurredAt);
                     break;
 
                 case PatientAbsentAtConsultation absentAtConsultation:
-                    CompletePatient(activePatients, queueStates, monitors, absentAtConsultation.PatientId, absentAtConsultation.TurnId, "Absent", null, absentAtConsultation.OccurredAt);
+                    CompletePatient(activePatients, queueStates, monitors, absentAtConsultation.PatientId, absentAtConsultation.TurnId, OperationalVisibleStatuses.Absent, null, absentAtConsultation.OccurredAt);
                     break;
 
                 case PatientAbsentAtCashier absentAtCashier:
-                    CompletePatient(activePatients, queueStates, monitors, absentAtCashier.PatientId, absentAtCashier.TurnId, "Absent", null, absentAtCashier.OccurredAt);
+                    CompletePatient(activePatients, queueStates, monitors, absentAtCashier.PatientId, absentAtCashier.TurnId, OperationalVisibleStatuses.Absent, null, absentAtCashier.OccurredAt);
                     break;
 
                 case PatientCancelledByPayment cancelledByPayment:
-                    CompletePatient(activePatients, queueStates, monitors, cancelledByPayment.PatientId, null, "Cancelled", null, cancelledByPayment.OccurredAt);
+                    CompletePatient(activePatients, queueStates, monitors, cancelledByPayment.PatientId, null, OperationalVisibleStatuses.Cancelled, null, cancelledByPayment.OccurredAt);
                     break;
 
                 case PatientCancelledByAbsence cancelledByAbsence:
-                    CompletePatient(activePatients, queueStates, monitors, cancelledByAbsence.PatientId, null, "Cancelled", null, cancelledByAbsence.OccurredAt);
+                    CompletePatient(activePatients, queueStates, monitors, cancelledByAbsence.PatientId, null, OperationalVisibleStatuses.Cancelled, null, cancelledByAbsence.OccurredAt);
                     break;
             }
         }
@@ -246,14 +263,14 @@ public sealed class OperationalProjectionWarmupService : IHostedService
                 patientId,
                 patient.TurnId,
                 updatedAt,
-                "Waiting",
+                OperationalVisibleStatuses.Waiting,
                 null,
                 updatedAt);
         }
 
         monitors[patient.TurnId] = monitor with
         {
-            Status = status,
+            Status = OperationalVisibleStatuses.ResolveNextStatus(monitor.Status, status),
             RoomAssigned = roomAssigned ?? monitor.RoomAssigned,
             UpdatedAt = updatedAt
         };
@@ -290,7 +307,7 @@ public sealed class OperationalProjectionWarmupService : IHostedService
 
         monitors[turnId] = existingMonitor with
         {
-            Status = status,
+            Status = OperationalVisibleStatuses.ResolveNextStatus(existingMonitor.Status, status),
             RoomAssigned = roomAssigned ?? existingMonitor.RoomAssigned,
             UpdatedAt = updatedAt
         };

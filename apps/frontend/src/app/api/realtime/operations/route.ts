@@ -23,9 +23,16 @@ const TRAJECTORY_ROLES = new Set<StaffRole>(['Supervisor', 'Support']);
 
 const REALTIME_METHODS = [
   'PatientCheckedIn',
+  'PatientCalledAtCashier',
+  'PatientPaymentValidated',
+  'PatientPaymentPending',
   'PatientCalled',
   'PatientAtConsultation',
   'PatientAttentionCompleted',
+  'PatientAbsentAtCashier',
+  'PatientAbsentAtConsultation',
+  'PatientCancelledByPayment',
+  'PatientCancelledByAbsence',
 ] as const;
 
 interface RequestedScopes {

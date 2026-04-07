@@ -99,6 +99,74 @@ public class PatientTrajectoryTests
         Assert.IsType<PatientTrajectoryRebuilt>(events[0]);
     }
 
+    [Fact]
+    public void RecordStage_ValidTransition_ReceptionToCashier_Succeeds()
+    {
+        var occurredAt = new DateTime(2026, 4, 1, 9, 10, 0, DateTimeKind.Utc);
+        var trajectory = CreateTrajectory(occurredAt);
+        trajectory.ClearUnraisedEvents();
+
+        var added = trajectory.RecordStage(
+            PatientTrajectory.CashierStage,
+            nameof(PatientPaymentValidated),
+            "EnEsperaConsulta",
+            occurredAt.AddMinutes(5),
+            "corr-010");
+
+        Assert.True(added);
+        Assert.Equal(PatientTrajectory.CashierStage, trajectory.CurrentStage);
+    }
+
+    [Fact]
+    public void RecordStage_InvalidTransition_ReceptionToConsultation_ThrowsDomainException()
+    {
+        var occurredAt = new DateTime(2026, 4, 1, 9, 10, 0, DateTimeKind.Utc);
+        var trajectory = CreateTrajectory(occurredAt);
+        trajectory.ClearUnraisedEvents();
+
+        var ex = Assert.Throws<DomainException>(() => trajectory.RecordStage(
+            PatientTrajectory.ConsultationStage,
+            nameof(PatientClaimedForAttention),
+            "EnEsperaConsulta",
+            occurredAt.AddMinutes(5),
+            "corr-011"));
+
+        Assert.Contains("Invalid stage transition", ex.Message);
+    }
+
+    [Fact]
+    public void RecordStage_ValidTransition_CashierToConsultation_Succeeds()
+    {
+        var occurredAt = new DateTime(2026, 4, 1, 9, 10, 0, DateTimeKind.Utc);
+        var trajectory = CreateTrajectory(occurredAt);
+        trajectory.ClearUnraisedEvents();
+
+        trajectory.RecordStage(
+            PatientTrajectory.CashierStage,
+            nameof(PatientPaymentValidated),
+            "EnEsperaConsulta",
+            occurredAt.AddMinutes(5),
+            "corr-012");
+
+        var added = trajectory.RecordStage(
+            PatientTrajectory.ConsultationStage,
+            nameof(PatientClaimedForAttention),
+            "EnEsperaConsulta",
+            occurredAt.AddMinutes(10),
+            "corr-013");
+
+        Assert.True(added);
+        Assert.Equal(PatientTrajectory.ConsultationStage, trajectory.CurrentStage);
+    }
+
+    [Fact]
+    public void CurrentStage_AfterStart_ReturnsInitialStage()
+    {
+        var occurredAt = new DateTime(2026, 4, 1, 9, 10, 0, DateTimeKind.Utc);
+        var trajectory = CreateTrajectory(occurredAt);
+        Assert.Equal(PatientTrajectory.ReceptionStage, trajectory.CurrentStage);
+    }
+
     private static PatientTrajectory CreateTrajectory(DateTime occurredAt)
     {
         return PatientTrajectory.Start(

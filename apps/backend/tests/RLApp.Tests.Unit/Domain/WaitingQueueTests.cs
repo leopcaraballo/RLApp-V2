@@ -144,6 +144,8 @@ public class WaitingQueueTests
     {
         var queue = CreateOpenQueue();
         queue.CheckInPatient("p-1", "Alice", null, 1, null, CorrelationId);
+        queue.AssignPatientToRoom("p-1", "room-1", CorrelationId);
+        queue.CallPatient("p-1", "room-1", CorrelationId, TrajectoryId);
         queue.ClearUnraisedEvents();
 
         queue.MarkPatientAbsent("p-1", null, null, CorrelationId, TrajectoryId);
@@ -171,6 +173,9 @@ public class WaitingQueueTests
     {
         var queue = CreateOpenQueue();
         queue.CheckInPatient("p-1", "Alice", null, 1, null, CorrelationId);
+        queue.AssignPatientToRoom("p-1", "room-1", CorrelationId);
+        queue.CallPatient("p-1", "room-1", CorrelationId, TrajectoryId);
+        queue.StartPatientAttention("p-1", "room-1", CorrelationId, TrajectoryId);
         queue.ClearUnraisedEvents();
 
         queue.CompletePatientAttention("p-1", "room-1", null, null, CorrelationId, TrajectoryId);
@@ -187,6 +192,7 @@ public class WaitingQueueTests
     {
         var queue = CreateOpenQueue();
         queue.CheckInPatient("p-1", "Alice", null, 1, null, CorrelationId);
+        queue.AssignPatientToRoom("p-1", "room-1", CorrelationId);
         queue.ClearUnraisedEvents();
 
         queue.CallPatient("p-1", "room-1", CorrelationId, TrajectoryId);
@@ -195,5 +201,46 @@ public class WaitingQueueTests
         Assert.Single(events);
         var @event = Assert.IsType<PatientCalled>(events[0]);
         Assert.Equal(TrajectoryId, @event.TrajectoryId);
+    }
+
+    [Fact]
+    public void AssignPatientToRoom_RaisesClaimedPhaseEvent()
+    {
+        var queue = CreateOpenQueue();
+        queue.CheckInPatient("p-1", "Alice", null, 1, null, CorrelationId);
+        queue.ClearUnraisedEvents();
+
+        queue.AssignPatientToRoom("p-1", "room-1", CorrelationId);
+
+        var @event = Assert.IsType<PatientClaimedForAttention>(Assert.Single(queue.GetUnraisedEvents()));
+        Assert.Equal(PatientClaimedForAttention.ClaimedPhase, @event.ConsultationPhase);
+        Assert.False(@event.RepresentsStartedAttention);
+    }
+
+    [Fact]
+    public void StartPatientAttention_AfterCall_RaisesStartedPhaseEvent()
+    {
+        var queue = CreateOpenQueue();
+        queue.CheckInPatient("p-1", "Alice", null, 1, null, CorrelationId);
+        queue.AssignPatientToRoom("p-1", "room-1", CorrelationId);
+        queue.CallPatient("p-1", "room-1", CorrelationId, TrajectoryId);
+        queue.ClearUnraisedEvents();
+
+        queue.StartPatientAttention("p-1", "room-1", CorrelationId, TrajectoryId);
+
+        var @event = Assert.IsType<PatientClaimedForAttention>(Assert.Single(queue.GetUnraisedEvents()));
+        Assert.Equal(PatientClaimedForAttention.StartedPhase, @event.ConsultationPhase);
+        Assert.True(@event.RepresentsStartedAttention);
+        Assert.Equal(TrajectoryId, @event.TrajectoryId);
+    }
+
+    [Fact]
+    public void StartPatientAttention_BeforeCall_ThrowsDomainException()
+    {
+        var queue = CreateOpenQueue();
+        queue.CheckInPatient("p-1", "Alice", null, 1, null, CorrelationId);
+        queue.AssignPatientToRoom("p-1", "room-1", CorrelationId);
+
+        Assert.Throws<DomainException>(() => queue.StartPatientAttention("p-1", "room-1", CorrelationId, TrajectoryId));
     }
 }
