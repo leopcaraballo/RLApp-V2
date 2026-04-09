@@ -17,7 +17,7 @@ describe('getRoleDisplayName', () => {
   });
 
   it('returns role as-is for unknown role', () => {
-    expect(getRoleDisplayName('UnknownRole' as any)).toBe('UnknownRole');
+    expect(getRoleDisplayName('UnknownRole' as never)).toBe('UnknownRole');
   });
 });
 

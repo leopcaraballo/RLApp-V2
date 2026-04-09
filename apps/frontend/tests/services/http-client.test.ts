@@ -1,5 +1,6 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, type Mock } from 'vitest';
 import { ApiError, httpRequest } from '@/services/http-client';
+import type { ApiEnvelopeError } from '@/types/api';
 
 describe('ApiError', () => {
   it('has correct properties', () => {
@@ -13,7 +14,7 @@ describe('ApiError', () => {
 
   it('carries error payload', () => {
     const payload = { message: 'Validation failed', code: 'VALIDATION_ERROR' };
-    const error = new ApiError(400, 'Validation failed', payload as any);
+    const error = new ApiError(400, 'Validation failed', payload as ApiEnvelopeError);
     expect(error.payload).toEqual(payload);
   });
 });
@@ -25,7 +26,7 @@ describe('httpRequest', () => {
       ok: true,
       headers: new Headers({ 'content-type': 'application/json' }),
       json: () => Promise.resolve(mockResponse),
-    } as any);
+    } as Response);
 
     const result = await httpRequest<{ data: string }>('http://localhost/test');
     expect(result).toEqual(mockResponse);
@@ -38,7 +39,7 @@ describe('httpRequest', () => {
       status: 500,
       headers: new Headers({ 'content-type': 'application/json' }),
       json: () => Promise.resolve(errorPayload),
-    } as any);
+    } as Response);
 
     await expect(httpRequest('http://localhost/fail')).rejects.toThrow(ApiError);
 
@@ -56,14 +57,14 @@ describe('httpRequest', () => {
       ok: true,
       headers: new Headers({ 'content-type': 'application/json' }),
       json: () => Promise.resolve({ success: true }),
-    } as any);
+    } as Response);
 
     await httpRequest('http://localhost/test', {
       method: 'POST',
       json: { key: 'value' },
     });
 
-    const [, options] = (globalThis.fetch as any).mock.calls[0];
+    const [, options] = (globalThis.fetch as Mock).mock.calls[0];
     expect(options.body).toBe(JSON.stringify({ key: 'value' }));
     expect(options.headers.get('Content-Type')).toBe('application/json');
   });
@@ -73,7 +74,7 @@ describe('httpRequest', () => {
       ok: true,
       headers: new Headers({ 'content-type': 'text/plain' }),
       text: () => Promise.resolve('plain text'),
-    } as any);
+    } as Response);
 
     const result = await httpRequest<string>('http://localhost/text');
     expect(result).toBe('plain text');
@@ -85,7 +86,7 @@ describe('httpRequest', () => {
       status: 400,
       headers: new Headers({ 'content-type': 'application/json' }),
       json: () => Promise.resolve({ error: 'Bad request detail' }),
-    } as any);
+    } as Response);
 
     try {
       await httpRequest('http://localhost/fail');
@@ -100,7 +101,7 @@ describe('httpRequest', () => {
       status: 503,
       headers: new Headers({ 'content-type': 'application/json' }),
       json: () => Promise.resolve({ unknown: true }),
-    } as any);
+    } as Response);
 
     try {
       await httpRequest('http://localhost/fail');
