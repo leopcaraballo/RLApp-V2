@@ -10,6 +10,9 @@ using Events;
 /// </summary>
 public class WaitingQueue : DomainEntity
 {
+    private const string AtCashierAttentionState = "AtCashier";
+    private const string PaymentPendingAttentionState = "PaymentPending";
+    private const string WaitingForConsultationAttentionState = "WaitingForConsultation";
     private const string ClaimedAttentionState = "Claimed";
     private const string CalledAttentionState = "Called";
     private const string InConsultationAttentionState = "InConsultation";
@@ -87,13 +90,25 @@ public class WaitingQueue : DomainEntity
     }
 
     /// <summary>
-    /// Get the next patient in queue.
+    /// Get the next patient that still needs cashier attention.
     /// </summary>
-    public string GetNextPatient()
+    public string GetNextPatientForCashier()
     {
-        var nextPatientId = PatientIds.FirstOrDefault(patientId => !PatientRoomAssignments.ContainsKey(patientId));
+        var nextPatientId = PatientIds.FirstOrDefault(IsAvailableForCashierAttention);
         if (string.IsNullOrWhiteSpace(nextPatientId))
-            throw new DomainException("No unassigned patients in queue");
+            throw new DomainException("No patients pending cashier attention in queue");
+
+        return nextPatientId;
+    }
+
+    /// <summary>
+    /// Get the next patient that is eligible for consultation.
+    /// </summary>
+    public string GetNextPatientForConsultation()
+    {
+        var nextPatientId = PatientIds.FirstOrDefault(IsReadyForConsultation);
+        if (string.IsNullOrWhiteSpace(nextPatientId))
+            throw new DomainException("No patients ready for consultation in queue");
 
         return nextPatientId;
     }
@@ -108,6 +123,9 @@ public class WaitingQueue : DomainEntity
 
         if (PatientRoomAssignments.ContainsKey(patientId))
             throw new DomainException("Patient is already assigned to a room");
+
+        if (!IsReadyForConsultation(patientId))
+            throw new DomainException("Patient must have validated payment before consultation can be claimed");
 
         PatientRoomAssignments.Add(patientId, roomId);
         PatientAttentionStates[patientId] = ClaimedAttentionState;
@@ -176,6 +194,11 @@ public class WaitingQueue : DomainEntity
         if (!PatientIds.Contains(patientId))
             throw new DomainException("Patient is not in the queue");
 
+        if (PatientRoomAssignments.ContainsKey(patientId))
+            throw new DomainException("Patient is already assigned to a consulting room");
+
+        PatientAttentionStates[patientId] = AtCashierAttentionState;
+
         RaiseDomainEvent(new PatientCalledAtCashier(Id, patientId, cashierStationId, correlationId));
     }
 
@@ -190,6 +213,11 @@ public class WaitingQueue : DomainEntity
         if (amount <= 0)
             throw new DomainException("Payment amount must be greater than zero");
 
+        if (PatientRoomAssignments.ContainsKey(patientId))
+            throw new DomainException("Patient already moved into consultation flow");
+
+        PatientAttentionStates[patientId] = WaitingForConsultationAttentionState;
+
         RaiseDomainEvent(new PatientPaymentValidated(Id, patientId, amount, turnId, paymentReference, correlationId));
     }
 
@@ -200,6 +228,11 @@ public class WaitingQueue : DomainEntity
     {
         if (!PatientIds.Contains(patientId))
             throw new DomainException("Patient is not in the queue");
+
+        if (PatientRoomAssignments.ContainsKey(patientId))
+            throw new DomainException("Patient already moved into consultation flow");
+
+        PatientAttentionStates[patientId] = PaymentPendingAttentionState;
 
         RaiseDomainEvent(new PatientPaymentPending(Id, patientId, correlationId));
     }
@@ -267,24 +300,28 @@ public class WaitingQueue : DomainEntity
     }
 
     /// <summary>
-    /// Cancel patient by absence policy.
-    /// </summary>
-    public void CancelPatientByAbsence(string patientId, string correlationId)
-    {
-        if (!PatientIds.Contains(patientId))
-            throw new DomainException("Patient is not in the queue");
-
-        PatientIds.Remove(patientId);
-        PatientRoomAssignments.Remove(patientId);
-        PatientAttentionStates.Remove(patientId);
-        RaiseDomainEvent(new PatientCancelledByAbsence(Id, patientId, correlationId));
-    }
-
-    /// <summary>
     /// Get the number of patients in the queue.
     /// </summary>
     public int GetQueueSize() => PatientIds.Count;
 
     private string? GetAttentionState(string patientId)
         => PatientAttentionStates.TryGetValue(patientId, out var state) ? state : null;
+
+    private bool IsAvailableForCashierAttention(string patientId)
+    {
+        if (PatientRoomAssignments.ContainsKey(patientId))
+        {
+            return false;
+        }
+
+        var attentionState = GetAttentionState(patientId);
+        return !string.Equals(attentionState, WaitingForConsultationAttentionState, StringComparison.Ordinal)
+            && !string.Equals(attentionState, ClaimedAttentionState, StringComparison.Ordinal)
+            && !string.Equals(attentionState, CalledAttentionState, StringComparison.Ordinal)
+            && !string.Equals(attentionState, InConsultationAttentionState, StringComparison.Ordinal);
+    }
+
+    private bool IsReadyForConsultation(string patientId)
+        => !PatientRoomAssignments.ContainsKey(patientId)
+            && string.Equals(GetAttentionState(patientId), WaitingForConsultationAttentionState, StringComparison.Ordinal);
 }

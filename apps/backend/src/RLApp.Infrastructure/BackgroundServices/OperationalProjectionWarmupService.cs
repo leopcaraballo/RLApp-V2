@@ -181,7 +181,7 @@ public sealed class OperationalProjectionWarmupService : IHostedService
                 }
 
                 case PatientCalledAtCashier calledAtCashier:
-                    UpdateMonitor(activePatients, monitors, calledAtCashier.PatientId, OperationalVisibleStatuses.AtCashier, null, calledAtCashier.OccurredAt);
+                    UpdateMonitor(activePatients, monitors, calledAtCashier.PatientId, OperationalVisibleStatuses.AtCashier, calledAtCashier.CashierStationId, calledAtCashier.OccurredAt);
                     break;
 
                 case PatientPaymentPending paymentPending:
@@ -215,14 +215,6 @@ public sealed class OperationalProjectionWarmupService : IHostedService
 
                 case PatientAbsentAtCashier absentAtCashier:
                     CompletePatient(activePatients, queueStates, monitors, absentAtCashier.PatientId, absentAtCashier.TurnId, OperationalVisibleStatuses.Absent, null, absentAtCashier.OccurredAt);
-                    break;
-
-                case PatientCancelledByPayment cancelledByPayment:
-                    CompletePatient(activePatients, queueStates, monitors, cancelledByPayment.PatientId, null, OperationalVisibleStatuses.Cancelled, null, cancelledByPayment.OccurredAt);
-                    break;
-
-                case PatientCancelledByAbsence cancelledByAbsence:
-                    CompletePatient(activePatients, queueStates, monitors, cancelledByAbsence.PatientId, null, OperationalVisibleStatuses.Cancelled, null, cancelledByAbsence.OccurredAt);
                     break;
             }
         }

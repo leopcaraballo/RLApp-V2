@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { startTransition } from 'react';
 import { getVisibleNavigation } from '@/lib/authorization';
+import { formatDisplayDateTime, getRoleDisplayName } from '@/lib/display-text';
 import { rlappApi } from '@/services/rlapp-api';
 import type { SessionUser } from '@/types/session';
 
@@ -21,9 +22,13 @@ export function AppShell({ session, children }: AppShellProps) {
     <div className="shell">
       <aside className="shell__sidebar">
         <div className="brand-card">
-          <div className="brand-card__eyebrow">RLApp frontend</div>
-          <h1>Operational console</h1>
-          <p>Next.js 16 app aligned to the backend commands that really exist today.</p>
+          <div className="brand-card__eyebrow">Plataforma de staff</div>
+          <h1>RLApp Clinical Orchestrator</h1>
+          <p>
+            Una sola vista para registrar pacientes, seguir la operacion y revisar el estado del
+            sistema.
+          </p>
+          <p>Orquestador de Trayectorias Clínicas Sincronizadas</p>
         </div>
 
         <nav className="shell__nav">
@@ -47,10 +52,10 @@ export function AppShell({ session, children }: AppShellProps) {
       <div className="shell__content">
         <header className="topbar">
           <div>
-            <div className="topbar__eyebrow">Authenticated staff</div>
+            <div className="topbar__eyebrow">Sesion activa</div>
             <strong>{session.username}</strong>
             <span>
-              {session.role} · expires {new Date(session.expiresAt).toLocaleString()}
+              {getRoleDisplayName(session.role)} · vence {formatDisplayDateTime(session.expiresAt)}
             </span>
           </div>
 
@@ -65,7 +70,7 @@ export function AppShell({ session, children }: AppShellProps) {
             }}
             type="button"
           >
-            Logout
+            Cerrar sesion
           </button>
         </header>
 

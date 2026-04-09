@@ -23,6 +23,27 @@ public sealed class WaitingRoomMonitorEntryDto
     public DateTime UpdatedAt { get; set; }
 }
 
+public sealed class PublicWaitingRoomDisplayDto
+{
+    public string QueueId { get; set; } = string.Empty;
+    public DateTime GeneratedAt { get; set; }
+    public PublicWaitingRoomTurnDto? CurrentTurn { get; set; }
+    public IReadOnlyList<PublicWaitingRoomTurnDto> UpcomingTurns { get; set; } = Array.Empty<PublicWaitingRoomTurnDto>();
+    public IReadOnlyList<PublicWaitingRoomCallDto> ActiveCalls { get; set; } = Array.Empty<PublicWaitingRoomCallDto>();
+}
+
+public sealed class PublicWaitingRoomTurnDto
+{
+    public string TurnNumber { get; set; } = string.Empty;
+}
+
+public sealed class PublicWaitingRoomCallDto
+{
+    public string TurnNumber { get; set; } = string.Empty;
+    public string Destination { get; set; } = string.Empty;
+    public string Status { get; set; } = string.Empty;
+}
+
 public sealed class OperationsDashboardSnapshotDto
 {
     public DateTime GeneratedAt { get; set; }

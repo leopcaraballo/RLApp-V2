@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getBackendApiBaseUrl } from '@/lib/env';
+import { shouldUseSecureSessionCookie } from '@/lib/session-cookie';
 import { SESSION_COOKIE_NAME, sealSession } from '@/lib/session';
 import type { AuthenticationResult, LoginRequest } from '@/types/api';
 
@@ -69,7 +70,7 @@ export async function POST(request: NextRequest) {
   response.cookies.set(SESSION_COOKIE_NAME, cookieValue, {
     httpOnly: true,
     sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
+    secure: shouldUseSecureSessionCookie(request),
     path: '/',
     maxAge: result.expiresInSeconds ?? 3600,
   });

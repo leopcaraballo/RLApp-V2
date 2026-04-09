@@ -1,9 +1,19 @@
 'use client';
 
+import Link from 'next/link';
 import { HealthPanels } from '@/components/health/health-panels';
 import { ContractAlert } from '@/components/shared/contract-alert';
 import { SectionIntro } from '@/components/shared/section-intro';
 import { StatusBadge } from '@/components/shared/status-badge';
+import { getVisibleNavigation } from '@/lib/authorization';
+import {
+  formatDisplayDateTime,
+  formatDisplayMinutes,
+  formatDisplayNumber,
+  getOperationalStatusDisplayName,
+  getRoleDisplayName,
+} from '@/lib/display-text';
+import { getRealtimeLabel, getRealtimeTone } from '@/lib/realtime-status';
 import { useOperationsDashboard } from '@/hooks/use-operational-read-models';
 import { useOperationalRealtime } from '@/hooks/use-operational-realtime';
 import { ApiError } from '@/services/http-client';
@@ -11,47 +21,6 @@ import type { StaffRole } from '@/types/api';
 import type { SessionUser } from '@/types/session';
 
 const DASHBOARD_ROLES = new Set<StaffRole>(['Supervisor', 'Support']);
-
-const roleBoundaryCopy: Record<string, { title: string; detail: string; status: string }[]> = {
-  Receptionist: [
-    {
-      title: 'Waiting Room Monitor',
-      detail: 'Use the persisted queue monitor from Waiting Room to follow live reception load.',
-      status: 'Projection-backed',
-    },
-    {
-      title: 'Reception Flow',
-      detail: 'Arrival registration and check-in remain the primary workflow for this role.',
-      status: 'Command access',
-    },
-  ],
-  Doctor: [
-    {
-      title: 'Consultation Queue',
-      detail:
-        'Waiting Room keeps claim-next and call-patient so turns remain queued and visible before consultation starts.',
-      status: 'Command access',
-    },
-    {
-      title: 'Medical Operations',
-      detail:
-        'Medical now owns call-next shortcut, start-consultation, room lifecycle, and consultation completion.',
-      status: 'Command access',
-    },
-  ],
-  Cashier: [
-    {
-      title: 'Cashier Operations',
-      detail: 'Payment validation and cashier absence stay bounded to the Cashier workspace.',
-      status: 'Command access',
-    },
-    {
-      title: 'Operational Dashboard',
-      detail: 'The aggregated dashboard is restricted to Supervisor and Support by contract.',
-      status: 'Role-restricted',
-    },
-  ],
-};
 
 function readErrorMessage(error: unknown): string {
   if (error instanceof ApiError) {
@@ -62,31 +31,7 @@ function readErrorMessage(error: unknown): string {
     return error.message;
   }
 
-  return 'The operational dashboard could not be loaded.';
-}
-
-function formatTimestamp(value: string): string {
-  return new Date(value).toLocaleString();
-}
-
-function formatMetric(value: number): string {
-  return new Intl.NumberFormat().format(value);
-}
-
-function formatMinutes(value: number): string {
-  return `${value.toFixed(1)} min`;
-}
-
-function realtimeTone(state: 'idle' | 'connecting' | 'live' | 'reconnecting') {
-  if (state === 'live') {
-    return 'success' as const;
-  }
-
-  if (state === 'reconnecting' || state === 'connecting') {
-    return 'warning' as const;
-  }
-
-  return 'neutral' as const;
+  return 'No fue posible cargar el tablero operativo.';
 }
 
 function projectionTone(lagSeconds: number) {
@@ -103,6 +48,7 @@ function projectionTone(lagSeconds: number) {
 
 export function DashboardHome({ session }: { session: SessionUser }) {
   const canViewDashboard = DASHBOARD_ROLES.has(session.role);
+  const quickActions = getVisibleNavigation(session.role).filter((item) => item.href !== '/');
   const dashboardQuery = useOperationsDashboard(canViewDashboard);
   const realtime = useOperationalRealtime({
     role: session.role,
@@ -111,173 +57,163 @@ export function DashboardHome({ session }: { session: SessionUser }) {
   });
 
   if (!canViewDashboard) {
-    const operationalSurfaces = roleBoundaryCopy[session.role] ?? [
-      {
-        title: 'Operational Dashboard',
-        detail: 'This aggregated snapshot is available only to Supervisor and Support.',
-        status: 'Role-restricted',
-      },
-    ];
-
     return (
-      <>
+      <div className="clinical-space">
         <SectionIntro
-          badge={session.role}
-          description="This workspace keeps route access, but the aggregated operational dashboard is restricted by contract to Supervisor and Support."
-          eyebrow="Operational overview"
-          title={`Welcome, ${session.username}`}
+          badge={getRoleDisplayName(session.role)}
+          eyebrow="Inicio operativo"
+          title="Inicio"
         />
 
         <ContractAlert
-          title="Dashboard boundary"
+          title="Acceso al tablero agregado"
           items={[
-            'The persisted dashboard snapshot is authorized only for Supervisor and Support.',
-            'Reception operational visibility now lives in the Waiting Room monitor for eligible roles.',
-            'Cashier and doctor workflows stay available through their bounded command surfaces.',
+            'El tablero agregado solo esta disponible para Supervisor y Soporte.',
+            'Si tu rol no ve el tablero, usa los accesos de abajo para continuar con tu trabajo diario.',
+            'Las vistas operativas siguen separadas por rol para evitar errores y acciones no autorizadas.',
           ]}
         />
 
-        <section className="grid grid--two">
-          {operationalSurfaces.map((surface) => (
-            <article className="panel" key={surface.title}>
+        <section className="grid grid--two clinical-grid">
+          {quickActions.map((surface) => (
+            <article className="panel clinical-panel shortcut-card" key={surface.href}>
               <div className="panel__header">
                 <div>
-                  <div className="panel__eyebrow">Available surface</div>
-                  <h2>{surface.title}</h2>
-                  <p>{surface.detail}</p>
+                  <div className="panel__eyebrow">Acceso</div>
+                  <h2>{surface.label}</h2>
                 </div>
-                <StatusBadge tone="info">{surface.status}</StatusBadge>
+                <StatusBadge tone="info">Activo</StatusBadge>
+              </div>
+              <div className="form-actions shortcut-card__action">
+                <Link className="ghost-button" href={surface.href}>
+                  Abrir
+                </Link>
               </div>
             </article>
           ))}
         </section>
 
         <HealthPanels />
-      </>
+      </div>
     );
   }
 
   return (
-    <>
+    <div className="clinical-space">
       <SectionIntro
-        badge={session.role}
-        description="This home view now consumes the persisted operations dashboard and stays in sync through a same-origin invalidation stream mediated by the BFF."
-        eyebrow="Synchronized visibility"
-        title={`Operations overview for ${session.username}`}
+        badge={getRoleDisplayName(session.role)}
+        eyebrow="Visibilidad sincronizada"
+        title="Panorama operativo"
       />
 
-      <section className="panel">
+      <section className="grid grid--three clinical-grid">
+        {quickActions.map((item) => (
+          <article className="panel clinical-panel shortcut-card" key={item.href}>
+            <div className="panel__eyebrow">Atajo frecuente</div>
+            <h2>{item.label}</h2>
+            <div className="form-actions shortcut-card__action">
+              <Link className="ghost-button" href={item.href}>
+                Abrir
+              </Link>
+            </div>
+          </article>
+        ))}
+      </section>
+
+      <section className="panel clinical-panel clinical-panel--hero">
         <div className="panel__header">
           <div>
-            <div className="panel__eyebrow">Realtime channel</div>
-            <h2>Projection-backed dashboard sync</h2>
-            <p>
-              Dashboard cards refresh from persisted snapshots, while the stream only carries
-              invalidation metadata.
-            </p>
+            <div className="panel__eyebrow">Sincronizacion</div>
+            <h2>Estado en vivo</h2>
           </div>
-          <StatusBadge tone={realtimeTone(realtime.connectionState)}>
-            {realtime.connectionState === 'live' ? 'Live sync' : 'Reconnecting'}
+          <StatusBadge tone={getRealtimeTone(realtime.connectionState)}>
+            {getRealtimeLabel(realtime.connectionState)}
           </StatusBadge>
         </div>
         <div className="panel__meta">
           <span>
-            Last event:{' '}
+            Ultimo evento:{' '}
             {realtime.lastEvent
-              ? `${realtime.lastEvent.eventType} at ${formatTimestamp(realtime.lastEvent.occurredAt)}`
-              : 'Waiting for the first invalidation.'}
+              ? `${realtime.lastEvent.eventType} · ${formatDisplayDateTime(realtime.lastEvent.occurredAt)}`
+              : 'Aun no se ha recibido una invalidacion.'}
           </span>
         </div>
       </section>
 
       {dashboardQuery.isPending ? (
-        <section className="panel">
+        <section className="panel clinical-panel clinical-panel--soft">
           <div className="panel__header">
             <div>
-              <div className="panel__eyebrow">Loading snapshot</div>
-              <h2>Fetching persisted operational metrics</h2>
-              <p>The dashboard is waiting for the latest materialized snapshot.</p>
+              <div className="panel__eyebrow">Cargando</div>
+              <h2>Consultando tablero</h2>
             </div>
-            <StatusBadge tone="warning">Loading</StatusBadge>
+            <StatusBadge tone="warning">Cargando</StatusBadge>
           </div>
         </section>
       ) : null}
 
       {dashboardQuery.isError ? (
         <ContractAlert
-          title="Operational dashboard unavailable"
+          title="No se pudo abrir el tablero operativo"
           items={[readErrorMessage(dashboardQuery.error)]}
         />
       ) : null}
 
       {dashboardQuery.data ? (
         <>
-          <section className="grid grid--three">
-            <article className="panel">
-              <div className="panel__eyebrow">Current waiting</div>
+          <section className="grid grid--three clinical-grid">
+            <article className="panel clinical-panel metric-panel">
+              <div className="panel__eyebrow">En espera</div>
               <div className="metric-value">
-                {formatMetric(dashboardQuery.data.currentWaitingCount)}
+                {formatDisplayNumber(dashboardQuery.data.currentWaitingCount)}
               </div>
-              <p className="metric-caption">Patients still visible in persisted waiting states.</p>
             </article>
 
-            <article className="panel">
-              <div className="panel__eyebrow">Average wait</div>
+            <article className="panel clinical-panel metric-panel">
+              <div className="panel__eyebrow">Espera promedio</div>
               <div className="metric-value">
-                {formatMinutes(dashboardQuery.data.averageWaitTimeMinutes)}
+                {formatDisplayMinutes(dashboardQuery.data.averageWaitTimeMinutes)}
               </div>
-              <p className="metric-caption">Projection-backed average across active queues.</p>
             </article>
 
-            <article className="panel">
-              <div className="panel__eyebrow">Projection lag</div>
+            <article className="panel clinical-panel metric-panel">
+              <div className="panel__eyebrow">Lag</div>
               <div className="metric-value">
-                {formatMetric(dashboardQuery.data.projectionLagSeconds)}s
+                {formatDisplayNumber(dashboardQuery.data.projectionLagSeconds)}s
               </div>
-              <p className="metric-caption">
-                Delay between the latest persisted event and this snapshot.
-              </p>
             </article>
 
-            <article className="panel">
-              <div className="panel__eyebrow">Patients today</div>
+            <article className="panel clinical-panel metric-panel">
+              <div className="panel__eyebrow">Pacientes del dia</div>
               <div className="metric-value">
-                {formatMetric(dashboardQuery.data.totalPatientsToday)}
+                {formatDisplayNumber(dashboardQuery.data.totalPatientsToday)}
               </div>
-              <p className="metric-caption">
-                Aggregate daily volume from the dashboard projection.
-              </p>
             </article>
 
-            <article className="panel">
-              <div className="panel__eyebrow">Completed</div>
-              <div className="metric-value">{formatMetric(dashboardQuery.data.totalCompleted)}</div>
-              <p className="metric-caption">
-                Closed attentions already materialized in the read model.
-              </p>
+            <article className="panel clinical-panel metric-panel">
+              <div className="panel__eyebrow">Cierres</div>
+              <div className="metric-value">
+                {formatDisplayNumber(dashboardQuery.data.totalCompleted)}
+              </div>
             </article>
 
-            <article className="panel">
-              <div className="panel__eyebrow">Active rooms</div>
-              <div className="metric-value">{formatMetric(dashboardQuery.data.activeRooms)}</div>
-              <p className="metric-caption">
-                Consultation rooms visible as active in the snapshot.
-              </p>
+            <article className="panel clinical-panel metric-panel">
+              <div className="panel__eyebrow">Consultorios en atencion</div>
+              <div className="metric-value">
+                {formatDisplayNumber(dashboardQuery.data.activeRooms)}
+              </div>
             </article>
           </section>
 
-          <section className="grid grid--two">
-            <article className="panel">
+          <section className="grid grid--two clinical-grid">
+            <article className="panel clinical-panel clinical-panel--soft">
               <div className="panel__header">
                 <div>
-                  <div className="panel__eyebrow">Queue snapshots</div>
-                  <h2>Queues contributing to the dashboard</h2>
-                  <p>
-                    Each row comes from the persisted queue projection used to build the aggregate.
-                  </p>
+                  <div className="panel__eyebrow">Colas</div>
+                  <h2>Panorama por cola</h2>
                 </div>
                 <StatusBadge tone="info">
-                  {dashboardQuery.data.queueSnapshots.length} queues
+                  {dashboardQuery.data.queueSnapshots.length} colas
                 </StatusBadge>
               </div>
 
@@ -286,40 +222,43 @@ export function DashboardHome({ session }: { session: SessionUser }) {
                   <div className="data-list__row" key={queue.queueId}>
                     <div>
                       <strong>{queue.queueId}</strong>
-                      <p>{formatMinutes(queue.averageWaitTimeMinutes)} average wait</p>
+                      <span className="compact-meta">
+                        {formatDisplayMinutes(queue.averageWaitTimeMinutes)}
+                      </span>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      <strong>{formatMetric(queue.totalPending)} pending</strong>
-                      <p>Updated {formatTimestamp(queue.lastUpdatedAt)}</p>
+                      <strong>{formatDisplayNumber(queue.totalPending)} pendientes</strong>
+                      <span className="compact-meta">
+                        {formatDisplayDateTime(queue.lastUpdatedAt)}
+                      </span>
                     </div>
                   </div>
                 ))}
               </div>
             </article>
 
-            <article className="panel">
+            <article className="panel clinical-panel clinical-panel--soft">
               <div className="panel__header">
                 <div>
-                  <div className="panel__eyebrow">Visible states</div>
-                  <h2>Status breakdown and snapshot integrity</h2>
-                  <p>Operational counts are materialized from the same monitor projection set.</p>
+                  <div className="panel__eyebrow">Estados</div>
+                  <h2>Distribucion</h2>
                 </div>
                 <StatusBadge tone={projectionTone(dashboardQuery.data.projectionLagSeconds)}>
-                  {dashboardQuery.data.projectionLagSeconds <= 5 ? 'Healthy lag' : 'Watch lag'}
+                  {dashboardQuery.data.projectionLagSeconds <= 5 ? 'Saludable' : 'Revisar'}
                 </StatusBadge>
               </div>
 
               <div className="data-list">
                 {dashboardQuery.data.statusBreakdown.map((entry) => (
                   <div className="data-list__row" key={entry.status}>
-                    <strong>{entry.status}</strong>
-                    <span>{formatMetric(entry.total)}</span>
+                    <strong>{getOperationalStatusDisplayName(entry.status)}</strong>
+                    <span>{formatDisplayNumber(entry.total)}</span>
                   </div>
                 ))}
               </div>
 
               <div className="panel__meta">
-                <span>Generated at {formatTimestamp(dashboardQuery.data.generatedAt)}</span>
+                <span>Generado {formatDisplayDateTime(dashboardQuery.data.generatedAt)}</span>
               </div>
             </article>
           </section>
@@ -327,6 +266,6 @@ export function DashboardHome({ session }: { session: SessionUser }) {
       ) : null}
 
       <HealthPanels />
-    </>
+    </div>
   );
 }

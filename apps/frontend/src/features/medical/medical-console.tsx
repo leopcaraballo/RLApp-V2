@@ -4,17 +4,18 @@ import { z } from 'zod';
 import { ActionFormCard } from '@/components/operations/action-form-card';
 import { OperationHistory } from '@/components/operations/operation-history';
 import { SectionIntro } from '@/components/shared/section-intro';
+import { getRoleDisplayName } from '@/lib/display-text';
 import { useOperationJournal } from '@/hooks/use-operation-journal';
 import { rlappApi } from '@/services/rlapp-api';
 import type { StaffRole } from '@/types/api';
 
 const activateRoomSchema = z.object({
-  roomId: z.string().min(1),
-  roomName: z.string().min(1),
+  roomId: z.string().min(1, 'El consultorio es obligatorio.'),
+  roomName: z.string().min(1, 'El nombre del consultorio es obligatorio.'),
 });
 
 const deactivateRoomSchema = z.object({
-  roomId: z.string().min(1),
+  roomId: z.string().min(1, 'El consultorio es obligatorio.'),
 });
 
 const medicalCallNextSchema = z.object({
@@ -30,7 +31,7 @@ const startConsultationSchema = z.object({
 const finishConsultationSchema = z.object({
   turnId: z.string().default('MAIN-QUEUE-001-PAT-0045'),
   queueId: z.string().default('MAIN-QUEUE-001'),
-  patientId: z.string().min(1),
+  patientId: z.string().min(1, 'El paciente es obligatorio.'),
   consultingRoomId: z.string().default('ROOM-01'),
   outcome: z.string().default('completed'),
 });
@@ -38,9 +39,9 @@ const finishConsultationSchema = z.object({
 const medicalAbsentSchema = z.object({
   turnId: z.string().default('MAIN-QUEUE-001-PAT-0045'),
   queueId: z.string().default('MAIN-QUEUE-001'),
-  patientId: z.string().min(1),
+  patientId: z.string().min(1, 'El paciente es obligatorio.'),
   consultingRoomId: z.string().default('ROOM-01'),
-  reason: z.string().min(1),
+  reason: z.string().min(1, 'Debes indicar la razon de la ausencia.'),
 });
 
 export function MedicalConsole({ role }: { role: StaffRole }) {
@@ -51,10 +52,10 @@ export function MedicalConsole({ role }: { role: StaffRole }) {
   return (
     <>
       <SectionIntro
-        badge={role}
-        description="Medical now owns the consultation shortcut, the explicit start step, and the completion/absence transitions after the waiting-room reservation and call steps."
-        eyebrow="Medical operations"
-        title="Consulting rooms and consultation flow"
+        badge={getRoleDisplayName(role)}
+        description="Desde aqui puedes operar consultorios, iniciar la atencion y cerrar consultas o registrar ausencias clinicas."
+        eyebrow="Atencion medica"
+        title="Consultorios y flujo de consulta"
       />
 
       <div className="grid grid--two">
@@ -63,34 +64,32 @@ export function MedicalConsole({ role }: { role: StaffRole }) {
             defaultValues={{ roomId: 'ROOM-01', roomName: 'Consultorio 1' }}
             description="POST /api/medical/consulting-room/activate"
             fields={[
-              { name: 'roomId', label: 'Room ID', placeholder: 'ROOM-01' },
-              { name: 'roomName', label: 'Room name', placeholder: 'Consultorio 1' },
+              { name: 'roomId', label: 'Consultorio', placeholder: 'ROOM-01' },
+              { name: 'roomName', label: 'Nombre visible', placeholder: 'Consultorio 1' },
             ]}
             onSettled={(entry) =>
               journal.pushEntry({ ...entry, timestamp: new Date().toISOString() })
             }
             onSubmit={(values) => rlappApi.activateConsultingRoom(values)}
             schema={activateRoomSchema}
-            submitLabel="Activate room"
-            title="Activate consulting room"
+            submitLabel="Activar consultorio"
+            title="Activar consultorio"
           />
         ) : null}
 
         {canManageRooms ? (
           <ActionFormCard
-            contractWarnings={[
-              'When the room does not exist, the backend returns 400 instead of 404.',
-            ]}
+            contractWarnings={['Si el consultorio no existe, el backend responde 400 y no 404.']}
             defaultValues={{ roomId: 'ROOM-01' }}
             description="POST /api/medical/consulting-room/deactivate"
-            fields={[{ name: 'roomId', label: 'Room ID', placeholder: 'ROOM-01' }]}
+            fields={[{ name: 'roomId', label: 'Consultorio', placeholder: 'ROOM-01' }]}
             onSettled={(entry) =>
               journal.pushEntry({ ...entry, timestamp: new Date().toISOString() })
             }
             onSubmit={(values) => rlappApi.deactivateConsultingRoom(values)}
             schema={deactivateRoomSchema}
-            submitLabel="Deactivate room"
-            title="Deactivate consulting room"
+            submitLabel="Desactivar consultorio"
+            title="Desactivar consultorio"
           />
         ) : null}
 
@@ -102,24 +101,24 @@ export function MedicalConsole({ role }: { role: StaffRole }) {
             }}
             description="POST /api/medical/call-next"
             fields={[
-              { name: 'queueId', label: 'Queue ID', placeholder: 'MAIN-QUEUE-001' },
+              { name: 'queueId', label: 'Cola', placeholder: 'MAIN-QUEUE-001' },
               {
                 name: 'consultingRoomId',
-                label: 'Consulting room ID',
+                label: 'Consultorio',
                 placeholder: 'ROOM-01',
               },
             ]}
             notes={[
-              'This shortcut reserves and calls the next eligible turn in one step.',
-              'Use start-consultation when the patient actually enters the consulting room.',
+              'Este atajo reserva y llama al siguiente turno elegible en un solo paso.',
+              'Usa iniciar atencion solo cuando el paciente ya haya entrado al consultorio.',
             ]}
             onSettled={(entry) =>
               journal.pushEntry({ ...entry, timestamp: new Date().toISOString() })
             }
             onSubmit={(values) => rlappApi.medicalCallNext(values)}
             schema={medicalCallNextSchema}
-            submitLabel="Call next"
-            title="Medical call-next shortcut"
+            submitLabel="Llamar siguiente"
+            title="Atajo para llamar siguiente"
           />
         ) : null}
 
@@ -133,25 +132,25 @@ export function MedicalConsole({ role }: { role: StaffRole }) {
             fields={[
               {
                 name: 'turnId',
-                label: 'Turn ID',
+                label: 'Turno',
                 placeholder: 'MAIN-QUEUE-001-PAT-0045',
               },
               {
                 name: 'consultingRoomId',
-                label: 'Consulting room ID',
+                label: 'Consultorio',
                 placeholder: 'ROOM-01',
               },
             ]}
             notes={[
-              'Start this step only after the patient has already been called and is physically entering the consulting room.',
+              'Inicia este paso solo cuando el paciente ya fue llamado y esta entrando al consultorio.',
             ]}
             onSettled={(entry) =>
               journal.pushEntry({ ...entry, timestamp: new Date().toISOString() })
             }
             onSubmit={(values) => rlappApi.startConsultation(values)}
             schema={startConsultationSchema}
-            submitLabel="Start consultation"
-            title="Start active consultation"
+            submitLabel="Iniciar atencion"
+            title="Comenzar consulta activa"
           />
         ) : null}
 
@@ -166,34 +165,34 @@ export function MedicalConsole({ role }: { role: StaffRole }) {
             }}
             description="POST /api/waiting-room/complete-attention"
             fields={[
-              { name: 'turnId', label: 'Turn ID', placeholder: 'MAIN-QUEUE-001-PAT-0045' },
-              { name: 'queueId', label: 'Queue ID', placeholder: 'MAIN-QUEUE-001' },
-              { name: 'patientId', label: 'Patient ID (NUIP)', placeholder: 'PAT-0052' },
+              { name: 'turnId', label: 'Turno', placeholder: 'MAIN-QUEUE-001-PAT-0045' },
+              { name: 'queueId', label: 'Cola', placeholder: 'MAIN-QUEUE-001' },
+              { name: 'patientId', label: 'Documento o NUIP', placeholder: 'PAT-0052' },
               {
                 name: 'consultingRoomId',
-                label: 'Consulting room ID',
+                label: 'Consultorio',
                 placeholder: 'ROOM-01',
               },
               {
                 name: 'outcome',
                 kind: 'select',
-                label: 'Outcome',
+                label: 'Resultado',
                 options: [
-                  { label: 'Completed', value: 'completed' },
-                  { label: 'Follow-up', value: 'follow-up' },
+                  { label: 'Completada', value: 'completed' },
+                  { label: 'Seguimiento', value: 'follow-up' },
                 ],
               },
             ]}
             notes={[
-              'Complete-attention closes the consultation and releases the room for the next patient.',
+              'Completar atencion cierra la consulta y libera el consultorio para el siguiente paciente.',
             ]}
             onSettled={(entry) =>
               journal.pushEntry({ ...entry, timestamp: new Date().toISOString() })
             }
             onSubmit={(values) => rlappApi.finishConsultation(values)}
             schema={finishConsultationSchema}
-            submitLabel="Complete attention"
-            title="Complete consultation attention"
+            submitLabel="Completar atencion"
+            title="Cerrar consulta"
           />
         ) : null}
 
@@ -204,23 +203,23 @@ export function MedicalConsole({ role }: { role: StaffRole }) {
               queueId: 'MAIN-QUEUE-001',
               patientId: '',
               consultingRoomId: 'ROOM-01',
-              reason: 'Patient did not enter room',
+              reason: 'El paciente no ingreso al consultorio',
             }}
             description="POST /api/medical/mark-absent"
             fields={[
-              { name: 'turnId', label: 'Turn ID', placeholder: 'MAIN-QUEUE-001-PAT-0045' },
-              { name: 'queueId', label: 'Queue ID', placeholder: 'MAIN-QUEUE-001' },
-              { name: 'patientId', label: 'Patient ID (NUIP)', placeholder: 'PAT-0052' },
+              { name: 'turnId', label: 'Turno', placeholder: 'MAIN-QUEUE-001-PAT-0045' },
+              { name: 'queueId', label: 'Cola', placeholder: 'MAIN-QUEUE-001' },
+              { name: 'patientId', label: 'Documento o NUIP', placeholder: 'PAT-0052' },
               {
                 name: 'consultingRoomId',
-                label: 'Consulting room ID',
+                label: 'Consultorio',
                 placeholder: 'ROOM-01',
               },
               {
                 name: 'reason',
                 kind: 'textarea',
-                label: 'Reason',
-                placeholder: 'Patient did not enter room',
+                label: 'Motivo',
+                placeholder: 'El paciente no ingreso al consultorio',
               },
             ]}
             onSettled={(entry) =>
@@ -228,15 +227,15 @@ export function MedicalConsole({ role }: { role: StaffRole }) {
             }
             onSubmit={(values) => rlappApi.markMedicalAbsence(values)}
             schema={medicalAbsentSchema}
-            submitLabel="Mark absent"
-            title="Medical absence"
+            submitLabel="Registrar ausencia"
+            title="Ausencia en consulta"
           />
         ) : null}
 
         <OperationHistory
           entries={journal.entries}
           onClear={journal.clearEntries}
-          title="Medical journal"
+          title="Bitacora medica"
         />
       </div>
     </>

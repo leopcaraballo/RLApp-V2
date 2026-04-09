@@ -150,7 +150,7 @@ public class CallNextAtCashierHandler : IRequestHandler<CallNextAtCashierCommand
                 return CommandResult<PatientCallResultDto>.Failure("Queue not found", command.CorrelationId);
             }
 
-            var patientId = queue.GetNextPatient();
+            var patientId = queue.GetNextPatientForCashier();
 
             queue.CallPatientAtCashier(patientId, command.CashierStationId, command.CorrelationId);
 

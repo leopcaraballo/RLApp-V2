@@ -145,6 +145,83 @@ public sealed class GetPatientTrajectoryHandler : IRequestHandler<GetPatientTraj
     }
 }
 
+public sealed class QueryActivePatientTrajectoriesHandler : IRequestHandler<QueryActivePatientTrajectoriesQuery, QueryResult<PatientTrajectoryDiscoveryResponseDto>>
+{
+    private readonly IProjectionStore _projectionStore;
+
+    public QueryActivePatientTrajectoriesHandler(IProjectionStore projectionStore)
+    {
+        _projectionStore = projectionStore;
+    }
+
+    public async Task<QueryResult<PatientTrajectoryDiscoveryResponseDto>> Handle(QueryActivePatientTrajectoriesQuery query, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(query.QueueId))
+        {
+            return QueryResult<PatientTrajectoryDiscoveryResponseDto>.Failure("QUEUE_ID_REQUIRED", query.CorrelationId);
+        }
+
+        var projections = await _projectionStore.QueryPatientTrajectoriesAsync(
+            query.QueueId, PatientTrajectory.ActiveState, null, null, cancellationToken);
+
+        var filtered = string.IsNullOrWhiteSpace(query.Stage)
+            ? projections
+            : projections.Where(p => p.Stages.Any() &&
+                string.Equals(p.Stages[^1].Stage, query.Stage, StringComparison.Ordinal)).ToArray();
+
+        var items = filtered.Select(p => new PatientTrajectoryDiscoveryItemDto
+        {
+            TrajectoryId = p.TrajectoryId,
+            PatientId = p.PatientId,
+            QueueId = p.QueueId,
+            CurrentState = p.CurrentState,
+            OpenedAt = p.OpenedAt,
+            ClosedAt = p.ClosedAt,
+            LastCorrelationId = p.CorrelationIds.LastOrDefault()
+        }).ToArray();
+
+        return QueryResult<PatientTrajectoryDiscoveryResponseDto>.Ok(
+            new PatientTrajectoryDiscoveryResponseDto { Total = items.Length, Items = items },
+            query.CorrelationId);
+    }
+}
+
+public sealed class QueryPatientTrajectoryHistoryHandler : IRequestHandler<QueryPatientTrajectoryHistoryQuery, QueryResult<PatientTrajectoryDiscoveryResponseDto>>
+{
+    private readonly IProjectionStore _projectionStore;
+
+    public QueryPatientTrajectoryHistoryHandler(IProjectionStore projectionStore)
+    {
+        _projectionStore = projectionStore;
+    }
+
+    public async Task<QueryResult<PatientTrajectoryDiscoveryResponseDto>> Handle(QueryPatientTrajectoryHistoryQuery query, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(query.QueueId))
+        {
+            return QueryResult<PatientTrajectoryDiscoveryResponseDto>.Failure("QUEUE_ID_REQUIRED", query.CorrelationId);
+        }
+
+        var projections = await _projectionStore.QueryPatientTrajectoriesAsync(
+            query.QueueId, null, query.From, query.To, cancellationToken);
+
+        var items = projections.Select(p => new PatientTrajectoryDiscoveryItemDto
+        {
+            TrajectoryId = p.TrajectoryId,
+            PatientId = p.PatientId,
+            QueueId = p.QueueId,
+            CurrentState = p.CurrentState,
+            OpenedAt = p.OpenedAt,
+            ClosedAt = p.ClosedAt,
+            LastCorrelationId = p.CorrelationIds.LastOrDefault()
+        }).ToArray();
+
+        return QueryResult<PatientTrajectoryDiscoveryResponseDto>.Ok(
+            new PatientTrajectoryDiscoveryResponseDto { Total = items.Length, Items = items },
+            query.CorrelationId);
+    }
+}
+
 public sealed class RebuildPatientTrajectoriesHandler : IRequestHandler<RebuildPatientTrajectoriesCommand, CommandResult<RebuildPatientTrajectoriesResultDto>>
 {
     private static readonly ConcurrentDictionary<string, byte> RunningRebuilds = new(StringComparer.Ordinal);
@@ -357,6 +434,35 @@ public sealed class RebuildPatientTrajectoriesHandler : IRequestHandler<RebuildP
                         break;
                     }
 
+                case PatientCalled called:
+                    {
+                        var queueId = called.AggregateId;
+                        lastKnownQueueByPatient[patientId] = queueId;
+                        var trajectory = GetOrCreateHistoricalTrajectory(
+                            trajectories,
+                            activeTrajectories,
+                            patientId,
+                            queueId,
+                            called.OccurredAt,
+                            PatientTrajectory.ConsultationStage,
+                            called.EventType,
+                            "LlamadoConsulta",
+                            called.CorrelationId);
+
+                        if (string.Equals(trajectory.CurrentStage, PatientTrajectory.ReceptionStage, StringComparison.Ordinal))
+                        {
+                            break;
+                        }
+
+                        trajectory.RecordStage(
+                            PatientTrajectory.ConsultationStage,
+                            called.EventType,
+                            "LlamadoConsulta",
+                            called.OccurredAt,
+                            called.CorrelationId);
+                        break;
+                    }
+
                 case PatientAbsentAtCashier absentAtCashier:
                     {
                         var queueId = absentAtCashier.AggregateId;
@@ -369,11 +475,11 @@ public sealed class RebuildPatientTrajectoriesHandler : IRequestHandler<RebuildP
                             absentAtCashier.OccurredAt,
                             PatientTrajectory.CashierStage,
                             absentAtCashier.EventType,
-                            "CanceladoPorPago",
+                            "CanceladoPorAusencia",
                             absentAtCashier.CorrelationId);
                         trajectory.Cancel(
                             absentAtCashier.EventType,
-                            "CanceladoPorPago",
+                            "CanceladoPorAusencia",
                             absentAtCashier.Reason,
                             absentAtCashier.OccurredAt,
                             absentAtCashier.CorrelationId);
@@ -521,6 +627,7 @@ public sealed class RebuildPatientTrajectoriesHandler : IRequestHandler<RebuildP
     {
         PatientCheckedIn => true,
         PatientPaymentValidated => true,
+        PatientCalled => true,
         PatientAttentionCompleted => true,
         PatientAbsentAtCashier => true,
         PatientAbsentAtConsultation => true,
@@ -543,6 +650,7 @@ public sealed class RebuildPatientTrajectoriesHandler : IRequestHandler<RebuildP
         {
             PatientCheckedIn checkedIn => string.Equals(checkedIn.AggregateId, queueId, StringComparison.Ordinal),
             PatientPaymentValidated paymentValidated => string.Equals(paymentValidated.AggregateId, queueId, StringComparison.Ordinal),
+            PatientCalled called => string.Equals(called.AggregateId, queueId, StringComparison.Ordinal),
             PatientAbsentAtCashier absentAtCashier => string.Equals(absentAtCashier.AggregateId, queueId, StringComparison.Ordinal),
             PatientAttentionCompleted completed => string.Equals(completed.AggregateId, queueId, StringComparison.Ordinal),
             PatientAbsentAtConsultation absentAtConsultation => string.Equals(absentAtConsultation.AggregateId, queueId, StringComparison.Ordinal),
@@ -556,6 +664,7 @@ public sealed class RebuildPatientTrajectoriesHandler : IRequestHandler<RebuildP
         {
             PatientCheckedIn checkedIn => checkedIn.PatientId,
             PatientPaymentValidated paymentValidated => paymentValidated.PatientId,
+            PatientCalled called => called.PatientId,
             PatientAttentionCompleted completed => completed.PatientId,
             PatientAbsentAtCashier absentAtCashier => absentAtCashier.PatientId,
             PatientAbsentAtConsultation absentAtConsultation => absentAtConsultation.PatientId,

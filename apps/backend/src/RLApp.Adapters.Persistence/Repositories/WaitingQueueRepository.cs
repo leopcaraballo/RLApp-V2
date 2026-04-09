@@ -93,6 +93,15 @@ public class WaitingQueueRepository : IWaitingQueueRepository
                 case PatientCheckedIn checkedIn when !patientIds.Contains(checkedIn.PatientId):
                     patientIds.Add(checkedIn.PatientId);
                     break;
+                case PatientCalledAtCashier calledAtCashier:
+                    attentionStates[calledAtCashier.PatientId] = "AtCashier";
+                    break;
+                case PatientPaymentPending paymentPending:
+                    attentionStates[paymentPending.PatientId] = "PaymentPending";
+                    break;
+                case PatientPaymentValidated paymentValidated:
+                    attentionStates[paymentValidated.PatientId] = "WaitingForConsultation";
+                    break;
                 case PatientClaimedForAttention claimed:
                     roomAssignments[claimed.PatientId] = claimed.RoomId;
                     attentionStates[claimed.PatientId] = claimed.RepresentsStartedAttention
@@ -117,16 +126,6 @@ public class WaitingQueueRepository : IWaitingQueueRepository
                     patientIds.Remove(absentCashier.PatientId);
                     roomAssignments.Remove(absentCashier.PatientId);
                     attentionStates.Remove(absentCashier.PatientId);
-                    break;
-                case PatientCancelledByAbsence cancelledByAbsence:
-                    patientIds.Remove(cancelledByAbsence.PatientId);
-                    roomAssignments.Remove(cancelledByAbsence.PatientId);
-                    attentionStates.Remove(cancelledByAbsence.PatientId);
-                    break;
-                case PatientCancelledByPayment cancelledByPayment:
-                    patientIds.Remove(cancelledByPayment.PatientId);
-                    roomAssignments.Remove(cancelledByPayment.PatientId);
-                    attentionStates.Remove(cancelledByPayment.PatientId);
                     break;
             }
         }

@@ -18,6 +18,8 @@ Definir la estructura y reglas del repositorio como sistema de desarrollo gobern
 - `.github/copilot/` como compatibility layer derivada
 - enforcement de Git Flow y Conventional Commits sobre la capa AI-first
 - higiene repo-wide para outputs generados, caches locales y diffs no canonicos del frontend
+- analisis repo-wide para placeholders, contratos legacy retirados, shims obsoletos desconectados y helpers locales reemplazados por utilidades compartidas
+- deteccion de tipos mapeados sin consumidor confirmado en runtime y tareas locales versionadas para ejecutar la misma validacion fuera del terminal interactivo
 
 ## Required behavior
 
@@ -31,6 +33,12 @@ Definir la estructura y reglas del repositorio como sistema de desarrollo gobern
 - Los artefactos generados por build local, en especial `apps/frontend/.next/`, deben permanecer fuera del versionado mediante la politica repo-wide de `.gitignore`.
 - Si se detectan artefactos generados trackeados, la remediacion debe ejecutarse desde una rama `feature/*` alineada con `develop` y revisarse antes de cualquier promocion de `develop` hacia `main`.
 - Un cleanup repo-wide no debe mezclar cambios funcionales ajenos al saneamiento de gobierno y versionado.
+- Debe existir al menos una validacion automatizada reutilizable en local, CI y PR que bloquee la reintroduccion de scaffolding placeholder, simbolos legacy retirados por auditoria y helpers locales duplicados cuando ya exista una utilidad compartida aprobada.
+- La misma validacion repo-wide debe poder ejecutarse desde una tarea local versionada del workspace, ademas del script y de los workflows oficiales, para evitar dependencia de shells contaminados o prompts interactivos externos.
+- Una limpieza automatica solo puede actuar sobre hallazgos deterministicos, no funcionales y reversibles, como placeholders vacios, shims obsoletos desconectados y contratos legacy sin wiring activo en runtime.
+- Los tipos mapeados en ORM o proyecciones sin consumidor confirmado fuera de su propia declaracion y configuracion deben retirarse del arbol productivo y quedar bloqueados por la validacion de higiene hasta que exista un caso de uso canonico que los reactive.
+- Los contratos y simbolos retirados por no existir en el runtime activo, incluyendo `cancel-payment`, `PatientCancelledByPayment`, `PatientCancelledByAbsence` y `CancelPatientByAbsence`, deben permanecer fuera del arbol productivo y disparar falla de higiene si reaparecen.
+- Las reglas de higiene y analisis deben dejar evidencia verificable y no depender de interpretacion manual del diff para detectar la reincidencia.
 
 ## Contract dependencies
 
@@ -51,3 +59,9 @@ Definir la estructura y reglas del repositorio como sistema de desarrollo gobern
 - Los manifests de `.github/copilot/` quedan alineados con el set completo de agentes, skills y guardrails activos.
 - Un build local del frontend no reintroduce `apps/frontend/.next/` al versionado del repositorio.
 - Un saneamiento repo-wide puede proponerse por `feature/* -> develop` y dejar `develop -> main` como promocion posterior consolidada.
+- El gate repo-wide falla si reaparecen archivos placeholder como `Class1.cs`, shims obsoletos retirados del arbol productivo o simbolos backend declarados como legacy fuera del runtime vigente.
+- El gate repo-wide falla si reaparecen tipos mapeados retirados por no tener consumidor confirmado en runtime.
+- El gate repo-wide falla si reaparece una capacidad terminal de cancelacion de pago o un evento duplicado de cancelacion por ausencia fuera de la trayectoria canonicamente soportada.
+- El lint del frontend falla si reaparecen helpers locales ya consolidados en una utilidad compartida para presentar estado realtime.
+- La misma regla de higiene puede ejecutarse con el mismo comportamiento desde scripts del repositorio y desde los workflows oficiales.
+- La validacion local versionada del workspace debe ejecutar exactamente la misma regla repo-wide de higiene que CI y PR.

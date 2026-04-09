@@ -2,11 +2,11 @@ import { writeFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 
 const baseUrl = process.env.RLAPP_BASE_URL ?? "http://127.0.0.1:5094";
-const queueId = process.env.RLAPP_QUEUE_ID ?? "MAIN-QUEUE-001";
-const cashierStationId = process.env.RLAPP_CASHIER_ID ?? "CASHIER-01";
+const queueId = process.env.RLAPP_QUEUE_ID ?? "CONSULTA-EXTERNA-PRINCIPAL";
+const cashierStationId = process.env.RLAPP_CASHIER_ID ?? "CAJA-PRINCIPAL";
 const requestedPatients = Number(process.env.RLAPP_TOTAL_PATIENTS ?? 100);
 const initialRoomCount = Number(process.env.RLAPP_INITIAL_ROOMS ?? 10);
-const remainingRoomCount = Number(process.env.RLAPP_REMAINING_ROOMS ?? 5);
+const remainingRoomCount = Number(process.env.RLAPP_REMAINING_ROOMS ?? 6);
 const targetRemainingRoomCount = Math.min(initialRoomCount, remainingRoomCount);
 const targetDeactivatedRoomCount = Math.max(
   0,
@@ -17,6 +17,25 @@ const deactivateAtPatient = Number(
 );
 const roomIdPrefix = process.env.RLAPP_ROOM_ID_PREFIX ?? "ROOM";
 const roomNamePrefix = process.env.RLAPP_ROOM_NAME_PREFIX ?? "Consultorio";
+const patientIdStart = readNonNegativeIntegerEnv(
+  "RLAPP_PATIENT_ID_START",
+  52300000,
+);
+const appointmentPrefix = process.env.RLAPP_APPOINTMENT_PREFIX ?? "CITA-CE";
+const progressInterval = Math.max(
+  10,
+  readNonNegativeIntegerEnv("RLAPP_PROGRESS_INTERVAL", 50),
+);
+const registrationBatchSize = Math.max(
+  1,
+  readNonNegativeIntegerEnv("RLAPP_REGISTRATION_BATCH_SIZE", 50),
+);
+const timingProfile = {
+  interPatientWait: resolveDelayRange("INTER_PATIENT_WAIT", 0, 0),
+  cashierDwell: resolveDelayRange("CASHIER_DWELL", 0, 0),
+  medicalCallDwell: resolveDelayRange("MEDICAL_CALL_DWELL", 0, 0),
+  consultationDwell: resolveDelayRange("CONSULTATION_DWELL", 0, 0),
+};
 const reportPath =
   process.env.RLAPP_REPORT_PATH ??
   "/home/lcaraballo/Documentos/Sofka Projects/projects/RLApp-V2/.tmp/rlapp-patient-simulation-report.json";
@@ -33,7 +52,89 @@ const caseCounts = resolveCaseCounts(requestedPatients);
 const roomCatalog = buildRoomCatalog(initialRoomCount);
 const activeRooms = [...roomCatalog];
 const deactivatedRooms = [];
+const assignableRoomIds = new Set(roomCatalog.map((room) => room.roomId));
+const availableRooms = [...roomCatalog];
+const waitingRoomResolvers = [];
 let roomDeactivationDone = false;
+let roomDeactivationRequested = false;
+let processedPatientCount = 0;
+let resultCommitChain = Promise.resolve();
+let operationalMutationChain = Promise.resolve();
+const simulationDayCode = new Date()
+  .toISOString()
+  .slice(0, 10)
+  .replace(/-/g, "");
+
+const primaryNames = [
+  "Maria",
+  "Juan",
+  "Ana",
+  "Carlos",
+  "Luisa",
+  "Andres",
+  "Paula",
+  "Miguel",
+  "Valentina",
+  "Santiago",
+  "Camila",
+  "Daniel",
+  "Laura",
+  "Sebastian",
+  "Juliana",
+  "Mateo",
+  "Carolina",
+  "Felipe",
+  "Isabella",
+  "Nicolas",
+];
+const secondaryNames = [
+  "Fernanda",
+  "Alejandro",
+  "Patricia",
+  "Jose",
+  "Catalina",
+  "Esteban",
+  "Andrea",
+  "Javier",
+  "Tatiana",
+  "Ricardo",
+  "Gabriela",
+  "David",
+  "Lorena",
+  "Alejandra",
+  "Rafael",
+  "Natalia",
+  "Cristian",
+  "Adriana",
+  "Oscar",
+  "Claudia",
+];
+const surnames = [
+  "Gomez",
+  "Rodriguez",
+  "Martinez",
+  "Lopez",
+  "Gonzalez",
+  "Perez",
+  "Ramirez",
+  "Torres",
+  "Sanchez",
+  "Vargas",
+  "Moreno",
+  "Castro",
+  "Romero",
+  "Diaz",
+  "Herrera",
+  "Rojas",
+  "Jimenez",
+  "Restrepo",
+  "Navarro",
+  "Ortega",
+  "Mendoza",
+  "Suarez",
+  "Cortes",
+  "Pineda",
+];
 
 const terminalTrajectoryStates = new Set([
   "TrayectoriaFinalizada",
@@ -46,6 +147,8 @@ const report = {
   queueId,
   cashierStationId,
   patientPrefix,
+  timingProfile,
+  registrationBatchSize,
   caseCounts,
   requestedPatients,
   roomCatalog: roomCatalog.map((room) => ({
@@ -108,6 +211,71 @@ function buildRoomCatalog(totalRooms) {
   }));
 }
 
+function buildSyntheticPatientProfile(index, width) {
+  const primaryName = primaryNames[(index - 1) % primaryNames.length];
+  const secondaryName = secondaryNames[(index * 3 - 1) % secondaryNames.length];
+  const firstSurname = surnames[(index * 5 - 1) % surnames.length];
+  const secondSurname = surnames[(index * 7 - 1) % surnames.length];
+  const includeSecondName = index % 3 !== 0;
+  const patientId = String(patientIdStart + index - 1);
+  const patientName = [
+    primaryName,
+    includeSecondName ? secondaryName : null,
+    firstSurname,
+    secondSurname,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  return {
+    patientId,
+    patientName,
+    appointmentReference: `${appointmentPrefix}-${simulationDayCode}-${String(index).padStart(width, "0")}`,
+  };
+}
+
+function describeCaseCategory(category) {
+  switch (category) {
+    case "completed":
+      return "flujo-completo";
+    case "medicallyReviewed":
+      return "seguimiento-medico";
+    case "unpaid":
+      return "pago-pendiente";
+    case "abandoned":
+      return "ausencia-en-caja";
+    case "cancelled":
+      return "ausencia-en-consulta";
+    default:
+      return category;
+  }
+}
+
+function readNonNegativeIntegerEnv(name, defaultValue) {
+  const value = Number(process.env[name] ?? defaultValue);
+
+  if (!Number.isInteger(value) || value < 0) {
+    throw new Error(
+      `Invalid non-negative integer configured for ${name}: ${process.env[name]}`,
+    );
+  }
+
+  return value;
+}
+
+function resolveDelayRange(prefix, defaultMin, defaultMax) {
+  const minMs = readNonNegativeIntegerEnv(`RLAPP_MIN_${prefix}_MS`, defaultMin);
+  const maxMs = readNonNegativeIntegerEnv(`RLAPP_MAX_${prefix}_MS`, defaultMax);
+
+  if (maxMs < minMs) {
+    throw new Error(
+      `Invalid delay range for ${prefix}: max ${maxMs} cannot be lower than min ${minMs}`,
+    );
+  }
+
+  return { minMs, maxMs };
+}
+
 function requiresConsultingRoom(category) {
   return (
     category === "completed" ||
@@ -116,18 +284,69 @@ function requiresConsultingRoom(category) {
   );
 }
 
-function getActiveRoomForCase(caseItem) {
-  if (!requiresConsultingRoom(caseItem.category)) {
+function removeAvailableRoom(roomId) {
+  const roomIndex = availableRooms.findIndex((room) => room.roomId === roomId);
+
+  if (roomIndex < 0) {
     return null;
   }
 
-  if (activeRooms.length === 0) {
-    throw new Error(
-      `No active consulting rooms available for patient ${caseItem.patientId}`,
-    );
+  return availableRooms.splice(roomIndex, 1)[0];
+}
+
+function roomIsDeactivated(roomId) {
+  return deactivatedRooms.some((room) => room.roomId === roomId);
+}
+
+async function deactivateRoomAndRecord(room, processedPatients) {
+  if (roomIsDeactivated(room.roomId)) {
+    return;
   }
 
-  return activeRooms[(caseItem.index - 1) % activeRooms.length];
+  const deactivationResult = await deactivateConsultingRoom(room);
+  const activeRoomIndex = activeRooms.findIndex(
+    (candidate) => candidate.roomId === room.roomId,
+  );
+
+  if (activeRoomIndex >= 0) {
+    activeRooms.splice(activeRoomIndex, 1);
+  }
+
+  deactivatedRooms.push(room);
+  report.roomLifecycle.deactivatedRooms.push({
+    ...deactivationResult,
+    processedPatients,
+  });
+  roomDeactivationDone = deactivatedRooms.length === targetDeactivatedRoomCount;
+}
+
+function acquireConsultingRoom() {
+  const availableRoomIndex = availableRooms.findIndex((room) =>
+    assignableRoomIds.has(room.roomId),
+  );
+
+  if (availableRoomIndex >= 0) {
+    return Promise.resolve(availableRooms.splice(availableRoomIndex, 1)[0]);
+  }
+
+  return new Promise((resolve) => {
+    waitingRoomResolvers.push(resolve);
+  });
+}
+
+async function releaseConsultingRoom(room) {
+  if (!assignableRoomIds.has(room.roomId)) {
+    await deactivateRoomAndRecord(room, processedPatientCount);
+    return;
+  }
+
+  const nextResolver = waitingRoomResolvers.shift();
+  if (nextResolver) {
+    nextResolver(room);
+    return;
+  }
+
+  availableRooms.push(room);
 }
 
 let accessToken = "";
@@ -138,6 +357,26 @@ function nowIso() {
 
 function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function pickRandomDelay(range) {
+  if (!range || range.maxMs <= range.minMs) {
+    return range?.minMs ?? 0;
+  }
+
+  return (
+    range.minMs + Math.floor(Math.random() * (range.maxMs - range.minMs + 1))
+  );
+}
+
+async function waitForRandomDelay(range) {
+  const waitMs = pickRandomDelay(range);
+
+  if (waitMs > 0) {
+    await delay(waitMs);
+  }
+
+  return waitMs;
 }
 
 function buildCorrelationId(label) {
@@ -206,6 +445,56 @@ async function request(
   return data;
 }
 
+function isConcurrencyConflictError(error) {
+  const message = error instanceof Error ? error.message : String(error);
+  const normalizedMessage = message.toLowerCase();
+
+  return (
+    normalizedMessage.includes("concurrency_conflict") ||
+    normalizedMessage.includes("concurrent modification detected")
+  );
+}
+
+async function runWithConcurrencyRetry(operation, maxAttempts = 5) {
+  let attempt = 0;
+
+  while (attempt < maxAttempts) {
+    try {
+      return await operation();
+    } catch (error) {
+      attempt += 1;
+
+      if (!isConcurrencyConflictError(error) || attempt >= maxAttempts) {
+        throw error;
+      }
+
+      await delay(25 * attempt);
+    }
+  }
+
+  throw new Error("Operation exceeded concurrency retry budget.");
+}
+
+function runSerializedOperationalMutation(operation) {
+  const pendingMutation = operationalMutationChain.then(
+    () => runWithConcurrencyRetry(operation),
+    () => runWithConcurrencyRetry(operation),
+  );
+
+  operationalMutationChain = pendingMutation.catch(() => {});
+  return pendingMutation;
+}
+
+function readErrorText(payload) {
+  if (!payload || typeof payload !== "object") {
+    return typeof payload === "string" ? payload : "";
+  }
+
+  return (
+    payload.error ?? payload.message ?? payload.detail ?? payload.title ?? ""
+  );
+}
+
 async function login() {
   const response = await request("/api/staff/auth/login", {
     method: "POST",
@@ -235,11 +524,30 @@ async function activateConsultingRoom(room) {
   const response = await request("/api/medical/consulting-room/activate", {
     method: "POST",
     headers: headersFor(`activate-room-${room.roomId}`),
+    expectedStatuses: [200, 400],
     body: {
       roomId: room.roomId,
       roomName: room.roomName,
     },
   });
+
+  if (response?.success === true) {
+    return {
+      ...room,
+      activatedAt: nowIso(),
+      response,
+    };
+  }
+
+  const errorText = String(readErrorText(response));
+  if (
+    errorText.length > 0 &&
+    !errorText.toLowerCase().includes("already active")
+  ) {
+    throw new Error(
+      `Unable to activate consulting room ${room.roomId}: ${JSON.stringify(response)}`,
+    );
+  }
 
   return {
     ...room,
@@ -252,10 +560,29 @@ async function deactivateConsultingRoom(room) {
   const response = await request("/api/medical/consulting-room/deactivate", {
     method: "POST",
     headers: headersFor(`deactivate-room-${room.roomId}`),
+    expectedStatuses: [200, 400],
     body: {
       roomId: room.roomId,
     },
   });
+
+  if (response?.success === true) {
+    return {
+      ...room,
+      deactivatedAt: nowIso(),
+      response,
+    };
+  }
+
+  const errorText = String(readErrorText(response));
+  if (
+    errorText.length > 0 &&
+    !errorText.toLowerCase().includes("already inactive")
+  ) {
+    throw new Error(
+      `Unable to deactivate consulting room ${room.roomId}: ${JSON.stringify(response)}`,
+    );
+  }
 
   return {
     ...room,
@@ -280,9 +607,15 @@ async function ensureConsultingRooms() {
 }
 
 async function deactivateRoomsAtHalfway(processedPatients) {
-  if (roomDeactivationDone || processedPatients < deactivateAtPatient) {
+  if (
+    roomDeactivationDone ||
+    roomDeactivationRequested ||
+    processedPatients < deactivateAtPatient
+  ) {
     return;
   }
+
+  roomDeactivationRequested = true;
 
   if (targetDeactivatedRoomCount === 0) {
     roomDeactivationDone = true;
@@ -290,24 +623,20 @@ async function deactivateRoomsAtHalfway(processedPatients) {
   }
 
   const roomsToDeactivate = activeRooms.slice(-targetDeactivatedRoomCount);
-  const deactivationResults = [];
 
   for (const room of roomsToDeactivate) {
-    deactivationResults.push(await deactivateConsultingRoom(room));
+    assignableRoomIds.delete(room.roomId);
   }
 
-  activeRooms.splice(
-    activeRooms.length - roomsToDeactivate.length,
-    roomsToDeactivate.length,
-  );
-  deactivatedRooms.push(...roomsToDeactivate);
-  report.roomLifecycle.deactivatedRooms.push(
-    ...deactivationResults.map((room) => ({
-      ...room,
-      processedPatients,
-    })),
-  );
-  roomDeactivationDone = true;
+  for (const room of roomsToDeactivate) {
+    const availableRoom = removeAvailableRoom(room.roomId);
+
+    if (availableRoom) {
+      await deactivateRoomAndRecord(availableRoom, processedPatients);
+    }
+  }
+
+  roomDeactivationDone = deactivatedRooms.length === targetDeactivatedRoomCount;
 }
 
 function buildCasePlan() {
@@ -331,14 +660,16 @@ function buildCasePlan() {
       availableCategories[
         Math.floor(Math.random() * availableCategories.length)
       ];
-    const patientId = `${safePatientPrefix}PAT${String(index).padStart(width, "0")}`;
+    const patientProfile = buildSyntheticPatientProfile(index, width);
 
     plan.push({
       index,
       category,
-      patientId,
-      patientName: `Paciente ${index}`,
-      appointmentReference: `APPT-${patientPrefix}-${String(index).padStart(width, "0")}`,
+      patientId: patientProfile.patientId,
+      patientName: patientProfile.patientName,
+      appointmentReference: patientProfile.appointmentReference,
+      caseLabel: describeCaseCategory(category),
+      patientReference: `${safePatientPrefix}${String(index).padStart(width, "0")}`,
     });
     pending[category] -= 1;
     index += 1;
@@ -356,128 +687,182 @@ function expectPatient(callResult, patientId, endpoint) {
 }
 
 async function registerPatient(caseItem) {
-  return request("/api/reception/register", {
-    method: "POST",
-    headers: headersFor(`register-${caseItem.patientId}`, {
-      withIdempotency: true,
+  return runSerializedOperationalMutation(() =>
+    request("/api/reception/register", {
+      method: "POST",
+      headers: headersFor(`register-${caseItem.patientId}`, {
+        withIdempotency: true,
+      }),
+      body: {
+        queueId,
+        patientId: caseItem.patientId,
+        patientName: caseItem.patientName,
+        appointmentReference: caseItem.appointmentReference,
+        priority: "1",
+        notes: `simulacion:${caseItem.caseLabel};referencia:${caseItem.patientReference}`,
+      },
     }),
-    body: {
-      queueId,
-      patientId: caseItem.patientId,
-      patientName: caseItem.patientName,
-      appointmentReference: caseItem.appointmentReference,
-      priority: "1",
-      notes: `simulation:${caseItem.category}`,
-    },
-  });
+  );
+}
+
+async function registerCasePlan(casePlan) {
+  const registeredCases = [];
+
+  for (const caseItem of casePlan) {
+    const arrivalGapMs =
+      registeredCases.length === 0
+        ? 0
+        : await waitForRandomDelay(timingProfile.interPatientWait);
+    const registerResult = await registerPatient(caseItem);
+
+    registeredCases.push({
+      ...caseItem,
+      registerResult,
+      timings: {
+        arrivalGapMs,
+        cashierDwellMs: 0,
+        medicalCallDwellMs: 0,
+        consultationDwellMs: 0,
+      },
+    });
+
+    if (
+      caseItem.index % progressInterval === 0 ||
+      caseItem.index === casePlan.length
+    ) {
+      console.log(
+        `[registration] registered ${caseItem.index}/${casePlan.length}`,
+      );
+    }
+  }
+
+  return registeredCases;
 }
 
 async function callCashier(caseItem) {
-  return request("/api/cashier/call-next", {
-    method: "POST",
-    headers: headersFor(`cashier-call-${caseItem.patientId}`, {
-      withIdempotency: true,
+  return runSerializedOperationalMutation(() =>
+    request("/api/cashier/call-next", {
+      method: "POST",
+      headers: headersFor(`cashier-call-${caseItem.patientId}`, {
+        withIdempotency: true,
+      }),
+      body: {
+        queueId,
+        cashierStationId,
+      },
     }),
-    body: {
-      queueId,
-      cashierStationId,
-    },
-  });
+  );
 }
 
 async function validatePayment(caseItem, turnId) {
-  return request("/api/cashier/validate-payment", {
-    method: "POST",
-    headers: headersFor(`validate-payment-${caseItem.patientId}`),
-    body: {
-      turnId,
-      queueId,
-      patientId: caseItem.patientId,
-      paymentReference: `PAY-${caseItem.patientId}`,
-      validatedAmount: 25,
-    },
-  });
+  return runSerializedOperationalMutation(() =>
+    request("/api/cashier/validate-payment", {
+      method: "POST",
+      headers: headersFor(`validate-payment-${caseItem.patientId}`),
+      body: {
+        turnId,
+        queueId,
+        patientId: caseItem.patientId,
+        paymentReference: `PAY-${caseItem.patientId}`,
+        validatedAmount: 25,
+      },
+    }),
+  );
 }
 
 async function markPaymentPending(caseItem, turnId) {
-  return request("/api/cashier/mark-payment-pending", {
-    method: "POST",
-    headers: headersFor(`payment-pending-${caseItem.patientId}`),
-    body: {
-      turnId,
-      queueId,
-      patientId: caseItem.patientId,
-      reason: "Payment abandoned during simulation",
-      attemptNumber: 1,
-    },
-  });
+  return runSerializedOperationalMutation(() =>
+    request("/api/cashier/mark-payment-pending", {
+      method: "POST",
+      headers: headersFor(`payment-pending-${caseItem.patientId}`),
+      body: {
+        turnId,
+        queueId,
+        patientId: caseItem.patientId,
+        reason: "Payment abandoned during simulation",
+        attemptNumber: 1,
+      },
+    }),
+  );
 }
 
 async function markCashierAbsent(caseItem, turnId) {
-  return request("/api/cashier/mark-absent", {
-    method: "POST",
-    headers: headersFor(`cashier-absent-${caseItem.patientId}`),
-    body: {
-      turnId,
-      queueId,
-      patientId: caseItem.patientId,
-      reason: "Patient did not complete cashier step",
-    },
-  });
+  return runSerializedOperationalMutation(() =>
+    request("/api/cashier/mark-absent", {
+      method: "POST",
+      headers: headersFor(`cashier-absent-${caseItem.patientId}`),
+      body: {
+        turnId,
+        queueId,
+        patientId: caseItem.patientId,
+        reason: "Patient did not complete cashier step",
+      },
+    }),
+  );
 }
 
 async function callMedical(caseItem, room) {
-  return request("/api/medical/call-next", {
-    method: "POST",
-    headers: headersFor(`medical-call-${caseItem.patientId}-${room.roomId}`),
-    body: {
-      queueId,
-      consultingRoomId: room.roomId,
-    },
-  });
+  return runSerializedOperationalMutation(() =>
+    request("/api/medical/call-next", {
+      method: "POST",
+      headers: headersFor(`medical-call-${caseItem.patientId}-${room.roomId}`),
+      body: {
+        queueId,
+        consultingRoomId: room.roomId,
+      },
+    }),
+  );
 }
 
 async function startConsultation(turnId, caseItem, room) {
-  return request("/api/medical/start-consultation", {
-    method: "POST",
-    headers: headersFor(
-      `start-consultation-${caseItem.patientId}-${room.roomId}`,
-    ),
-    body: {
-      turnId,
-      consultingRoomId: room.roomId,
-    },
-  });
+  return runSerializedOperationalMutation(() =>
+    request("/api/medical/start-consultation", {
+      method: "POST",
+      headers: headersFor(
+        `start-consultation-${caseItem.patientId}-${room.roomId}`,
+      ),
+      body: {
+        turnId,
+        consultingRoomId: room.roomId,
+      },
+    }),
+  );
 }
 
 async function completeConsultation(turnId, caseItem, room, outcome) {
-  return request("/api/medical/finish-consultation", {
-    method: "POST",
-    headers: headersFor(
-      `complete-consultation-${caseItem.patientId}-${room.roomId}`,
-    ),
-    body: {
-      turnId,
-      queueId,
-      patientId: caseItem.patientId,
-      consultingRoomId: room.roomId,
-      outcome,
-    },
-  });
+  return runSerializedOperationalMutation(() =>
+    request("/api/medical/finish-consultation", {
+      method: "POST",
+      headers: headersFor(
+        `complete-consultation-${caseItem.patientId}-${room.roomId}`,
+      ),
+      body: {
+        turnId,
+        queueId,
+        patientId: caseItem.patientId,
+        consultingRoomId: room.roomId,
+        outcome,
+      },
+    }),
+  );
 }
 
 async function markMedicalAbsent(turnId, caseItem, room) {
-  return request("/api/medical/mark-absent", {
-    method: "POST",
-    headers: headersFor(`medical-absent-${caseItem.patientId}-${room.roomId}`),
-    body: {
-      turnId,
-      queueId,
-      patientId: caseItem.patientId,
-      consultingRoomId: room.roomId,
-      reason: "Patient cancelled before medical review",
-    },
-  });
+  return runSerializedOperationalMutation(() =>
+    request("/api/medical/mark-absent", {
+      method: "POST",
+      headers: headersFor(
+        `medical-absent-${caseItem.patientId}-${room.roomId}`,
+      ),
+      body: {
+        turnId,
+        queueId,
+        patientId: caseItem.patientId,
+        consultingRoomId: room.roomId,
+        reason: "Patient cancelled before medical review",
+      },
+    }),
+  );
 }
 
 async function discoverTrajectory(patientId) {
@@ -536,13 +921,63 @@ async function getMonitor() {
   );
 }
 
-async function pollOperationalReadModels(totalPatients, completedPatients) {
+function extractDashboardCounters(dashboard) {
+  return {
+    currentWaitingCount: Number(dashboard?.currentWaitingCount ?? 0),
+    totalPatientsToday: Number(dashboard?.totalPatientsToday ?? 0),
+    totalCompleted: Number(dashboard?.totalCompleted ?? 0),
+  };
+}
+
+function dashboardCountersEqual(left, right) {
+  return (
+    left.currentWaitingCount === right.currentWaitingCount &&
+    left.totalPatientsToday === right.totalPatientsToday &&
+    left.totalCompleted === right.totalCompleted
+  );
+}
+
+async function captureOperationalBaseline() {
+  const timeoutAt = Date.now() + 15000;
+  let lastSnapshot = null;
+  let stableSince = 0;
+
+  while (Date.now() < timeoutAt) {
+    const currentSnapshot = extractDashboardCounters(await getDashboard());
+
+    if (lastSnapshot && dashboardCountersEqual(lastSnapshot, currentSnapshot)) {
+      if (stableSince === 0) {
+        stableSince = Date.now();
+      }
+
+      if (Date.now() - stableSince >= 1000) {
+        return { dashboard: currentSnapshot };
+      }
+    } else {
+      stableSince = 0;
+      lastSnapshot = currentSnapshot;
+    }
+
+    await delay(250);
+  }
+
+  return {
+    dashboard: lastSnapshot ?? extractDashboardCounters(await getDashboard()),
+  };
+}
+
+async function pollOperationalReadModels(
+  totalPatients,
+  completedPatients,
+  baseline,
+) {
   const timeoutAt = Date.now() + 60000;
   let last = null;
 
   while (Date.now() < timeoutAt) {
     const dashboard = await getDashboard();
     const monitor = await getMonitor();
+    const dashboardCounters = extractDashboardCounters(dashboard);
     const nonTerminalEntries = (monitor?.entries ?? []).filter(
       (entry) => !terminalMonitorStatuses.has(entry.status),
     );
@@ -554,9 +989,12 @@ async function pollOperationalReadModels(totalPatients, completedPatients) {
     };
 
     const dashboardReady =
-      dashboard?.currentWaitingCount === 0 &&
-      dashboard?.totalPatientsToday >= totalPatients &&
-      dashboard?.totalCompleted === completedPatients;
+      dashboardCounters.currentWaitingCount ===
+        baseline.dashboard.currentWaitingCount &&
+      dashboardCounters.totalPatientsToday ===
+        baseline.dashboard.totalPatientsToday + totalPatients &&
+      dashboardCounters.totalCompleted ===
+        baseline.dashboard.totalCompleted + completedPatients;
     const monitorReady =
       monitor?.waitingCount === 0 && nonTerminalEntries.length === 0;
 
@@ -572,8 +1010,92 @@ async function pollOperationalReadModels(totalPatients, completedPatients) {
   );
 }
 
-async function runCase(caseItem) {
-  const registerResult = await registerPatient(caseItem);
+function queueCaseResultCommit(result) {
+  const commitResult = async () => {
+    report.cases.push(result);
+    processedPatientCount += 1;
+    await deactivateRoomsAtHalfway(processedPatientCount);
+
+    if (
+      processedPatientCount % progressInterval === 0 ||
+      processedPatientCount === requestedPatients
+    ) {
+      console.log(
+        `[progress] processed ${processedPatientCount}/${requestedPatients}`,
+      );
+    }
+  };
+
+  const commitPromise = resultCommitChain.then(commitResult, commitResult);
+  resultCommitChain = commitPromise.catch(() => {});
+  return commitPromise;
+}
+
+async function processMedicalCase(caseItem, initialTurnId, baseTimings) {
+  const room = await acquireConsultingRoom();
+
+  try {
+    const timings = { ...baseTimings };
+    const medicalCall = await callMedical(caseItem, room);
+    expectPatient(medicalCall, caseItem.patientId, "/api/medical/call-next");
+    const turnId = medicalCall.turnId ?? initialTurnId;
+
+    timings.medicalCallDwellMs = await waitForRandomDelay(
+      timingProfile.medicalCallDwell,
+    );
+
+    if (caseItem.category === "cancelled") {
+      await markMedicalAbsent(turnId, caseItem, room);
+      const trajectory = await pollTrajectory(caseItem, "TrayectoriaCancelada");
+
+      return {
+        ...caseItem,
+        roomId: room.roomId,
+        timings,
+        finalTrajectoryState: trajectory.currentState,
+        trajectoryId: trajectory.trajectoryId,
+        closedAt: trajectory.closedAt,
+        outcome: "cancelled-at-consultation",
+      };
+    }
+
+    await startConsultation(turnId, caseItem, room);
+    timings.consultationDwellMs = await waitForRandomDelay(
+      timingProfile.consultationDwell,
+    );
+
+    const consultationOutcome =
+      caseItem.category === "medicallyReviewed" ? "follow-up" : "completed";
+
+    await completeConsultation(turnId, caseItem, room, consultationOutcome);
+    const trajectory = await pollTrajectory(caseItem, "TrayectoriaFinalizada");
+
+    return {
+      ...caseItem,
+      roomId: room.roomId,
+      timings,
+      finalTrajectoryState: trajectory.currentState,
+      trajectoryId: trajectory.trajectoryId,
+      closedAt: trajectory.closedAt,
+      medicalOutcome: consultationOutcome,
+      outcome:
+        caseItem.category === "medicallyReviewed"
+          ? "reviewed-by-doctor"
+          : "completed",
+    };
+  } finally {
+    await releaseConsultingRoom(room);
+  }
+}
+
+async function runCashierStage(caseItem) {
+  const timings = {
+    arrivalGapMs: caseItem.timings?.arrivalGapMs ?? 0,
+    cashierDwellMs: 0,
+    medicalCallDwellMs: 0,
+    consultationDwellMs: 0,
+  };
+  const registerResult = caseItem.registerResult;
   const cashierCall = await callCashier(caseItem);
   expectPatient(cashierCall, caseItem.patientId, "/api/cashier/call-next");
   let turnId = cashierCall.turnId ?? registerResult.turnId;
@@ -582,77 +1104,51 @@ async function runCase(caseItem) {
     throw new Error(`No turnId returned for patient ${caseItem.patientId}`);
   }
 
+  timings.cashierDwellMs = await waitForRandomDelay(timingProfile.cashierDwell);
+
   if (caseItem.category === "abandoned") {
     await markCashierAbsent(caseItem, turnId);
-    const trajectory = await pollTrajectory(caseItem, "TrayectoriaCancelada");
+
     return {
-      ...caseItem,
-      finalTrajectoryState: trajectory.currentState,
-      trajectoryId: trajectory.trajectoryId,
-      closedAt: trajectory.closedAt,
-      outcome: "abandoned-at-cashier",
+      resultPromise: pollTrajectory(caseItem, "TrayectoriaCancelada").then(
+        (trajectory) => ({
+          ...caseItem,
+          timings,
+          finalTrajectoryState: trajectory.currentState,
+          trajectoryId: trajectory.trajectoryId,
+          closedAt: trajectory.closedAt,
+          outcome: "abandoned-at-cashier",
+        }),
+      ),
     };
   }
 
   if (caseItem.category === "unpaid") {
     await markPaymentPending(caseItem, turnId);
     await markCashierAbsent(caseItem, turnId);
-    const trajectory = await pollTrajectory(caseItem, "TrayectoriaCancelada");
-    return {
-      ...caseItem,
-      finalTrajectoryState: trajectory.currentState,
-      trajectoryId: trajectory.trajectoryId,
-      closedAt: trajectory.closedAt,
-      outcome: "unpaid-payment-pending",
-    };
-  }
 
-  const room = getActiveRoomForCase(caseItem);
-  if (!room) {
-    throw new Error(
-      `Category ${caseItem.category} requires a consulting room but none was assigned`,
-    );
+    return {
+      resultPromise: pollTrajectory(caseItem, "TrayectoriaCancelada").then(
+        (trajectory) => ({
+          ...caseItem,
+          timings,
+          finalTrajectoryState: trajectory.currentState,
+          trajectoryId: trajectory.trajectoryId,
+          closedAt: trajectory.closedAt,
+          outcome: "unpaid-payment-pending",
+        }),
+      ),
+    };
   }
 
   await validatePayment(caseItem, turnId);
-  const medicalCall = await callMedical(caseItem, room);
-  expectPatient(medicalCall, caseItem.patientId, "/api/medical/call-next");
-  turnId = medicalCall.turnId ?? turnId;
-
-  if (caseItem.category === "cancelled") {
-    await markMedicalAbsent(turnId, caseItem, room);
-    const trajectory = await pollTrajectory(caseItem, "TrayectoriaCancelada");
-    return {
-      ...caseItem,
-      roomId: room.roomId,
-      finalTrajectoryState: trajectory.currentState,
-      trajectoryId: trajectory.trajectoryId,
-      closedAt: trajectory.closedAt,
-      outcome: "cancelled-at-consultation",
-    };
-  }
-
-  await startConsultation(turnId, caseItem, room);
-  const consultationOutcome =
-    caseItem.category === "medicallyReviewed" ? "follow-up" : "completed";
-  await completeConsultation(turnId, caseItem, room, consultationOutcome);
-  const trajectory = await pollTrajectory(caseItem, "TrayectoriaFinalizada");
 
   return {
-    ...caseItem,
-    roomId: room.roomId,
-    finalTrajectoryState: trajectory.currentState,
-    trajectoryId: trajectory.trajectoryId,
-    closedAt: trajectory.closedAt,
-    medicalOutcome: consultationOutcome,
-    outcome:
-      caseItem.category === "medicallyReviewed"
-        ? "reviewed-by-doctor"
-        : "completed",
+    resultPromise: processMedicalCase(caseItem, turnId, timings),
   };
 }
 
-function buildSummary(results, operational) {
+function buildSummary(results, operational, baseline) {
   const finalStates = results.reduce((accumulator, item) => {
     accumulator[item.finalTrajectoryState] =
       (accumulator[item.finalTrajectoryState] ?? 0) + 1;
@@ -670,9 +1166,19 @@ function buildSummary(results, operational) {
     finalStates,
     outcomes,
     dashboard: {
+      baseline: baseline.dashboard,
       currentWaitingCount: operational.dashboard.currentWaitingCount,
+      currentWaitingCountDelta:
+        operational.dashboard.currentWaitingCount -
+        baseline.dashboard.currentWaitingCount,
       totalPatientsToday: operational.dashboard.totalPatientsToday,
+      totalPatientsTodayDelta:
+        operational.dashboard.totalPatientsToday -
+        baseline.dashboard.totalPatientsToday,
       totalCompleted: operational.dashboard.totalCompleted,
+      totalCompletedDelta:
+        operational.dashboard.totalCompleted -
+        baseline.dashboard.totalCompleted,
       activeRooms: operational.dashboard.activeRooms,
       projectionLagSeconds: operational.dashboard.projectionLagSeconds,
       statusBreakdown: operational.dashboard.statusBreakdown,
@@ -718,22 +1224,42 @@ async function main() {
 
   await login();
   await ensureConsultingRooms();
+  const operationalBaseline = await captureOperationalBaseline();
+  const caseTasks = [];
+  let cashierPipeline = Promise.resolve();
 
-  for (const caseItem of casePlan) {
-    const result = await runCase(caseItem);
-    report.cases.push(result);
-    await deactivateRoomsAtHalfway(caseItem.index);
+  for (
+    let batchStart = 0;
+    batchStart < casePlan.length;
+    batchStart += registrationBatchSize
+  ) {
+    const batch = casePlan.slice(
+      batchStart,
+      batchStart + registrationBatchSize,
+    );
+    const registeredCases = await registerCasePlan(batch);
 
-    if (caseItem.index % 10 === 0 || caseItem.index === totalPatients) {
-      console.log(`[progress] processed ${caseItem.index}/${totalPatients}`);
+    for (const caseItem of registeredCases) {
+      cashierPipeline = cashierPipeline.then(async () => {
+        const { resultPromise } = await runCashierStage(caseItem);
+        caseTasks.push(
+          resultPromise.then((result) => queueCaseResultCommit(result)),
+        );
+      });
     }
   }
+
+  await cashierPipeline;
+  await Promise.all(caseTasks);
+  await resultCommitChain;
+  report.cases.sort((left, right) => left.index - right.index);
 
   const operational = await pollOperationalReadModels(
     totalPatients,
     completedPatients,
+    operationalBaseline,
   );
-  report.summary = buildSummary(report.cases, operational);
+  report.summary = buildSummary(report.cases, operational, operationalBaseline);
 
   const allTerminal = report.cases.every((item) =>
     terminalTrajectoryStates.has(item.finalTrajectoryState),
@@ -756,21 +1282,21 @@ async function main() {
     );
   }
 
-  if (report.summary.dashboard.currentWaitingCount !== 0) {
+  if (report.summary.dashboard.currentWaitingCountDelta !== 0) {
     throw new Error(
-      `Dashboard currentWaitingCount expected 0 but received ${report.summary.dashboard.currentWaitingCount}`,
+      `Dashboard currentWaitingCount delta expected 0 but received ${report.summary.dashboard.currentWaitingCountDelta} (baseline ${report.summary.dashboard.baseline.currentWaitingCount}, current ${report.summary.dashboard.currentWaitingCount})`,
     );
   }
 
-  if (report.summary.dashboard.totalCompleted !== completedPatients) {
+  if (report.summary.dashboard.totalCompletedDelta !== completedPatients) {
     throw new Error(
-      `Dashboard totalCompleted expected ${completedPatients} but received ${report.summary.dashboard.totalCompleted}`,
+      `Dashboard totalCompleted delta expected ${completedPatients} but received ${report.summary.dashboard.totalCompletedDelta} (baseline ${report.summary.dashboard.baseline.totalCompleted}, current ${report.summary.dashboard.totalCompleted})`,
     );
   }
 
-  if (report.summary.dashboard.totalPatientsToday < totalPatients) {
+  if (report.summary.dashboard.totalPatientsTodayDelta !== totalPatients) {
     throw new Error(
-      `Dashboard totalPatientsToday expected at least ${totalPatients} but received ${report.summary.dashboard.totalPatientsToday}`,
+      `Dashboard totalPatientsToday delta expected ${totalPatients} but received ${report.summary.dashboard.totalPatientsTodayDelta} (baseline ${report.summary.dashboard.baseline.totalPatientsToday}, current ${report.summary.dashboard.totalPatientsToday})`,
     );
   }
 

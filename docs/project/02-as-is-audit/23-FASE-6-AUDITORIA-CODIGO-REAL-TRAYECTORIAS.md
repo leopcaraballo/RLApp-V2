@@ -92,7 +92,6 @@
   - `EnEsperaTaquilla`
   - `EnEsperaConsulta`
   - `Finalizado`
-  - `CanceladoPorPago`
   - `CanceladoPorAusencia`
 - En el canal realtime de staff aparecen otros labels de estado, pero son payloads de invalidacion y no el estado persistido del aggregate:
   - `Waiting`
@@ -128,19 +127,18 @@ Eventos reales de cola y consulta que alimentan la trayectoria:
 - `PatientPaymentValidated`
 - `PatientPaymentPending`
 - `PatientAbsentAtCashier`
-- `PatientCancelledByPayment`
 - `ConsultingRoomActivated`
 - `ConsultingRoomDeactivated`
 - `PatientClaimedForAttention`
 - `PatientCalled`
 - `PatientAttentionCompleted`
 - `PatientAbsentAtConsultation`
-- `PatientCancelledByAbsence`
 
 Observaciones relevantes:
 
 - La trayectoria no nace por un evento generico `StageAdvanced`; nace y evoluciona a partir de eventos operacionales concretos.
 - `PatientTrajectoryOrchestrator` traduce eventos de `WaitingQueue` a mutaciones de `PatientTrajectory`.
+- La cancelacion de trayectoria por ausencia se materializa hoy a partir de `PatientAbsentAtCashier` y `PatientAbsentAtConsultation`, sin publicar eventos duplicados de cancelacion operativa.
 - `SignalRNotificationConsumer` solo publica a realtime cuatro eventos operacionales: `PatientCheckedIn`, `PatientCalled`, `PatientClaimedForAttention` y `PatientAttentionCompleted`.
 
 ### 4. Repositorios, puertos y persistencia

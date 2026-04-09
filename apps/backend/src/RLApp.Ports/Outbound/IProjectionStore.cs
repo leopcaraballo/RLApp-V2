@@ -9,6 +9,7 @@ public interface IProjectionStore
     Task UpsertAsync(string projectionId, string projectionType, object projectionData, CancellationToken cancellationToken = default);
     Task<T> GetAsync<T>(string projectionId, CancellationToken cancellationToken = default) where T : class;
     Task<IReadOnlyList<PatientTrajectoryProjection>> FindPatientTrajectoriesAsync(string patientId, string? queueId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<PatientTrajectoryProjection>> QueryPatientTrajectoriesAsync(string queueId, string? state, DateTime? from, DateTime? to, CancellationToken cancellationToken = default);
     Task<PatientTrajectoryProjection?> GetPatientTrajectoryAsync(string trajectoryId, CancellationToken cancellationToken = default);
     Task<WaitingRoomMonitorProjection?> GetWaitingRoomMonitorAsync(string queueId, CancellationToken cancellationToken = default);
     Task<OperationsDashboardProjection> GetOperationsDashboardAsync(CancellationToken cancellationToken = default);

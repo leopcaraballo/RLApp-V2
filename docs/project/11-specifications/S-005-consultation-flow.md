@@ -32,7 +32,7 @@ Definir claim del siguiente paciente, llamado a consulta, inicio efectivo, final
 - `start-consultation` solo es valido para un turno correctamente llamado y marca `ST-006 -> ST-007 EnConsulta`.
 - `finish-consultation` mueve `ST-007 EnConsulta` a `ST-008 Finalizado` y libera el consultorio.
 - `mark-absent` en consulta mueve `ST-006 LlamadoConsulta` a `ST-009 CanceladoPorAusencia`.
-- Maximo una ausencia en consulta antes de cancelacion por ausencia.
+- La ausencia en consulta es terminal para el turno operativo y cancela la trayectoria activa.
 
 ## Contracts
 
@@ -42,7 +42,7 @@ Definir claim del siguiente paciente, llamado a consulta, inicio efectivo, final
 ## State and event impact
 
 - Transiciones: `ST-005 -> ST-006`, `ST-006 -> ST-007`, `ST-007 -> ST-008`, `ST-006 -> ST-009`
-- Eventos canonicos: `EV-010 PatientClaimedForAttention`, `EV-011 PatientCalled`, `EV-012 PatientAttentionCompleted`, `EV-013 PatientAbsentAtConsultation`, `EV-014 PatientCancelledByAbsence`
+- Eventos canonicos: `EV-010 PatientClaimedForAttention`, `EV-011 PatientCalled`, `EV-012 PatientAttentionCompleted`, `EV-013 PatientAbsentAtConsultation`
 
 ## Validation criteria
 

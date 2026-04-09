@@ -8,7 +8,6 @@
 - POST /api/cashier/validate-payment
 - POST /api/cashier/mark-payment-pending
 - POST /api/cashier/mark-absent
-- POST /api/cashier/cancel-payment
 - POST /api/medical/call-next
 - POST /api/medical/consulting-room/activate
 - POST /api/medical/consulting-room/deactivate

@@ -7,6 +7,13 @@ import { OperationHistory } from '@/components/operations/operation-history';
 import { ContractAlert } from '@/components/shared/contract-alert';
 import { SectionIntro } from '@/components/shared/section-intro';
 import { StatusBadge } from '@/components/shared/status-badge';
+import {
+  formatDisplayDateTime,
+  formatDisplayMinutes,
+  getOperationalStatusDisplayName,
+  getRoleDisplayName,
+} from '@/lib/display-text';
+import { getRealtimeLabel, getRealtimeTone } from '@/lib/realtime-status';
 import { useOperationJournal } from '@/hooks/use-operation-journal';
 import { useOperationalRealtime } from '@/hooks/use-operational-realtime';
 import { useWaitingRoomMonitor } from '@/hooks/use-operational-read-models';
@@ -19,7 +26,7 @@ const DEFAULT_QUEUE_ID = 'MAIN-QUEUE-001';
 const checkInSchema = z.object({
   queueId: z.string().default(DEFAULT_QUEUE_ID),
   appointmentReference: z.string().default('AUTO-APT-' + new Date().getTime()),
-  patientId: z.string().min(1),
+  patientId: z.string().min(1, 'El documento o NUIP es obligatorio.'),
   patientName: z.string().optional(),
   consultationType: z.string().default('GeneralMedicine'),
   priority: z.string().default('Standard'),
@@ -32,7 +39,7 @@ const claimNextSchema = z.object({
 
 const callPatientSchema = z.object({
   queueId: z.string().default(DEFAULT_QUEUE_ID),
-  turnId: z.string().min(1),
+  turnId: z.string().min(1, 'Debes indicar el turno.'),
   consultingRoomId: z.string().default('ROOM-01'),
 });
 
@@ -45,27 +52,7 @@ function readErrorMessage(error: unknown): string {
     return error.message;
   }
 
-  return 'The persisted waiting room monitor could not be loaded.';
-}
-
-function formatTimestamp(value: string): string {
-  return new Date(value).toLocaleString();
-}
-
-function formatMinutes(value: number): string {
-  return `${value.toFixed(1)} min`;
-}
-
-function realtimeTone(state: 'idle' | 'connecting' | 'live' | 'reconnecting') {
-  if (state === 'live') {
-    return 'success' as const;
-  }
-
-  if (state === 'reconnecting' || state === 'connecting') {
-    return 'warning' as const;
-  }
-
-  return 'neutral' as const;
+  return 'No fue posible cargar el monitor persistido de sala de espera.';
 }
 
 export function WaitingRoomConsole({ role }: { role: StaffRole }) {
@@ -83,27 +70,25 @@ export function WaitingRoomConsole({ role }: { role: StaffRole }) {
   });
 
   return (
-    <>
+    <div className="clinical-space">
       <SectionIntro
-        badge={role}
-        description="Reception keeps check-in here, doctor flow keeps claim and call here, and active consultation starts only once Medical confirms start-consultation."
-        eyebrow="Waiting room"
-        title="Queue monitor and consultation flow"
+        badge={getRoleDisplayName(role)}
+        eyebrow="Sala de espera"
+        title="Monitor clinico"
       />
 
-      <div className="grid grid--two">
-        <section className="panel" style={{ gridColumn: '1 / -1' }}>
+      <div className="grid grid--two clinical-grid">
+        <section
+          className="panel clinical-panel clinical-panel--hero"
+          style={{ gridColumn: '1 / -1' }}
+        >
           <div className="panel__header">
             <div>
-              <div className="panel__eyebrow">Persisted monitor</div>
-              <h2>Operational waiting room snapshot</h2>
-              <p>
-                This monitor reads from persisted projections and only re-syncs after invalidation
-                events arrive through the same-origin realtime channel.
-              </p>
+              <div className="panel__eyebrow">Sala de espera</div>
+              <h2>Monitor</h2>
             </div>
-            <StatusBadge tone={realtimeTone(realtime.connectionState)}>
-              {realtime.connectionState === 'live' ? 'Live sync' : 'Reconnecting'}
+            <StatusBadge tone={getRealtimeTone(realtime.connectionState)}>
+              {getRealtimeLabel(realtime.connectionState)}
             </StatusBadge>
           </div>
 
@@ -111,7 +96,7 @@ export function WaitingRoomConsole({ role }: { role: StaffRole }) {
             <>
               <div className="monitor-toolbar">
                 <label className="monitor-toolbar__field" htmlFor="monitorQueueId">
-                  <span>Queue ID</span>
+                  <span>Cola</span>
                   <input
                     id="monitorQueueId"
                     onChange={(event) => {
@@ -124,97 +109,84 @@ export function WaitingRoomConsole({ role }: { role: StaffRole }) {
                     value={requestedQueueId}
                   />
                 </label>
-                <p className="inline-note">
-                  Snapshot generated for the selected queue only. Commands continue using their own
-                  backend contracts, while Medical owns consultation start and completion.
-                </p>
               </div>
 
               {monitorQuery.isPending ? (
-                <div className="empty-state" style={{ marginTop: '20px' }}>
-                  <p>Loading the persisted waiting room snapshot for {activeQueueId}.</p>
+                <div className="empty-state compact-empty" style={{ marginTop: '20px' }}>
+                  <p>Cargando {activeQueueId}.</p>
                 </div>
               ) : null}
 
               {monitorQuery.isError ? (
                 <ContractAlert
-                  title="Waiting room monitor unavailable"
+                  title="No se pudo abrir el monitor de sala de espera"
                   items={[readErrorMessage(monitorQuery.error)]}
                 />
               ) : null}
 
               {monitorQuery.data ? (
                 <>
-                  <div className="grid grid--three" style={{ marginTop: '20px' }}>
-                    <article className="panel">
-                      <div className="panel__eyebrow">Waiting</div>
+                  <div className="grid grid--three clinical-grid" style={{ marginTop: '20px' }}>
+                    <article className="panel clinical-panel metric-panel">
+                      <div className="panel__eyebrow">En espera</div>
                       <div className="metric-value">{monitorQuery.data.waitingCount}</div>
-                      <p className="metric-caption">
-                        Patients still waiting in {monitorQuery.data.queueId}.
-                      </p>
                     </article>
 
-                    <article className="panel">
-                      <div className="panel__eyebrow">Average wait</div>
+                    <article className="panel clinical-panel metric-panel">
+                      <div className="panel__eyebrow">Espera promedio</div>
                       <div className="metric-value">
-                        {formatMinutes(monitorQuery.data.averageWaitTimeMinutes)}
+                        {formatDisplayMinutes(monitorQuery.data.averageWaitTimeMinutes)}
                       </div>
-                      <p className="metric-caption">
-                        Persisted average wait for the selected queue.
-                      </p>
                     </article>
 
-                    <article className="panel">
-                      <div className="panel__eyebrow">Active rooms</div>
+                    <article className="panel clinical-panel metric-panel">
+                      <div className="panel__eyebrow">Consultorios en atencion</div>
                       <div className="metric-value">
                         {monitorQuery.data.activeConsultationRooms}
                       </div>
-                      <p className="metric-caption">
-                        Rooms currently visible with active attention.
-                      </p>
                     </article>
                   </div>
 
-                  <div className="grid grid--two" style={{ marginTop: '20px' }}>
-                    <section className="panel">
+                  <div className="grid grid--two clinical-grid" style={{ marginTop: '20px' }}>
+                    <section className="panel clinical-panel clinical-panel--soft">
                       <div className="panel__header">
                         <div>
-                          <div className="panel__eyebrow">Status breakdown</div>
-                          <h2>Visible states for {monitorQuery.data.queueId}</h2>
+                          <div className="panel__eyebrow">Estados</div>
+                          <h2>Distribucion</h2>
                         </div>
                         <StatusBadge tone="info">
-                          {monitorQuery.data.statusBreakdown.length} states
+                          {monitorQuery.data.statusBreakdown.length} estados
                         </StatusBadge>
                       </div>
 
                       <div className="data-list">
                         {monitorQuery.data.statusBreakdown.map((entry) => (
                           <div className="data-list__row" key={entry.status}>
-                            <strong>{entry.status}</strong>
+                            <strong>{getOperationalStatusDisplayName(entry.status)}</strong>
                             <span>{entry.total}</span>
                           </div>
                         ))}
                       </div>
 
                       <div className="panel__meta">
-                        <span>Generated at {formatTimestamp(monitorQuery.data.generatedAt)}</span>
+                        <span>Generado {formatDisplayDateTime(monitorQuery.data.generatedAt)}</span>
                         <span>
-                          Last event:{' '}
+                          Ultimo evento:{' '}
                           {realtime.lastEvent
-                            ? `${realtime.lastEvent.eventType} at ${formatTimestamp(realtime.lastEvent.occurredAt)}`
-                            : 'Waiting for invalidations.'}
+                            ? `${realtime.lastEvent.eventType} · ${formatDisplayDateTime(realtime.lastEvent.occurredAt)}`
+                            : 'Aun no llegan invalidaciones.'}
                         </span>
                       </div>
                     </section>
 
-                    <section className="panel">
+                    <section className="panel clinical-panel clinical-panel--soft">
                       <div className="panel__header">
                         <div>
-                          <div className="panel__eyebrow">Live entries</div>
-                          <h2>Materialized turn list</h2>
+                          <div className="panel__eyebrow">Turnos</div>
+                          <h2>Listado</h2>
                         </div>
                         <StatusBadge tone="info">
-                          {monitorQuery.data.entries.length} entries
+                          {monitorQuery.data.entries.length} registros
                         </StatusBadge>
                       </div>
 
@@ -229,23 +201,25 @@ export function WaitingRoomConsole({ role }: { role: StaffRole }) {
                                     {entry.ticketNumber} · {entry.turnId}
                                   </p>
                                 </div>
-                                <StatusBadge tone="info">{entry.status}</StatusBadge>
+                                <StatusBadge tone="info">
+                                  {getOperationalStatusDisplayName(entry.status)}
+                                </StatusBadge>
                               </div>
                               <div className="monitor-entry__meta">
-                                <span>Updated {formatTimestamp(entry.updatedAt)}</span>
+                                <span>Actualizado {formatDisplayDateTime(entry.updatedAt)}</span>
                                 <span>
-                                  Room{' '}
+                                  Consultorio{' '}
                                   {entry.roomAssigned && entry.roomAssigned.length > 0
                                     ? entry.roomAssigned
-                                    : 'Pending'}
+                                    : 'Por asignar'}
                                 </span>
                               </div>
                             </article>
                           ))}
                         </div>
                       ) : (
-                        <div className="empty-state" style={{ marginTop: '20px' }}>
-                          <p>No materialized entries are currently visible for this queue.</p>
+                        <div className="empty-state compact-empty" style={{ marginTop: '20px' }}>
+                          <p>No hay turnos visibles en este momento para la cola seleccionada.</p>
                         </div>
                       )}
                     </section>
@@ -255,10 +229,10 @@ export function WaitingRoomConsole({ role }: { role: StaffRole }) {
             </>
           ) : (
             <ContractAlert
-              title="Monitor boundary"
+              title="Acceso al monitor"
               items={[
-                'The persisted waiting room monitor is currently authorized only for Receptionist and Supervisor.',
-                'Doctor workflow keeps command access here, but the projection-backed monitor remains restricted by contract.',
+                'El monitor persistido de sala de espera esta disponible solo para Recepcion y Supervisor.',
+                'El rol medico conserva acciones operativas en esta vista, pero no accede al monitor por contrato.',
               ]}
             />
           )}
@@ -267,8 +241,8 @@ export function WaitingRoomConsole({ role }: { role: StaffRole }) {
         {canCheckIn ? (
           <ActionFormCard
             contractWarnings={[
-              'appointmentReference, consultationType and priority are required but ignored by the backend handler.',
-              'The endpoint reuses the same underlying command as reception register.',
+              'appointmentReference, consultationType y priority aparecen en el contrato, pero hoy el backend no los usa.',
+              'Este endpoint reutiliza el mismo comando base del registro por recepcion.',
             ]}
             defaultValues={{
               queueId: DEFAULT_QUEUE_ID,
@@ -278,18 +252,17 @@ export function WaitingRoomConsole({ role }: { role: StaffRole }) {
               consultationType: 'GeneralMedicine',
               priority: 'Standard',
             }}
-            description="POST /api/waiting-room/check-in"
             fields={[
-              { name: 'patientId', label: 'Patient ID (NUIP)', placeholder: 'PAT-0045' },
-              { name: 'patientName', label: 'Patient name', placeholder: 'Ana Perez' },
+              { name: 'patientId', label: 'Documento o NUIP', placeholder: 'PAT-0045' },
+              { name: 'patientName', label: 'Nombre del paciente', placeholder: 'Ana Perez' },
             ]}
             onSettled={(entry) =>
               journal.pushEntry({ ...entry, timestamp: new Date().toISOString() })
             }
             onSubmit={(values) => rlappApi.checkInPatient(values)}
             schema={checkInSchema}
-            submitLabel="Check in patient"
-            title="Waiting room check-in"
+            submitLabel="Ingresar"
+            title="Ingreso"
           />
         ) : null}
 
@@ -299,26 +272,21 @@ export function WaitingRoomConsole({ role }: { role: StaffRole }) {
               queueId: DEFAULT_QUEUE_ID,
               consultingRoomId: 'ROOM-01',
             }}
-            description="POST /api/waiting-room/claim-next"
             fields={[
-              { name: 'queueId', label: 'Queue ID', placeholder: DEFAULT_QUEUE_ID },
+              { name: 'queueId', label: 'Cola', placeholder: DEFAULT_QUEUE_ID },
               {
                 name: 'consultingRoomId',
-                label: 'Consulting room ID',
+                label: 'Consultorio',
                 placeholder: 'ROOM-01',
               },
-            ]}
-            notes={[
-              'Use this step to reserve the next eligible turn for the consulting room.',
-              'The patient remains visible as waiting until call-patient and start-consultation are completed.',
             ]}
             onSettled={(entry) =>
               journal.pushEntry({ ...entry, timestamp: new Date().toISOString() })
             }
             onSubmit={(values) => rlappApi.claimNextPatient(values)}
             schema={claimNextSchema}
-            submitLabel="Claim next patient"
-            title="Claim next for consultation"
+            submitLabel="Reservar"
+            title="Reserva"
           />
         ) : null}
 
@@ -329,40 +297,35 @@ export function WaitingRoomConsole({ role }: { role: StaffRole }) {
               turnId: `${DEFAULT_QUEUE_ID}-PAT-0045`,
               consultingRoomId: 'ROOM-01',
             }}
-            description="POST /api/waiting-room/call-patient"
             fields={[
-              { name: 'queueId', label: 'Queue ID', placeholder: DEFAULT_QUEUE_ID },
+              { name: 'queueId', label: 'Cola', placeholder: DEFAULT_QUEUE_ID },
               {
                 name: 'turnId',
-                label: 'Turn ID',
+                label: 'Turno',
                 placeholder: `${DEFAULT_QUEUE_ID}-PAT-0045`,
               },
               {
                 name: 'consultingRoomId',
-                label: 'Consulting room ID',
+                label: 'Consultorio',
                 placeholder: 'ROOM-01',
               },
-            ]}
-            notes={[
-              'Use the turn ID from the monitor or from the claim-next response.',
-              'Medical will start the consultation explicitly after the patient enters the room.',
             ]}
             onSettled={(entry) =>
               journal.pushEntry({ ...entry, timestamp: new Date().toISOString() })
             }
             onSubmit={(values) => rlappApi.callPatient(values)}
             schema={callPatientSchema}
-            submitLabel="Call patient"
-            title="Call claimed patient"
+            submitLabel="Llamar paciente"
+            title="Llamado"
           />
         ) : null}
 
         <OperationHistory
           entries={journal.entries}
           onClear={journal.clearEntries}
-          title="Waiting room journal"
+          title="Bitacora"
         />
       </div>
-    </>
+    </div>
   );
 }

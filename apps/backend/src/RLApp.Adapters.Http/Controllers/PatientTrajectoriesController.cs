@@ -96,4 +96,53 @@ public sealed class PatientTrajectoriesController : RLAppControllerBase
 
         return BadRequest(new { Code = result.Message, result.CorrelationId });
     }
+
+    [Authorize(Policy = AuthorizationPolicies.SupportOrSupervisor)]
+    [HttpGet("active")]
+    public async Task<IActionResult> GetActive(
+        [FromQuery] string queueId,
+        [FromQuery] string? stage,
+        [FromHeader(Name = "X-Correlation-Id")] string? correlationId,
+        CancellationToken cancellationToken)
+    {
+        var activeCorrelationId = string.IsNullOrWhiteSpace(correlationId)
+            ? Guid.NewGuid().ToString()
+            : correlationId;
+
+        var result = await _mediator.Send(
+            new QueryActivePatientTrajectoriesQuery(queueId, stage, activeCorrelationId),
+            cancellationToken);
+
+        if (!result.Success)
+        {
+            return BadRequest(new { Code = result.Message, result.CorrelationId });
+        }
+
+        return Ok(result.Data);
+    }
+
+    [Authorize(Policy = AuthorizationPolicies.SupportOrSupervisor)]
+    [HttpGet("history")]
+    public async Task<IActionResult> GetHistory(
+        [FromQuery] string queueId,
+        [FromQuery] DateTime? from,
+        [FromQuery] DateTime? to,
+        [FromHeader(Name = "X-Correlation-Id")] string? correlationId,
+        CancellationToken cancellationToken)
+    {
+        var activeCorrelationId = string.IsNullOrWhiteSpace(correlationId)
+            ? Guid.NewGuid().ToString()
+            : correlationId;
+
+        var result = await _mediator.Send(
+            new QueryPatientTrajectoryHistoryQuery(queueId, from, to, activeCorrelationId),
+            cancellationToken);
+
+        if (!result.Success)
+        {
+            return BadRequest(new { Code = result.Message, result.CorrelationId });
+        }
+
+        return Ok(result.Data);
+    }
 }

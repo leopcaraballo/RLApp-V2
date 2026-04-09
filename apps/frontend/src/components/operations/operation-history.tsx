@@ -1,4 +1,5 @@
 import { StatusBadge } from '@/components/shared/status-badge';
+import { formatDisplayDateTime, getJournalStatusDisplayName } from '@/lib/display-text';
 import type { OperationJournalEntry } from '@/hooks/use-operation-journal';
 
 interface OperationHistoryProps {
@@ -9,20 +10,20 @@ interface OperationHistoryProps {
 
 export function OperationHistory({ title, entries, onClear }: OperationHistoryProps) {
   return (
-    <section className="panel">
+    <section className="panel clinical-panel clinical-panel--soft">
       <div className="panel__header">
         <div>
-          <div className="panel__eyebrow">Audit-friendly trace</div>
+          <div className="panel__eyebrow">Actividad reciente</div>
           <h2>{title}</h2>
         </div>
         <button className="ghost-button" onClick={onClear} type="button">
-          Clear
+          Limpiar
         </button>
       </div>
 
       {entries.length === 0 ? (
-        <div className="empty-state">
-          <p>No operation journal entries yet. Successful and failed actions will appear here.</p>
+        <div className="empty-state compact-empty">
+          <p>Sin movimientos.</p>
         </div>
       ) : (
         <div className="history-list">
@@ -31,13 +32,13 @@ export function OperationHistory({ title, entries, onClear }: OperationHistoryPr
               <div className="history-item__header">
                 <h3>{entry.title}</h3>
                 <StatusBadge tone={entry.status === 'success' ? 'success' : 'danger'}>
-                  {entry.status}
+                  {getJournalStatusDisplayName(entry.status)}
                 </StatusBadge>
               </div>
               <p>{entry.message}</p>
               <div className="history-item__meta">
-                <span>{new Date(entry.timestamp).toLocaleString()}</span>
-                {entry.correlationId ? <span>Correlation: {entry.correlationId}</span> : null}
+                <span>{formatDisplayDateTime(entry.timestamp)}</span>
+                {entry.correlationId ? <span>Correlacion: {entry.correlationId}</span> : null}
               </div>
             </article>
           ))}

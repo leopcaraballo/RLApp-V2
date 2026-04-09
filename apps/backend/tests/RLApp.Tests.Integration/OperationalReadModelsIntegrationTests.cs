@@ -69,6 +69,43 @@ public class OperationalReadModelsIntegrationTests : IClassFixture<CustomWebAppl
     }
 
     [Fact]
+    public async Task PublicWaitingRoomDisplay_ShouldReturnSimultaneousSanitizedActiveCalls_Anonymously()
+    {
+        var queueId = $"QUEUE-{Guid.NewGuid():N}";
+
+        await SeedOperationalReadModelsAsync(queueId);
+
+        var response = await _client.GetAsync($"/api/v1/waiting-room/{queueId}/public-display");
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var payload = await response.Content.ReadFromJsonAsync<JsonElement>();
+        payload.GetProperty("queueId").GetString().Should().Be(queueId);
+        payload.GetProperty("currentTurn").GetProperty("turnNumber").GetString().Should().Be("R-001C");
+        payload.TryGetProperty("currentCall", out _).Should().BeFalse();
+        payload.TryGetProperty("patientId", out _).Should().BeFalse();
+        payload.TryGetProperty("patientName", out _).Should().BeFalse();
+
+        var activeCalls = payload.GetProperty("activeCalls");
+        activeCalls.GetArrayLength().Should().Be(3);
+
+        var activeCallStatuses = activeCalls
+            .EnumerateArray()
+            .Select(item => item.GetProperty("status").GetString())
+            .ToArray();
+
+        activeCallStatuses.Should().Contain(new[] { "Called", "InConsultation", "AtCashier" });
+        activeCalls.EnumerateArray().Any(item => item.GetProperty("destination").GetString() == "ROOM-03").Should().BeTrue();
+        activeCalls.EnumerateArray().Any(item => item.GetProperty("destination").GetString() == "ROOM-01").Should().BeTrue();
+        activeCalls.EnumerateArray().Any(item => item.GetProperty("destination").GetString() == "CASH-01").Should().BeTrue();
+
+        foreach (var item in activeCalls.EnumerateArray())
+        {
+            item.TryGetProperty("patientId", out _).Should().BeFalse();
+            item.TryGetProperty("patientName", out _).Should().BeFalse();
+        }
+    }
+
+    [Fact]
     public async Task OperationalReadModels_ShouldEnforceAuthorizationPolicies()
     {
         var queueId = $"QUEUE-{Guid.NewGuid():N}";
@@ -90,10 +127,71 @@ public class OperationalReadModelsIntegrationTests : IClassFixture<CustomWebAppl
         forbiddenDashboardResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
+    [Fact]
+    public async Task OperationalCommandEndpoints_ShouldEnforceReceptionCashierAndSupervisorPolicies()
+    {
+        var queueId = $"QUEUE-{Guid.NewGuid():N}";
+
+        var checkInPayload = new
+        {
+            queueId,
+            appointmentReference = "APPT-001",
+            patientId = "PAT-SEC-001",
+            patientName = "Paciente Seguridad",
+            consultationType = "General",
+            priority = "1"
+        };
+
+        var receptionUnauthorized = await _client.PostAsJsonAsync("/api/waiting-room/check-in", checkInPayload);
+        receptionUnauthorized.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+
+        var forbiddenReception = new HttpRequestMessage(HttpMethod.Post, "/api/waiting-room/check-in")
+        {
+            Content = JsonContent.Create(checkInPayload)
+        };
+        forbiddenReception.Headers.Authorization = new AuthenticationHeaderValue("Bearer", CreateToken("cashier-user", "cashier", "Cashier"));
+        forbiddenReception.Headers.Add("X-Correlation-Id", "corr-reception-forbidden");
+        forbiddenReception.Headers.Add("X-Idempotency-Key", "idem-reception-forbidden");
+        var forbiddenReceptionResponse = await _client.SendAsync(forbiddenReception);
+        forbiddenReceptionResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        var cashierPayload = new
+        {
+            queueId,
+            cashierStationId = "CASH-01"
+        };
+
+        var cashierUnauthorized = await _client.PostAsJsonAsync("/api/cashier/call-next", cashierPayload);
+        cashierUnauthorized.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+
+        var forbiddenCashier = new HttpRequestMessage(HttpMethod.Post, "/api/cashier/call-next")
+        {
+            Content = JsonContent.Create(cashierPayload)
+        };
+        forbiddenCashier.Headers.Authorization = new AuthenticationHeaderValue("Bearer", CreateToken("reception-user", "reception", "Receptionist"));
+        forbiddenCashier.Headers.Add("X-Correlation-Id", "corr-cashier-forbidden");
+        forbiddenCashier.Headers.Add("X-Idempotency-Key", "idem-cashier-forbidden");
+        var forbiddenCashierResponse = await _client.SendAsync(forbiddenCashier);
+        forbiddenCashierResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        var roomUnauthorized = await _client.PostAsJsonAsync("/api/medical/consulting-room/deactivate", new { roomId = "ROOM-SEC-001" });
+        roomUnauthorized.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+
+        var forbiddenRoom = new HttpRequestMessage(HttpMethod.Post, "/api/medical/consulting-room/deactivate")
+        {
+            Content = JsonContent.Create(new { roomId = "ROOM-SEC-001" })
+        };
+        forbiddenRoom.Headers.Authorization = new AuthenticationHeaderValue("Bearer", CreateToken("doctor-user", "doctor", "Doctor"));
+        forbiddenRoom.Headers.Add("X-Correlation-Id", "corr-room-forbidden");
+        var forbiddenRoomResponse = await _client.SendAsync(forbiddenRoom);
+        forbiddenRoomResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
     private async Task SeedOperationalReadModelsAsync(string queueId)
     {
         await using var scope = _factory.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var now = DateTime.UtcNow;
 
         var existingDashboard = await db.OperationsDashboards
             .SingleOrDefaultAsync(item => item.Id == "SYSTEM_SINGLETON");
@@ -103,7 +201,7 @@ public class OperationalReadModelsIntegrationTests : IClassFixture<CustomWebAppl
             QueueId = queueId,
             TotalPending = 2,
             AverageWaitTimeMinutes = 12.5,
-            LastUpdatedAt = DateTime.UtcNow.AddSeconds(-5)
+            LastUpdatedAt = now.AddSeconds(-5)
         });
 
         db.WaitingRoomMonitors.AddRange(
@@ -116,8 +214,8 @@ public class OperationalReadModelsIntegrationTests : IClassFixture<CustomWebAppl
                 TicketNumber = "R-001",
                 Status = "Waiting",
                 RoomAssigned = null,
-                CheckedInAt = DateTime.UtcNow.AddMinutes(-20),
-                UpdatedAt = DateTime.UtcNow.AddSeconds(-10)
+                CheckedInAt = now.AddMinutes(-20),
+                UpdatedAt = now.AddSeconds(-12)
             },
             new WaitingRoomMonitorView
             {
@@ -127,9 +225,9 @@ public class OperationalReadModelsIntegrationTests : IClassFixture<CustomWebAppl
                 PatientName = "Paciente Caja",
                 TicketNumber = "R-001A",
                 Status = "AtCashier",
-                RoomAssigned = null,
-                CheckedInAt = DateTime.UtcNow.AddMinutes(-18),
-                UpdatedAt = DateTime.UtcNow.AddSeconds(-9)
+                RoomAssigned = "CASH-01",
+                CheckedInAt = now.AddMinutes(-18),
+                UpdatedAt = now.AddSeconds(-9)
             },
             new WaitingRoomMonitorView
             {
@@ -140,8 +238,20 @@ public class OperationalReadModelsIntegrationTests : IClassFixture<CustomWebAppl
                 TicketNumber = "R-001B",
                 Status = "WaitingForConsultation",
                 RoomAssigned = null,
-                CheckedInAt = DateTime.UtcNow.AddMinutes(-17),
-                UpdatedAt = DateTime.UtcNow.AddSeconds(-8)
+                CheckedInAt = now.AddMinutes(-17),
+                UpdatedAt = now.AddSeconds(-10)
+            },
+            new WaitingRoomMonitorView
+            {
+                TurnId = $"{queueId}-PAT-CALLED",
+                QueueId = queueId,
+                PatientId = "PAT-CALLED",
+                PatientName = "Paciente Llamado",
+                TicketNumber = "R-001C",
+                Status = "Called",
+                RoomAssigned = "ROOM-03",
+                CheckedInAt = now.AddMinutes(-16),
+                UpdatedAt = now.AddSeconds(-7)
             },
             new WaitingRoomMonitorView
             {
@@ -152,8 +262,8 @@ public class OperationalReadModelsIntegrationTests : IClassFixture<CustomWebAppl
                 TicketNumber = "R-002",
                 Status = "InConsultation",
                 RoomAssigned = "ROOM-01",
-                CheckedInAt = DateTime.UtcNow.AddMinutes(-35),
-                UpdatedAt = DateTime.UtcNow.AddSeconds(-8)
+                CheckedInAt = now.AddMinutes(-35),
+                UpdatedAt = now.AddSeconds(-8)
             },
             new WaitingRoomMonitorView
             {
@@ -164,8 +274,8 @@ public class OperationalReadModelsIntegrationTests : IClassFixture<CustomWebAppl
                 TicketNumber = "R-003",
                 Status = "Completed",
                 RoomAssigned = "ROOM-02",
-                CheckedInAt = DateTime.UtcNow.AddHours(-1),
-                UpdatedAt = DateTime.UtcNow.AddMinutes(-5)
+                CheckedInAt = now.AddHours(-1),
+                UpdatedAt = now.AddMinutes(-5)
             });
 
         if (existingDashboard is null)
@@ -174,17 +284,17 @@ public class OperationalReadModelsIntegrationTests : IClassFixture<CustomWebAppl
             {
                 Id = "SYSTEM_SINGLETON",
                 TotalPatientsToday = 5,
-                ActiveRooms = 1,
+                ActiveRooms = 3,
                 TotalCompleted = 1,
-                Date = DateTime.UtcNow.Date
+                Date = now.Date
             });
         }
         else
         {
             existingDashboard.TotalPatientsToday = Math.Max(existingDashboard.TotalPatientsToday, 5);
-            existingDashboard.ActiveRooms = Math.Max(existingDashboard.ActiveRooms, 1);
+            existingDashboard.ActiveRooms = Math.Max(existingDashboard.ActiveRooms, 3);
             existingDashboard.TotalCompleted = Math.Max(existingDashboard.TotalCompleted, 1);
-            existingDashboard.Date = DateTime.UtcNow.Date;
+            existingDashboard.Date = now.Date;
         }
 
         await db.SaveChangesAsync();
