@@ -1,3 +1,5 @@
+> Nota: Validar y sincronizar estos flujos con los endpoints, eventos y estados actuales del código y las especificaciones en 07-interfaces-and-contracts tras cada refactorización mayor.
+>
 # AS-IS Domain Flows
 
 ## Reception
