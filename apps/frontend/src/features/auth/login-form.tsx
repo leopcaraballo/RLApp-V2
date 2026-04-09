@@ -42,8 +42,8 @@ export function LoginForm() {
     <section className="auth-card">
       <div className="auth-layout">
         <div>
-          <div className="section-intro__eyebrow">Acceso a RLApp</div>
-          <h1>Ingresa para continuar con la operacion diaria.</h1>
+          <div className="section-intro__eyebrow">Acceso de staff</div>
+          <h1>RLApp Clinical Orchestrator</h1>
           <p>
             La sesion se protege desde el servidor para que el navegador no exponga credenciales
             internas del backend.

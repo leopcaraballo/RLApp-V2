@@ -33,6 +33,7 @@ Definir el agregado `TrayectoriaPaciente`, su identificador canonico `Trajectory
 - el discovery operacional debe consultar solo proyecciones persistidas; nunca puede disparar replay ni reconstruccion en hot path
 - el discovery requiere `patientId` y puede acotarse por `queueId`; debe devolver cero o mas candidatas ordenadas con trayectorias activas primero y luego por `openedAt` descendente
 - cada candidata de discovery debe exponer como minimo `trajectoryId`, `patientId`, `queueId`, `currentState`, `openedAt`, `closedAt` y el `correlationId` operativo mas reciente para continuar el diagnostico
+- la vista protegida de trayectoria puede usar `RLApp Clinical Orchestrator` como titulo visible de la consola, siempre que mantenga labels funcionales de trayectoria en descripciones, formularios y resultados
 - el rebuild debe reconstruir la misma trayectoria desde eventos historicos sin mutar eventos legacy ni reemitir side effects operativos
 - `trajectoryId` complementa `correlationId` para vistas longitudinales; la migracion completa de correlacion de sagas queda fuera de esta fase
 

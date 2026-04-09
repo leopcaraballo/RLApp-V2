@@ -31,6 +31,12 @@ Proveer una vista maestra de la estructura documental y de la dependencia entre 
 - 11-specifications: requisitos funcionales y tecnicos
 - 12-testing: estrategia y artefactos de prueba
   - 12-testing/06-OPERATIONAL-FLOW-TEST-PLAN.md: plan integrado de pruebas para pacientes, staff, consultorios, trayectoria, monitor, dashboard y realtime
+  - 12-testing/07-SYNCHRONIZED-TRAJECTORY-QA-TEST-PLAN.md: plan QA del slice de trayectoria sincronizada y sus tres implementaciones de automatizacion
+  - 12-testing/08-SYNCHRONIZED-TRAJECTORY-QA-TEST-CASES.md: catalogo de casos QA y matriz de cobertura para trayectoria sincronizada
+  - 12-testing/qa/README.md: indice de anexos por implementacion para API Screenplay, Front POM y Front Screenplay
+  - 12-testing/qa/01-AUTO-API-SCREENPLAY-ANNEX.md: anexo de cobertura y ejecucion para la implementacion API Screenplay
+  - 12-testing/qa/02-AUTO-FRONT-POM-FACTORY-ANNEX.md: anexo de cobertura y ejecucion para la implementacion Front POM
+  - 12-testing/qa/03-AUTO-FRONT-SCREENPLAY-ANNEX.md: anexo de cobertura y ejecucion para la implementacion Front Screenplay
 - 13-operations: operacion y observabilidad
 - 14-diagrams: soporte visual
 - 15-traceability: matrices formales

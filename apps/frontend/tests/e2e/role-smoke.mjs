@@ -584,7 +584,7 @@ async function main() {
     assertOperationSucceeded(finishBody, 'Complete consultation');
 
     await switchSupportRole(supervisorClient, supportClient, supportStaffId, 'Support');
-    await assertPageContains(supportClient, '/trajectory', 'Consola de trayectoria del paciente');
+    await assertPageContains(supportClient, '/trajectory', 'RLApp Clinical Orchestrator');
     await pollTrajectory(supportClient, patientId, queueId);
     await assertDashboardRealtime(supportClient);
 

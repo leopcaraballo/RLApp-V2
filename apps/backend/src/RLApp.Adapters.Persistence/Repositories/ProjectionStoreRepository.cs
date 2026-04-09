@@ -95,17 +95,7 @@ public class ProjectionStoreRepository : IProjectionStore
             .ToListAsync(cancellationToken);
 
         return views
-            .Select(view => new PatientTrajectoryProjection
-            {
-                TrajectoryId = view.TrajectoryId,
-                PatientId = view.PatientId,
-                QueueId = view.QueueId,
-                CurrentState = view.CurrentState,
-                OpenedAt = view.OpenedAt,
-                ClosedAt = view.ClosedAt,
-                CorrelationIds = Deserialize<List<string>>(view.CorrelationIdsJson),
-                Stages = Deserialize<List<PatientTrajectoryStageProjection>>(view.StagesJson)
-            })
+            .Select(MapToProjection)
             .ToArray();
     }
 
@@ -120,18 +110,53 @@ public class ProjectionStoreRepository : IProjectionStore
             return null;
         }
 
-        return new PatientTrajectoryProjection
-        {
-            TrajectoryId = view.TrajectoryId,
-            PatientId = view.PatientId,
-            QueueId = view.QueueId,
-            CurrentState = view.CurrentState,
-            OpenedAt = view.OpenedAt,
-            ClosedAt = view.ClosedAt,
-            CorrelationIds = Deserialize<List<string>>(view.CorrelationIdsJson),
-            Stages = Deserialize<List<PatientTrajectoryStageProjection>>(view.StagesJson)
-        };
+        return MapToProjection(view);
     }
+
+    public async Task<IReadOnlyList<PatientTrajectoryProjection>> QueryPatientTrajectoriesAsync(
+        string queueId,
+        string? state,
+        DateTime? from,
+        DateTime? to,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _context.PatientTrajectories
+            .AsNoTracking()
+            .Where(t => t.QueueId == queueId);
+
+        if (!string.IsNullOrWhiteSpace(state))
+        {
+            query = query.Where(t => t.CurrentState == state);
+        }
+
+        if (from.HasValue)
+        {
+            query = query.Where(t => t.OpenedAt >= from.Value);
+        }
+
+        if (to.HasValue)
+        {
+            query = query.Where(t => t.OpenedAt <= to.Value);
+        }
+
+        var views = await query
+            .OrderByDescending(t => t.OpenedAt)
+            .ToListAsync(cancellationToken);
+
+        return views.Select(MapToProjection).ToArray();
+    }
+
+    private static PatientTrajectoryProjection MapToProjection(PatientTrajectoryView view) => new()
+    {
+        TrajectoryId = view.TrajectoryId,
+        PatientId = view.PatientId,
+        QueueId = view.QueueId,
+        CurrentState = view.CurrentState,
+        OpenedAt = view.OpenedAt,
+        ClosedAt = view.ClosedAt,
+        CorrelationIds = Deserialize<List<string>>(view.CorrelationIdsJson),
+        Stages = Deserialize<List<PatientTrajectoryStageProjection>>(view.StagesJson)
+    };
 
     public async Task<WaitingRoomMonitorProjection?> GetWaitingRoomMonitorAsync(string queueId, CancellationToken cancellationToken = default)
     {

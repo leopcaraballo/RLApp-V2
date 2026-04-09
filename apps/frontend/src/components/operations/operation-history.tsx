@@ -10,7 +10,7 @@ interface OperationHistoryProps {
 
 export function OperationHistory({ title, entries, onClear }: OperationHistoryProps) {
   return (
-    <section className="panel">
+    <section className="panel clinical-panel clinical-panel--soft">
       <div className="panel__header">
         <div>
           <div className="panel__eyebrow">Actividad reciente</div>
@@ -22,10 +22,8 @@ export function OperationHistory({ title, entries, onClear }: OperationHistoryPr
       </div>
 
       {entries.length === 0 ? (
-        <div className="empty-state">
-          <p>
-            Aun no hay movimientos registrados. Aqui veras acciones correctas y errores recientes.
-          </p>
+        <div className="empty-state compact-empty">
+          <p>Sin movimientos.</p>
         </div>
       ) : (
         <div className="history-list">

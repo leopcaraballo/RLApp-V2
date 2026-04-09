@@ -45,6 +45,76 @@ public sealed class PatientTrajectory : DomainEntity
         OpenedAt = DateTime.UtcNow;
     }
 
+    /// <summary>
+    /// Reconstructs a PatientTrajectory from its event history without using reflection.
+    /// </summary>
+    public static PatientTrajectory Replay(IReadOnlyList<DomainEvent> events)
+    {
+        var openedEvent = events.OfType<PatientTrajectoryOpened>().FirstOrDefault()
+            ?? throw new DomainException("Trajectory stream is missing the opening event");
+
+        var trajectory = new PatientTrajectory(openedEvent.AggregateId, openedEvent.PatientId, openedEvent.QueueId);
+
+        foreach (var @event in events)
+        {
+            switch (@event)
+            {
+                case PatientTrajectoryOpened opened:
+                    trajectory.OpenedAt = opened.OccurredAt;
+                    trajectory.CurrentState = ActiveState;
+                    trajectory.AddCorrelationId(opened.CorrelationId);
+                    break;
+
+                case PatientTrajectoryStageRecorded stageRecorded:
+                    trajectory.ApplyStageIfNotDuplicate(
+                        stageRecorded.Stage, stageRecorded.SourceEvent, stageRecorded.SourceState,
+                        stageRecorded.OccurredAt, stageRecorded.CorrelationId);
+                    trajectory.AddCorrelationId(stageRecorded.CorrelationId);
+                    break;
+
+                case PatientTrajectoryCompleted completed:
+                    trajectory.ApplyStageIfNotDuplicate(
+                        completed.Stage, completed.SourceEvent, completed.SourceState,
+                        completed.OccurredAt, completed.CorrelationId);
+                    trajectory.AddCorrelationId(completed.CorrelationId);
+                    trajectory.CurrentState = CompletedState;
+                    trajectory.ClosedAt = completed.OccurredAt;
+                    break;
+
+                case PatientTrajectoryCancelled cancelled:
+                    trajectory.AddCorrelationId(cancelled.CorrelationId);
+                    trajectory.CurrentState = CancelledState;
+                    trajectory.ClosedAt = cancelled.OccurredAt;
+                    break;
+
+                case PatientTrajectoryRebuilt rebuilt:
+                    trajectory.AddCorrelationId(rebuilt.CorrelationId);
+                    break;
+            }
+        }
+
+        trajectory.SetPersistedVersion(events.Count);
+        trajectory.ClearUnraisedEvents();
+        return trajectory;
+    }
+
+    private void ApplyStageIfNotDuplicate(
+        string stage, string sourceEvent, string? sourceState,
+        DateTime occurredAt, string correlationId)
+    {
+        if (!HasDuplicateStage(stage, sourceEvent, sourceState, occurredAt, correlationId))
+        {
+            Stages.Add(new TrajectoryStage
+            {
+                OccurredAt = occurredAt,
+                Stage = stage,
+                SourceEvent = sourceEvent,
+                SourceState = sourceState,
+                CorrelationId = correlationId
+            });
+        }
+    }
+
     public static PatientTrajectory Start(
         string trajectoryId,
         string patientId,

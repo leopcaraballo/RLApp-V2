@@ -26,6 +26,7 @@ Definir la visibilidad operacional sincronizada para staff a traves de monitor, 
 ## Required behavior
 
 - la UI de staff debe leer monitor, dashboard y trayectoria solo desde read models persistidos; nunca desde write-side ni replay en hot path
+- el shell autenticado de staff y las vistas operativas sincronizadas pueden usar `RLApp Clinical Orchestrator` como nombre visible del sistema; `Orquestador de Trayectorias Clínicas Sincronizadas` puede mostrarse como copy secundario en chrome informativo sin alterar taxonomias operativas ni terminos de contrato
 - el navegador no debe recibir ni persistir el `accessToken` del backend; el BFF lo conserva del lado servidor y expone solo resumen de sesion
 - el canal realtime de staff debe ser same-origin y autenticado por la sesion web; el backend hub permanece detras del BFF o de clientes confiables equivalentes
 - todo mensaje realtime de staff debe ser versionado y minimizar payload a metadatos de invalidacion como `eventType`, `queueId`, `trajectoryId`, `correlationId` y `occurredAt`

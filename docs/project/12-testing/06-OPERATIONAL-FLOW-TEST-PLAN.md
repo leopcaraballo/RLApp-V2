@@ -4,6 +4,16 @@
 
 Definir un plan realista y ejecutable para validar el flujo operativo completo de RLApp sobre pacientes, recepcion, caja, consulta, consultorios, trayectoria, monitor, dashboard, BFF y realtime same-origin.
 
+## Slice decomposition
+
+Para el slice de trayectoria sincronizada, este plan se descompone operativamente en:
+
+- `12-testing/07-SYNCHRONIZED-TRAJECTORY-QA-TEST-PLAN.md`
+- `12-testing/08-SYNCHRONIZED-TRAJECTORY-QA-TEST-CASES.md`
+- `12-testing/qa/README.md` y sus anexos por implementacion
+
+Estos artefactos reutilizan `PAT-01`, `VIS-05`, `VIS-06`, `REL-01`, `SEC-07` y `VIS-08` como anclas canonicas de cobertura; no reemplazan este plan integrado.
+
 ## Traceability
 
 - Specs: `S-002`, `S-003`, `S-004`, `S-005`, `S-007`, `S-009`, `S-011`, `S-013`
@@ -20,7 +30,7 @@ Definir un plan realista y ejecutable para validar el flujo operativo completo d
 - validar que recepcion, caja, doctor, supervisor y support solo puedan ejecutar lo permitido por rol
 - validar que monitor, dashboard y trayectoria converjan sobre snapshots persistidos sin leer replay en hot path
 - validar que la sesion web y el stream realtime same-origin no expongan `accessToken` al navegador
-- validar que la operacion siga consistente bajo volumen, reconexion y cambios de topologia de consultorios
+- validar que la operacion siga consistente bajo volumen, reconexion, tiempos de espera aleatorios y cambios de topologia de consultorios
 
 ## Entry criteria
 
@@ -64,11 +74,24 @@ docker compose ps -a
 ```bash
 RLAPP_TOTAL_PATIENTS=100 \
 RLAPP_INITIAL_ROOMS=10 \
-RLAPP_REMAINING_ROOMS=5 \
+RLAPP_REMAINING_ROOMS=6 \
 RLAPP_DEACTIVATE_AT_PATIENT=50 \
+RLAPP_MIN_INTER_PATIENT_WAIT_MS=50 \
+RLAPP_MAX_INTER_PATIENT_WAIT_MS=250 \
+RLAPP_MIN_CASHIER_DWELL_MS=200 \
+RLAPP_MAX_CASHIER_DWELL_MS=900 \
+RLAPP_MIN_MEDICAL_CALL_DWELL_MS=400 \
+RLAPP_MAX_MEDICAL_CALL_DWELL_MS=1500 \
+RLAPP_MIN_CONSULTATION_DWELL_MS=600 \
+RLAPP_MAX_CONSULTATION_DWELL_MS=2000 \
 RLAPP_REPORT_PATH=.tmp/rlapp-patient-simulation-random-100.json \
 node .tmp/rlapp-patient-simulation.mjs
 ```
+
+- `RLAPP_MIN/MAX_INTER_PATIENT_WAIT_MS`: gap aleatorio entre check-ins para construir cola real.
+- `RLAPP_MIN/MAX_CASHIER_DWELL_MS`: permanencia aleatoria entre llamado a caja y resolucion del paso de caja.
+- `RLAPP_MIN/MAX_MEDICAL_CALL_DWELL_MS`: permanencia aleatoria entre llamado a consulta y accion siguiente sobre el turno.
+- `RLAPP_MIN/MAX_CONSULTATION_DWELL_MS`: duracion aleatoria entre inicio y cierre de consulta.
 
 ### Evidence to collect
 
@@ -79,6 +102,7 @@ node .tmp/rlapp-patient-simulation.mjs
 - monitor, dashboard and trajectory snapshots used for assertions
 - audit timeline by `correlationId` for critical failures
 - simulation report JSON for deterministic and randomized runs
+- profile exacto de variables `RLAPP_*` usado por el harness durante la corrida
 
 ## Execution order
 
@@ -164,7 +188,7 @@ node .tmp/rlapp-patient-simulation.mjs
 - `REL-03` replay without side effects (`S-011`, `S-008`): el rebuild no reemite mensajes externos ni modifica eventos legacy.
 - `REL-04` projection update after messaging (`S-008`, `S-013`): eventos publicados terminan reflejados en monitor, dashboard y trayectoria.
 - `REL-05` deterministic docker smoke (`S-009`): flujo nominal de 1 a 10 pacientes con compose saludable y endpoints `200`.
-- `REL-06` mixed-flow volume run (`S-013`, `RES-TEST-004`): corrida de 100 pacientes con mezcla de finalizados y ausencias terminales, 10 consultorios habilitados y 5 deshabilitados a mitad de la prueba.
+- `REL-06` mixed-flow volume run (`S-013`, `RES-TEST-004`): corrida de 100 pacientes con mezcla de finalizados y ausencias terminales, tiempos de espera aleatorios por etapa y 10 consultorios habilitados con reduccion controlada a 6 activos a mitad de la prueba.
 - `REL-07` post-load cleanliness (`S-013`): despues de la corrida no quedan pacientes no terminales en monitor ni servicios degradados en compose.
 
 ## Blocking gaps to resolve before claiming perfect validation

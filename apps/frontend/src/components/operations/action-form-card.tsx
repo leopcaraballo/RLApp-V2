@@ -34,7 +34,7 @@ export interface FormFieldConfig<TForm extends FieldValues> {
 
 interface ActionFormCardProps<TForm extends FieldValues, TResult> {
   title: string;
-  description: string;
+  description?: string;
   schema: ZodType<TForm>;
   defaultValues: DefaultValues<TForm>;
   fields: FormFieldConfig<TForm>[];
@@ -137,14 +137,14 @@ export function ActionFormCard<TForm extends FieldValues, TResult>({
   });
 
   return (
-    <section className="operation-card">
+    <section className="operation-card clinical-panel">
       <div className="operation-card__header">
         <div>
           <div className="panel__eyebrow">Accion operativa</div>
           <h2>{title}</h2>
-          <p>{description}</p>
+          {description ? <p>{description}</p> : null}
         </div>
-        <StatusBadge tone="neutral">Accion</StatusBadge>
+        <StatusBadge tone="neutral">Operacion</StatusBadge>
       </div>
 
       <ContractAlert title="Importante antes de continuar" items={contractWarnings} />
@@ -199,7 +199,7 @@ export function ActionFormCard<TForm extends FieldValues, TResult>({
 
         {notes.length > 0 ? (
           <div className="form-notes">
-            <div className="panel__eyebrow">Ayuda rapida</div>
+            <div className="panel__eyebrow">Notas</div>
             <ul>
               {notes.map((note) => (
                 <li key={note}>{note}</li>
@@ -217,14 +217,14 @@ export function ActionFormCard<TForm extends FieldValues, TResult>({
 
       {mutation.isError ? (
         <div className="response-card response-card--error">
-          <div className="response-card__title">No se pudo completar la accion</div>
+          <div className="response-card__title">Error</div>
           <p>{readError(mutation.error).message}</p>
         </div>
       ) : null}
 
       {mutation.isSuccess && mutation.data ? (
         <div className="response-card response-card--success">
-          <div className="response-card__title">Resultado recibido</div>
+          <div className="response-card__title">Resultado</div>
           {renderResult ? (
             renderResult(mutation.data)
           ) : (

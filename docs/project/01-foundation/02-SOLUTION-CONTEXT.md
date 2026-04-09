@@ -18,3 +18,9 @@ El sistema orquesta la atencion de pacientes que ya tienen una cita registrada p
 - PostgreSQL
 - RabbitMQ
 - entorno de observabilidad
+
+## Platform identity
+
+- El frontend autenticado de staff se presenta visualmente como `RLApp Clinical Orchestrator`.
+- El texto secundario permitido para chrome informativo, pie de pagina o secciones de contexto es `Orquestador de Trayectorias Clínicas Sincronizadas`.
+- Esta identidad visual aplica solo a copy visible para el usuario; no renombra contratos, rutas, headers, cookies, IDs de prueba ni identificadores tecnicos internos.

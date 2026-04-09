@@ -401,9 +401,9 @@ export function PatientTrajectoryConsole({ session }: { session: SessionUser }) 
     <>
       <SectionIntro
         badge={getRoleDisplayName(session.role)}
-        eyebrow="Soporte y supervision"
-        title="Consola de trayectoria del paciente"
-        description="Busca trayectorias persistidas, revisa el historial longitudinal y, si tu rol lo permite, ejecuta reconstrucciones controladas."
+        eyebrow="Trayectoria del paciente"
+        title="RLApp Clinical Orchestrator"
+        description="Consola de trayectoria del paciente para buscar trayectorias persistidas, revisar el historial longitudinal y, si tu rol lo permite, ejecutar reconstrucciones controladas."
       />
 
       <div className="grid grid--two">

@@ -54,6 +54,12 @@ public class WaitingRoomMonitorConsumer :
             { "UpdatedAt", ev.OccurredAt },
             { "Status", OperationalVisibleStatuses.AtCashier }
         };
+
+        if (!string.IsNullOrWhiteSpace(ev.CashierStationId))
+        {
+            data["RoomAssigned"] = ev.CashierStationId;
+        }
+
         await UpsertMonitorAsync(context, ev.PatientId, data, OperationalVisibleStatuses.AtCashier);
     }
 

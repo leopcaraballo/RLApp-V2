@@ -181,7 +181,7 @@ public sealed class OperationalProjectionWarmupService : IHostedService
                 }
 
                 case PatientCalledAtCashier calledAtCashier:
-                    UpdateMonitor(activePatients, monitors, calledAtCashier.PatientId, OperationalVisibleStatuses.AtCashier, null, calledAtCashier.OccurredAt);
+                    UpdateMonitor(activePatients, monitors, calledAtCashier.PatientId, OperationalVisibleStatuses.AtCashier, calledAtCashier.CashierStationId, calledAtCashier.OccurredAt);
                     break;
 
                 case PatientPaymentPending paymentPending:

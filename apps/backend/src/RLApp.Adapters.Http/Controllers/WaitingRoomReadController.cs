@@ -39,4 +39,27 @@ public sealed class WaitingRoomReadController : ControllerBase
 
         return Ok(result.Data);
     }
+
+    [AllowAnonymous]
+    [HttpGet("{queueId}/public-display")]
+    public async Task<IActionResult> GetPublicDisplay(
+        [FromRoute] string queueId,
+        [FromHeader(Name = "X-Correlation-Id")] string? correlationId,
+        CancellationToken cancellationToken)
+    {
+        var activeCorrelationId = string.IsNullOrWhiteSpace(correlationId)
+            ? Guid.NewGuid().ToString()
+            : correlationId;
+
+        var result = await _mediator.Send(
+            new GetPublicWaitingRoomDisplayQuery(queueId, activeCorrelationId),
+            cancellationToken);
+
+        if (!result.Success)
+        {
+            return NotFound(new { Code = result.Message, result.CorrelationId });
+        }
+
+        return Ok(result.Data);
+    }
 }

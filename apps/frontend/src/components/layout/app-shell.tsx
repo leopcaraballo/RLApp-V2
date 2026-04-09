@@ -22,12 +22,13 @@ export function AppShell({ session, children }: AppShellProps) {
     <div className="shell">
       <aside className="shell__sidebar">
         <div className="brand-card">
-          <div className="brand-card__eyebrow">RLApp para staff</div>
-          <h1>Centro operativo</h1>
+          <div className="brand-card__eyebrow">Plataforma de staff</div>
+          <h1>RLApp Clinical Orchestrator</h1>
           <p>
             Una sola vista para registrar pacientes, seguir la operacion y revisar el estado del
             sistema.
           </p>
+          <p>Orquestador de Trayectorias Clínicas Sincronizadas</p>
         </div>
 
         <nav className="shell__nav">

@@ -24,21 +24,21 @@ function toneForHealth(status?: string): 'success' | 'warning' | 'danger' | 'neu
 
 function HealthCard({
   title,
-  description,
+  heading,
   data,
   isLoading,
 }: {
   title: string;
-  description: string;
+  heading: string;
   data?: HealthStatusResponse;
   isLoading: boolean;
 }) {
   return (
-    <article className="panel">
+    <article className="panel clinical-panel clinical-panel--soft">
       <div className="panel__header">
         <div>
           <div className="panel__eyebrow">{title}</div>
-          <h2>{description}</h2>
+          <h2>{heading}</h2>
         </div>
         <StatusBadge tone={toneForHealth(data?.status)}>
           {isLoading ? 'Cargando' : getHealthStatusDisplayName(data?.status)}
@@ -71,19 +71,19 @@ export function HealthPanels() {
     <div className="grid grid--three">
       <HealthCard
         data={healthQuery.data}
-        description="Resumen general de salud"
+        heading="General"
         isLoading={healthQuery.isLoading}
         title="/health"
       />
       <HealthCard
         data={readyQuery.data}
-        description="Dependencias para iniciar"
+        heading="Ready"
         isLoading={readyQuery.isLoading}
         title="/health/ready"
       />
       <HealthCard
         data={liveQuery.data}
-        description="Disponibilidad del proceso"
+        heading="Live"
         isLoading={liveQuery.isLoading}
         title="/health/live"
       />

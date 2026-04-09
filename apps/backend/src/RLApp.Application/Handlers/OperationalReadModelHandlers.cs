@@ -60,6 +60,104 @@ public sealed class GetWaitingRoomMonitorSnapshotHandler : IRequestHandler<GetWa
     }
 }
 
+public sealed class GetPublicWaitingRoomDisplayHandler : IRequestHandler<GetPublicWaitingRoomDisplayQuery, QueryResult<PublicWaitingRoomDisplayDto>>
+{
+    private readonly IProjectionStore _projectionStore;
+
+    public GetPublicWaitingRoomDisplayHandler(IProjectionStore projectionStore)
+    {
+        _projectionStore = projectionStore;
+    }
+
+    public async Task<QueryResult<PublicWaitingRoomDisplayDto>> Handle(GetPublicWaitingRoomDisplayQuery query, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(query.QueueId))
+        {
+            return QueryResult<PublicWaitingRoomDisplayDto>.Failure("PUBLIC_WAITING_ROOM_DISPLAY_NOT_FOUND", query.CorrelationId);
+        }
+
+        var projection = await _projectionStore.GetWaitingRoomMonitorAsync(query.QueueId, cancellationToken);
+        if (projection is null)
+        {
+            return QueryResult<PublicWaitingRoomDisplayDto>.Ok(
+                new PublicWaitingRoomDisplayDto
+                {
+                    QueueId = query.QueueId,
+                    GeneratedAt = DateTime.UtcNow,
+                    CurrentTurn = null,
+                    UpcomingTurns = Array.Empty<PublicWaitingRoomTurnDto>(),
+                    ActiveCalls = Array.Empty<PublicWaitingRoomCallDto>()
+                },
+                query.CorrelationId);
+        }
+
+        var activeCallEntries = projection.Entries
+            .Where(IsDisplayActiveTurn)
+            .Where(HasVisibleDestination)
+            .OrderByDescending(entry => entry.UpdatedAt)
+            .ThenBy(entry => NormalizeDestination(entry.RoomAssigned), StringComparer.OrdinalIgnoreCase)
+            .Take(6)
+            .ToArray();
+
+        var upcomingTurns = projection.Entries
+            .Where(IsUpcomingTurn)
+            .OrderBy(entry => entry.CheckedInAt)
+            .ThenBy(entry => ReadVisibleTurnNumber(entry), StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        var currentTurn = activeCallEntries.FirstOrDefault() ?? upcomingTurns.FirstOrDefault();
+
+        return QueryResult<PublicWaitingRoomDisplayDto>.Ok(
+            new PublicWaitingRoomDisplayDto
+            {
+                QueueId = projection.QueueId,
+                GeneratedAt = projection.GeneratedAt,
+                CurrentTurn = currentTurn is null ? null : MapTurn(currentTurn),
+                UpcomingTurns = upcomingTurns
+                    .Where(entry => currentTurn is null || !string.Equals(entry.TurnId, currentTurn.TurnId, StringComparison.OrdinalIgnoreCase))
+                    .Take(12)
+                    .Select(MapTurn)
+                    .ToArray(),
+                ActiveCalls = activeCallEntries
+                    .Select(MapCall)
+                    .ToArray()
+            },
+            query.CorrelationId);
+    }
+
+    private static bool IsDisplayActiveTurn(WaitingRoomMonitorEntryProjection entry)
+        => string.Equals(entry.Status, OperationalVisibleStatuses.Called, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(entry.Status, OperationalVisibleStatuses.AtCashier, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(entry.Status, OperationalVisibleStatuses.InConsultation, StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsUpcomingTurn(WaitingRoomMonitorEntryProjection entry)
+        => string.Equals(entry.Status, OperationalVisibleStatuses.Waiting, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(entry.Status, OperationalVisibleStatuses.WaitingForConsultation, StringComparison.OrdinalIgnoreCase);
+
+    private static PublicWaitingRoomTurnDto MapTurn(WaitingRoomMonitorEntryProjection entry)
+        => new()
+        {
+            TurnNumber = ReadVisibleTurnNumber(entry)
+        };
+
+    private static PublicWaitingRoomCallDto MapCall(WaitingRoomMonitorEntryProjection entry)
+        => new()
+        {
+            TurnNumber = ReadVisibleTurnNumber(entry),
+            Destination = NormalizeDestination(entry.RoomAssigned)!,
+            Status = entry.Status
+        };
+
+    private static bool HasVisibleDestination(WaitingRoomMonitorEntryProjection entry)
+        => NormalizeDestination(entry.RoomAssigned) is not null;
+
+    private static string ReadVisibleTurnNumber(WaitingRoomMonitorEntryProjection entry)
+        => string.IsNullOrWhiteSpace(entry.TicketNumber) ? entry.TurnId : entry.TicketNumber;
+
+    private static string? NormalizeDestination(string? destination)
+        => string.IsNullOrWhiteSpace(destination) ? null : destination.Trim();
+}
+
 public sealed class GetOperationalDashboardSnapshotHandler : IRequestHandler<GetOperationalDashboardSnapshotQuery, QueryResult<OperationsDashboardSnapshotDto>>
 {
     private readonly IProjectionStore _projectionStore;

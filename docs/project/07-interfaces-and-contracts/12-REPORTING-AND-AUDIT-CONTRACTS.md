@@ -26,7 +26,7 @@ Exponer el estado operativo agregado de sala de espera, caja y consulta desde pr
 | `averageWaitTimeMinutes` | `number` | Yes | Promedio operativo persistido para las queues observadas. |
 | `totalPatientsToday` | `integer` | Yes | Conteo agregado persistido por la proyeccion de dashboard. |
 | `totalCompleted` | `integer` | Yes | Conteo total de atenciones cerradas persistidas. |
-| `activeRooms` | `integer` | Yes | Consultorios activos al momento del snapshot. |
+| `activeRooms` | `integer` | Yes | Consultorios con atencion visible al momento del snapshot. |
 | `projectionLagSeconds` | `integer` | Yes | Lag actual de la proyeccion usada para el dashboard. |
 | `queueSnapshots` | `array[DashboardQueueSnapshot]` | Yes | Snapshot por queue utilizado para componer la vista. |
 | `statusBreakdown` | `array[DashboardStatusCount]` | Yes | Conteo de entradas visibles por estado en monitor. |

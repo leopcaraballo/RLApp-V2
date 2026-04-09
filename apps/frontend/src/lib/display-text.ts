@@ -63,6 +63,16 @@ export function formatDisplayDateTime(value: string | Date | null | undefined): 
   }).format(date);
 }
 
+export function formatDisplayClockTime(value: string | Date | null | undefined): string {
+  const date = value instanceof Date ? value : new Date(value ?? Date.now());
+
+  return new Intl.DateTimeFormat(locale, {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(date);
+}
+
 export function formatDisplayNumber(value: number): string {
   return new Intl.NumberFormat(locale).format(value);
 }

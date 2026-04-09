@@ -19,6 +19,7 @@ interface UseOperationalRealtimeOptions {
 const DASHBOARD_ROLES = new Set<StaffRole>(['Supervisor', 'Support']);
 const QUEUE_ROLES = new Set<StaffRole>(['Receptionist', 'Doctor', 'Supervisor']);
 const TRAJECTORY_ROLES = new Set<StaffRole>(['Supervisor', 'Support']);
+const VISIBLE_RECONNECT_DELAY_MS = 4_000;
 
 function buildRealtimeUrl(options: UseOperationalRealtimeOptions): string | null {
   const params = new URLSearchParams();
@@ -68,6 +69,7 @@ export function useOperationalRealtime(options: UseOperationalRealtimeOptions) {
   const [lastEvent, setLastEvent] = useState<OperationalRealtimeEvent | null>(null);
   const hasConnectedOnce = useRef(false);
   const hadConnectionError = useRef(false);
+  const reconnectIndicatorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const url = buildRealtimeUrl(options);
 
@@ -113,8 +115,16 @@ export function useOperationalRealtime(options: UseOperationalRealtimeOptions) {
     }
   });
 
+  const clearReconnectIndicatorTimeout = useEffectEvent(() => {
+    if (reconnectIndicatorTimeoutRef.current) {
+      clearTimeout(reconnectIndicatorTimeoutRef.current);
+      reconnectIndicatorTimeoutRef.current = null;
+    }
+  });
+
   useEffect(() => {
     if (!options.enabled || !url) {
+      clearReconnectIndicatorTimeout();
       setConnectionState('idle');
       return;
     }
@@ -125,6 +135,8 @@ export function useOperationalRealtime(options: UseOperationalRealtimeOptions) {
 
     source.onopen = () => {
       const shouldResync = hasConnectedOnce.current || hadConnectionError.current;
+
+      clearReconnectIndicatorTimeout();
       hasConnectedOnce.current = true;
       hadConnectionError.current = false;
       setConnectionState('live');
@@ -145,14 +157,29 @@ export function useOperationalRealtime(options: UseOperationalRealtimeOptions) {
 
     source.onerror = () => {
       hadConnectionError.current = true;
-      setConnectionState('reconnecting');
+
+      if (reconnectIndicatorTimeoutRef.current) {
+        return;
+      }
+
+      reconnectIndicatorTimeoutRef.current = setTimeout(() => {
+        reconnectIndicatorTimeoutRef.current = null;
+        setConnectionState('reconnecting');
+      }, VISIBLE_RECONNECT_DELAY_MS);
     };
 
     return () => {
+      clearReconnectIndicatorTimeout();
       source.close();
       setConnectionState('idle');
     };
-  }, [handleRealtimeMessage, invalidateVisibleState, options.enabled, url]);
+  }, [
+    clearReconnectIndicatorTimeout,
+    handleRealtimeMessage,
+    invalidateVisibleState,
+    options.enabled,
+    url,
+  ]);
 
   return {
     connectionState,
