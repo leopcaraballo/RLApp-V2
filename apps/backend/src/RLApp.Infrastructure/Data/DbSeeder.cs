@@ -18,8 +18,8 @@ public class DbSeeder
     private const string SupportPasswordConfigKey = "SeedUsers:Support:Password";
     private const string SupervisorPasswordEnvVar = "RLAPP_SEED_SUPERVISOR_PASSWORD";
     private const string SupportPasswordEnvVar = "RLAPP_SEED_SUPPORT_PASSWORD";
-    private const string DefaultSupervisorPassword = "superadmin";
-    private const string DefaultSupportPassword = "support";
+    private const string DefaultSupervisorPassword = "local-supervisor-pass";
+    private const string DefaultSupportPassword = "local-support-pass";
 
     private readonly AppDbContext _context;
     private readonly IConfiguration _configuration;
