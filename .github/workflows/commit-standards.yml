@@ -46,7 +46,7 @@ jobs:
             fi
           fi
 
-          commits="$(git log --format=%s $range)"
+          commits="$(git log --first-parent --format=%s $range)"
           [[ -n "$commits" ]] || { echo "No commit subjects found to validate."; exit 0; }
 
           while IFS= read -r subject; do
