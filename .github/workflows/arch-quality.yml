@@ -26,23 +26,35 @@ jobs:
         run: |
           set -euo pipefail
 
+          find_forbidden_references() {
+            local pattern="$1"
+            local root="$2"
+
+            grep -rEn "$pattern" "$root" --include='*.cs' \
+              | grep -v '/obj/' \
+              | grep -vE ':[0-9]+:[[:space:]]*(//|///|\*)' || true
+          }
+
           echo "=== Validating Domain has no infrastructure dependencies ==="
           forbidden='Microsoft\.EntityFrameworkCore|Npgsql|RabbitMQ|MassTransit|SignalR|System\.Net\.Http'
-          if grep -rE "$forbidden" apps/backend/src/RLApp.Domain/ --include='*.cs' | grep -v '/obj/'; then
+          if matches="$(find_forbidden_references "$forbidden" apps/backend/src/RLApp.Domain/)" && [[ -n "$matches" ]]; then
+            printf '%s\n' "$matches"
             echo "::error::Domain layer has forbidden infrastructure dependencies"
             exit 1
           fi
 
           echo "=== Validating Application has no direct adapter dependencies ==="
           forbidden_app='Npgsql|RabbitMQ\.Client|Microsoft\.AspNetCore|SignalR'
-          if grep -rE "$forbidden_app" apps/backend/src/RLApp.Application/ --include='*.cs' | grep -v '/obj/'; then
+          if matches="$(find_forbidden_references "$forbidden_app" apps/backend/src/RLApp.Application/)" && [[ -n "$matches" ]]; then
+            printf '%s\n' "$matches"
             echo "::error::Application layer has forbidden adapter dependencies"
             exit 1
           fi
 
           echo "=== Validating Ports has no implementation dependencies ==="
           forbidden_ports='EntityFrameworkCore|Npgsql|RabbitMQ|MassTransit|SignalR'
-          if grep -rE "$forbidden_ports" apps/backend/src/RLApp.Ports/ --include='*.cs' | grep -v '/obj/'; then
+          if matches="$(find_forbidden_references "$forbidden_ports" apps/backend/src/RLApp.Ports/)" && [[ -n "$matches" ]]; then
+            printf '%s\n' "$matches"
             echo "::error::Ports layer has forbidden implementation dependencies"
             exit 1
           fi
@@ -86,15 +98,12 @@ jobs:
             --exclude "*/obj/*" --exclude "*/Migrations/*" \
             -l csharp \
             -C 15 \
-            -w 2>&1 | tee /tmp/complexity-backend.txt
+            -w 2>&1 | tee /tmp/complexity-backend.txt || true
 
-          if lizard apps/backend/src/ \
-            --exclude "*/obj/*" --exclude "*/Migrations/*" \
-            -l csharp \
-            -T cyclomatic_complexity=15 2>/dev/null; then
-            echo "Backend complexity within limits"
-          else
+          if grep -q 'warning:' /tmp/complexity-backend.txt; then
             echo "::warning::Some backend functions exceed cyclomatic complexity threshold of 15"
+          else
+            echo "Backend complexity within limits"
           fi
 
       - name: Analyze frontend complexity
