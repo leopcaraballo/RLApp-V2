@@ -7,6 +7,11 @@
 - validar aceptacion exclusiva de ramas `feature/*`
 - validar rechazo de Conventional Commits invalidos
 - validar que la revision de subjects en Pull Request use el `merge-base` para no arrastrar commits historicos ajenos al alcance real del PR
+- validar que el workflow de seguridad use una configuracion compatible con pull requests para CodeQL y secret detection
+- validar que el workflow de seguridad no dependa de secretos embebidos en el repositorio para poder escanear el branch del PR
+- validar que el workflow de arquitectura exporte artefactos reutilizables del analisis de complejidad y patrones
+- validar que el workflow de performance siga siendo manual, parametrizable y con export de resultados
+- validar que CI publique cobertura y artefactos de validacion asociados al execution layer
 - validar que `/.gitignore` excluya outputs generados y caches locales sin ocultar fuentes canonicas del repo
 - validar remocion de `apps/frontend/.next/**` del versionado cuando aparezca trackeado por builds locales
 - validar que un cleanup repo-wide siga el flujo `feature/* -> develop` antes de cualquier promocion `develop -> main`

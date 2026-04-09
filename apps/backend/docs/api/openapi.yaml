@@ -62,7 +62,7 @@ paths:
                 summary: Login válido
                 value:
                   identifier: admin
-                  password: Password123!
+                  password: local-admin-pass
       responses:
         "200":
           description: Usuario autenticado correctamente.
@@ -1217,7 +1217,7 @@ components:
         password:
           type: string
           format: password
-          example: Password123!
+          example: local-admin-pass
     ChangeRoleRequest:
       type: object
       required:

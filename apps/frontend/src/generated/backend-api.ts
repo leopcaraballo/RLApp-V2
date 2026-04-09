@@ -512,7 +512,7 @@ export interface components {
       identifier: string;
       /**
        * Format: password
-       * @example Password123!
+       * @example local-admin-pass
        */
       password: string;
     };

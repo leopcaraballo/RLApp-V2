@@ -122,8 +122,14 @@ Perfil de mensajeria ejecutable:
 
 Usuarios seeded para el perfil local:
 
-- `superadmin` / `SuperAdmin@2026Dev!` (`Supervisor`)
-- `support` / `Support@2026Dev!` (`Support`)
+- `superadmin` (`Supervisor`)
+- `support` (`Support`)
+
+Passwords del seed local:
+
+- configurar `RLAPP_SEED_SUPERVISOR_PASSWORD` para `superadmin`
+- configurar `RLAPP_SEED_SUPPORT_PASSWORD` para `support`
+- si no se configuran, el runtime usa defaults locales pensados para smoke y QA
 
 Slice Fase 2 disponible en runtime:
 

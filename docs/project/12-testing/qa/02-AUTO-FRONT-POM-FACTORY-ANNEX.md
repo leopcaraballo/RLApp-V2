@@ -36,7 +36,7 @@ Documentar la cobertura de trayectoria sincronizada implementada en `AUTO_FRONT_
 
 ## Latest revalidation - 2026-04-08
 
-- comando ejecutado: `env RLAPP_FRONTEND_BASE_URL=http://localhost:3000 RLAPP_VALID_USERNAME=superadmin RLAPP_VALID_PASSWORD=SuperAdmin@2026Dev! ./gradlew clean test --no-daemon`
+- comando ejecutado: `env RLAPP_FRONTEND_BASE_URL=http://localhost:3000 RLAPP_VALID_USERNAME=superadmin RLAPP_VALID_PASSWORD=<seeded-supervisor-password> ./gradlew clean test --no-daemon`
 - resultado de build: `BUILD SUCCESSFUL in 33s`
 - evidencia verificada: `TEST-co.com.sofka.runners.TestRunner.xml` con `4` tests, `0` fallos y `0` errores
 - lectura funcional: el rerun limpio mantuvo en verde los `2` escenarios de login reutilizados por el repo y los `2` escenarios de trayectoria del slice sin exigir cambios en page object, steps o step definitions
