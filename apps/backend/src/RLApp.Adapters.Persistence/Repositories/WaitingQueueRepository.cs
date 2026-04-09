@@ -57,7 +57,7 @@ public class WaitingQueueRepository : IWaitingQueueRepository
 
     public async Task<IList<WaitingQueue>> GetAllAsync(CancellationToken cancellationToken = default)
     {
-        // Placeholder for event-sourced aggregate (would query projection)
+        // Not yet implemented — requires projection query.
         return await Task.FromResult(new List<WaitingQueue>());
     }
 

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using RLApp.Adapters.Persistence.Data;
 using RLApp.Adapters.Persistence.Data.Models;
 using RLApp.Domain.Common;
@@ -37,10 +38,12 @@ public class EventStoreRepository : IEventStore
     };
 
     private readonly AppDbContext _context;
+    private readonly ILogger<EventStoreRepository> _logger;
 
-    public EventStoreRepository(AppDbContext context)
+    public EventStoreRepository(AppDbContext context, ILogger<EventStoreRepository> logger)
     {
         _context = context;
+        _logger = logger;
     }
 
     public Task SaveAsync(DomainEvent domainEvent, int? expectedVersion = null, CancellationToken cancellationToken = default)
@@ -157,7 +160,7 @@ public class EventStoreRepository : IEventStore
         return events;
     }
 
-    private static DomainEvent? DeserializeEvent(EventRecord record)
+    private DomainEvent? DeserializeEvent(EventRecord record)
     {
         if (!EventTypeMap.TryGetValue(record.EventType, out var eventClrType))
             return null;
@@ -168,7 +171,7 @@ public class EventStoreRepository : IEventStore
         }
         catch (JsonException ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Failed to deserialize event {record.Id}: {ex.Message}");
+            _logger.LogWarning(ex, "Failed to deserialize event {EventId}", record.Id);
             return null;
         }
     }

@@ -145,9 +145,6 @@ public class WaitingRoomMonitorConsumer :
             { "Status", OperationalVisibleStatuses.Completed }
         };
         await UpsertMonitorAsync(context, ev.PatientId, data, OperationalVisibleStatuses.Completed);
-
-        // Optionally delete after some time, but for now we keep it or delete it:
-        // await _projectionStore.DeleteAsync(ev.PatientId);
     }
 
     public async Task Consume(ConsumeContext<PatientAbsentAtConsultation> context)
