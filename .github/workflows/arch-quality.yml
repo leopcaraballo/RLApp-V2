@@ -1,0 +1,169 @@
+name: Architecture & Quality
+
+on:
+  push:
+    branches: [main, develop, "feature/**"]
+    paths:
+      - 'apps/**'
+      - 'tests/**'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'apps/**'
+      - 'tests/**'
+  workflow_dispatch:
+
+jobs:
+  backend-architecture:
+    name: Backend Architecture Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Validate hexagonal layer dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "=== Validating Domain has no infrastructure dependencies ==="
+          forbidden='Microsoft\.EntityFrameworkCore|Npgsql|RabbitMQ|MassTransit|SignalR|System\.Net\.Http'
+          if grep -rE "$forbidden" apps/backend/src/RLApp.Domain/ --include='*.cs' | grep -v '/obj/'; then
+            echo "::error::Domain layer has forbidden infrastructure dependencies"
+            exit 1
+          fi
+
+          echo "=== Validating Application has no direct adapter dependencies ==="
+          forbidden_app='Npgsql|RabbitMQ\.Client|Microsoft\.AspNetCore|SignalR'
+          if grep -rE "$forbidden_app" apps/backend/src/RLApp.Application/ --include='*.cs' | grep -v '/obj/'; then
+            echo "::error::Application layer has forbidden adapter dependencies"
+            exit 1
+          fi
+
+          echo "=== Validating Ports has no implementation dependencies ==="
+          forbidden_ports='EntityFrameworkCore|Npgsql|RabbitMQ|MassTransit|SignalR'
+          if grep -rE "$forbidden_ports" apps/backend/src/RLApp.Ports/ --include='*.cs' | grep -v '/obj/'; then
+            echo "::error::Ports layer has forbidden implementation dependencies"
+            exit 1
+          fi
+
+          echo "Architecture layer validation passed"
+
+      - name: Validate no circular project references
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if grep -r 'ProjectReference.*RLApp\.\(Application\|Adapters\|Infrastructure\|Api\|Ports\)' apps/backend/src/RLApp.Domain/*.csproj; then
+            echo "::error::Domain project has forbidden project references"
+            exit 1
+          fi
+
+          for ref in Application Adapters Infrastructure Api; do
+            if grep -r "ProjectReference.*RLApp\.${ref}" apps/backend/src/RLApp.Ports/*.csproj; then
+              echo "::error::Ports project references forbidden project: ${ref}"
+              exit 1
+            fi
+          done
+
+          echo "No circular references detected"
+
+  complexity-analysis:
+    name: Cyclomatic Complexity
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install lizard
+        run: pip install lizard
+
+      - name: Analyze backend complexity
+        shell: bash
+        run: |
+          set -euo pipefail
+          lizard apps/backend/src/ \
+            --exclude "*/obj/*" --exclude "*/Migrations/*" \
+            -l csharp \
+            -C 15 \
+            -w 2>&1 | tee /tmp/complexity-backend.txt
+
+          if lizard apps/backend/src/ \
+            --exclude "*/obj/*" --exclude "*/Migrations/*" \
+            -l csharp \
+            -T cyclomatic_complexity=15 2>/dev/null; then
+            echo "Backend complexity within limits"
+          else
+            echo "::warning::Some backend functions exceed cyclomatic complexity threshold of 15"
+          fi
+
+      - name: Analyze frontend complexity
+        shell: bash
+        run: |
+          set -euo pipefail
+          lizard apps/frontend/src/ \
+            -l javascript \
+            -C 15 \
+            -w 2>&1 | tee /tmp/complexity-frontend.txt || true
+
+      - name: Upload complexity reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: complexity-reports
+          path: /tmp/complexity-*.txt
+
+  design-patterns:
+    name: Design Pattern Detection
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Detect design patterns
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          report='{"patterns":['
+          first=true
+
+          add_pattern() {
+            local name="$1" confidence="$2" count="$3" location="$4"
+            $first || report="$report,"
+            report="$report{\"pattern\":\"$name\",\"confidence\":\"$confidence\",\"count\":$count,\"location\":\"$location\"}"
+            first=false
+          }
+
+          count=$(grep -rlc "interface I.*Repository" apps/backend/src/RLApp.Ports/ --include='*.cs' 2>/dev/null | wc -l)
+          [[ $count -gt 0 ]] && add_pattern "Repository" "high" "$count" "RLApp.Ports/Inbound"
+
+          count=$(grep -rlc "Factory" apps/backend/src/RLApp.Domain/ --include='*.cs' 2>/dev/null | grep -v obj | wc -l)
+          [[ $count -gt 0 ]] && add_pattern "Factory Method" "high" "$count" "RLApp.Domain/Common"
+
+          count=$(grep -rlc "interface I.*Dispatcher\|interface I.*Strategy\|interface I.*Policy" apps/backend/src/ --include='*.cs' 2>/dev/null | grep -v obj | wc -l)
+          [[ $count -gt 0 ]] && add_pattern "Strategy" "medium" "$count" "RLApp.Infrastructure/BackgroundServices"
+
+          count=$(grep -rlc "MassTransitStateMachine\|SagaStateMachineInstance" apps/backend/src/ --include='*.cs' 2>/dev/null | grep -v obj | wc -l)
+          [[ $count -gt 0 ]] && add_pattern "Saga/StateMachine" "high" "$count" "RLApp.Adapters.Messaging/Sagas"
+
+          count=$(grep -rlc "DomainEvent\|IEventStore\|EventStore" apps/backend/src/ --include='*.cs' 2>/dev/null | grep -v obj | wc -l)
+          [[ $count -gt 0 ]] && add_pattern "Event Sourcing" "high" "$count" "RLApp.Domain + RLApp.Adapters.Persistence"
+
+          count=$(grep -rlc "IHubContext\|: Hub" apps/backend/src/ --include='*.cs' 2>/dev/null | grep -v obj | wc -l)
+          [[ $count -gt 0 ]] && add_pattern "Observer" "medium" "$count" "RLApp.Api/Hubs"
+
+          count=$(grep -rlc "abstract class.*Entity\|abstract class.*ValueObject\|abstract class.*Event" apps/backend/src/RLApp.Domain/ --include='*.cs' 2>/dev/null | grep -v obj | wc -l)
+          [[ $count -gt 0 ]] && add_pattern "Template Method" "high" "$count" "RLApp.Domain/Common"
+
+          count=$(grep -rlc "Guard\|Idempotency" apps/backend/src/ --include='*.cs' 2>/dev/null | grep -v obj | wc -l)
+          [[ $count -gt 0 ]] && add_pattern "Guard" "medium" "$count" "RLApp.Application/Services"
+
+          report="$report]}"
+          echo "$report" | python3 -m json.tool | tee design-patterns-report.json
+
+      - name: Upload pattern report
+        uses: actions/upload-artifact@v4
+        with:
+          name: design-patterns-report
+          path: design-patterns-report.json

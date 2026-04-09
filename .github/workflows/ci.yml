@@ -281,7 +281,18 @@ jobs:
             target=$(find . -maxdepth 4 -name '*.csproj' | head -n 1)
           fi
 
-          dotnet test "$target" --configuration Release --collect:"XPlat Code Coverage" --results-directory ./TestResults
+          dotnet test "$target" \
+            --configuration Release \
+            --collect:"XPlat Code Coverage" \
+            --results-directory ./TestResults \
+            -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=cobertura
+
+      - name: Upload coverage report
+        if: steps.detect.outputs.has_dotnet == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: ./TestResults/**/coverage.cobertura.xml
 
       - name: No executable project detected
         if: steps.detect.outputs.has_dotnet != 'true'
@@ -297,6 +308,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
+          cache-dependency-path: apps/frontend/package-lock.json
 
       - name: Install frontend dependencies
         shell: bash

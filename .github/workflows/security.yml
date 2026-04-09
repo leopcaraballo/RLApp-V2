@@ -1,0 +1,99 @@
+name: Security Scan
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+jobs:
+  codeql:
+    name: CodeQL SAST
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      contents: read
+    strategy:
+      matrix:
+        language: [csharp, javascript]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+
+      - name: Setup .NET 10
+        if: matrix.language == 'csharp'
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Build .NET for CodeQL
+        if: matrix.language == 'csharp'
+        run: dotnet build apps/backend/RLApp.slnx -c Release
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"
+
+  dependency-audit:
+    name: Dependency Vulnerability Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/frontend/package-lock.json
+
+      - name: Audit .NET dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          dotnet list apps/backend/RLApp.slnx package --vulnerable --include-transitive 2>&1 | tee /tmp/dotnet-audit.txt
+          if grep -qE '(High|Critical)' /tmp/dotnet-audit.txt; then
+            echo "::error::High/Critical .NET vulnerabilities found"
+            exit 1
+          fi
+
+      - name: Audit npm dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd apps/frontend
+          npm audit --audit-level=high 2>&1 | tee /tmp/npm-audit.txt || true
+          if npm audit --audit-level=high 2>/dev/null; then
+            echo "No high/critical npm vulnerabilities"
+          else
+            echo "::warning::npm audit found issues (see output above)"
+          fi
+
+  secret-scan:
+    name: Secret Detection
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
