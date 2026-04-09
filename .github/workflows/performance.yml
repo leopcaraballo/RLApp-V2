@@ -4,8 +4,8 @@ on:
   workflow_dispatch:
     inputs:
       duration:
-        description: 'Test duration in seconds'
-        default: '15'
+        description: "Test duration in seconds"
+        default: "15"
         required: false
 
 jobs:

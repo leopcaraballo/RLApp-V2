@@ -10,6 +10,8 @@ namespace RLApp.Tests.Integration;
 
 public class PatientFlowIntegrationTests : IClassFixture<CustomWebApplicationFactory>
 {
+    private const string IntegrationPassword = "local-integration-pass";
+
     private readonly CustomWebApplicationFactory _factory;
     private readonly HttpClient _client;
 
@@ -32,7 +34,7 @@ public class PatientFlowIntegrationTests : IClassFixture<CustomWebApplicationFac
                 Id = "staff-admin",
                 Username = "admin",
                 Email = "admin@clinic.local",
-                PasswordHash = hashService.HashPassword("Password123!"),
+                PasswordHash = hashService.HashPassword(IntegrationPassword),
                 Role = "Supervisor",
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow
@@ -41,7 +43,7 @@ public class PatientFlowIntegrationTests : IClassFixture<CustomWebApplicationFac
             await db.SaveChangesAsync();
         }
 
-        var loginRequest = new { identifier = "admin", password = "Password123!" };
+        var loginRequest = new { identifier = "admin", password = IntegrationPassword };
         var response = await _client.PostAsJsonAsync("/api/staff/auth/login", loginRequest);
 
         response.EnsureSuccessStatusCode();

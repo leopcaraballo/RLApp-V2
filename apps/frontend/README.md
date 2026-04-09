@@ -43,8 +43,14 @@ docker compose --profile backend --profile frontend up --build
 
 Usuarios seeded para el perfil local:
 
-- `superadmin` / `SuperAdmin@2026Dev!` (`Supervisor`)
-- `support` / `Support@2026Dev!` (`Support`)
+- `superadmin` (`Supervisor`)
+- `support` (`Support`)
+
+Passwords del seed local:
+
+- configurar `RLAPP_SEED_SUPERVISOR_PASSWORD` para `superadmin`
+- configurar `RLAPP_SEED_SUPPORT_PASSWORD` para `support`
+- si no se configuran, el runtime usa defaults locales pensados para smoke y QA
 
 El frontend sigue usando como contrato auditado `../backend/docs/api/openapi.yaml`, aunque el backend también arranca correctamente en el compose local.
 

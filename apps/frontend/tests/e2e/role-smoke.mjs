@@ -4,12 +4,12 @@ const POLL_INTERVAL_MS = 500;
 
 const SUPERVISOR_CREDENTIALS = {
   identifier: 'superadmin',
-  password: 'SuperAdmin@2026Dev!',
+  password: process.env.RLAPP_SEED_SUPERVISOR_PASSWORD ?? 'local-supervisor-pass',
 };
 
 const SUPPORT_CREDENTIALS = {
   identifier: 'support',
-  password: 'Support@2026Dev!',
+  password: process.env.RLAPP_SEED_SUPPORT_PASSWORD ?? 'local-support-pass',
 };
 
 function log(status, message) {

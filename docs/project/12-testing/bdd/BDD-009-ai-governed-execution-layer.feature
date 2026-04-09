@@ -25,6 +25,16 @@ Feature: AI governed execution layer
     When the workflow validates Conventional Commit subjects for the pull request
     Then only the commits after the merge-base are evaluated
 
+  Scenario: Execution layer security workflows stay operable on pull requests
+    Given the governed repository exposes security workflows in the execution layer
+    When a pull request triggers the security scan
+    Then CodeQL, dependency audit and secret detection execute without requiring secrets embedded in the repository
+
+  Scenario: Performance baseline remains manual and auditable
+    Given the execution layer exposes a manual performance baseline workflow
+    When an operator dispatches the workflow with a runtime duration parameter
+    Then the benchmark runs and publishes an artifact with the measured results
+
   Scenario: Generated frontend output stays out of version control
     Given frontend build artifacts exist under apps/frontend/.next
     When the repository hygiene rules are enforced

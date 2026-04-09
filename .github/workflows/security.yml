@@ -6,7 +6,7 @@ on:
   pull_request:
     branches: [main, develop]
   schedule:
-    - cron: '0 6 * * 1'
+    - cron: "0 6 * * 1"
   workflow_dispatch:
 
 jobs:
@@ -17,16 +17,23 @@ jobs:
       security-events: write
       contents: read
     strategy:
+      fail-fast: false
       matrix:
-        language: [csharp, javascript]
+        include:
+          - language: csharp
+            build-mode: manual
+          - language: javascript
+            build-mode: none
     steps:
       - name: Checkout
         uses: actions/checkout@v6
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
+        uses: github/codeql-action/init@v4
         with:
           languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+          dependency-caching: true
 
       - name: Setup .NET 10
         if: matrix.language == 'csharp'
@@ -34,12 +41,22 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
+      - name: Restore .NET for CodeQL
+        if: matrix.language == 'csharp'
+        shell: bash
+        run: |
+          set -euo pipefail
+          dotnet restore apps/backend/RLApp.slnx
+
       - name: Build .NET for CodeQL
         if: matrix.language == 'csharp'
-        run: dotnet build apps/backend/RLApp.slnx -c Release
+        shell: bash
+        run: |
+          set -euo pipefail
+          dotnet build apps/backend/RLApp.slnx -c Release --no-restore
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
+        uses: github/codeql-action/analyze@v4
         with:
           category: "/language:${{ matrix.language }}"
 
@@ -87,6 +104,9 @@ jobs:
   secret-scan:
     name: Secret Detection
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -96,4 +116,5 @@ jobs:
       - name: Run gitleaks
         uses: gitleaks/gitleaks-action@v2
         env:
-          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_ENABLE_COMMENTS: "false"

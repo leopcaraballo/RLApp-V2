@@ -23,7 +23,7 @@ export function LoginForm() {
     resolver: zodResolver(loginSchema),
     defaultValues: {
       identifier: 'superadmin',
-      password: 'SuperAdmin@2026Dev!',
+      password: '',
     },
   });
 
@@ -59,15 +59,19 @@ export function LoginForm() {
         </div>
 
         <div className="auth-grid">
-          <StatusBadge tone="info">Usuarios de prueba</StatusBadge>
+          <StatusBadge tone="info">Usuarios seeded</StatusBadge>
           <ul>
             <li>
-              Supervisor: <code>superadmin</code> / <code>SuperAdmin@2026Dev!</code>
+              Supervisor: <code>superadmin</code>
             </li>
             <li>
-              Soporte: <code>support</code> / <code>Support@2026Dev!</code>
+              Soporte: <code>support</code>
             </li>
           </ul>
+          <p>
+            Las passwords seeded se configuran en el backend por entorno y no se exponen en la
+            interfaz.
+          </p>
         </div>
 
         <form

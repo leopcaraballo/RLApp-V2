@@ -38,7 +38,7 @@ Mapear la cobertura de trayectoria sincronizada implementada en `AUTO_API_SCREEN
 
 ## Latest revalidation - 2026-04-08
 
-- comando ejecutado: `env RLAPP_API_BASE_URL=http://localhost:5094 RLAPP_VALID_USERNAME=superadmin RLAPP_VALID_PASSWORD=SuperAdmin@2026Dev! ./gradlew clean test --no-daemon`
+- comando ejecutado: `env RLAPP_API_BASE_URL=http://localhost:5094 RLAPP_VALID_USERNAME=superadmin RLAPP_VALID_PASSWORD=<seeded-supervisor-password> ./gradlew clean test --no-daemon`
 - resultado de build: `BUILD SUCCESSFUL in 43s`
 - evidencia verificada: `TEST-Flujo de Atencion de Paciente en RLApp-V2.xml` con `1` test, `0` fallos y `0` errores; `TEST-Trayectoria Clinica del Paciente en RLApp-V2.xml` con `4` tests, `0` fallos y `0` errores
 - lectura funcional: la suite volvio a validar el flujo nominal base y los cuatro escenarios de trayectoria sin requerir cambios en feature, runner, step definitions ni tasks de dominio

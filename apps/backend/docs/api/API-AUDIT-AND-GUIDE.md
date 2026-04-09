@@ -201,7 +201,7 @@ Content-Type: application/json
 
 {
   "identifier": "admin",
-  "password": "Password123!"
+  "password": "local-admin-pass"
 }
 ```
 

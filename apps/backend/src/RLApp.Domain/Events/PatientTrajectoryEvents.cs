@@ -19,7 +19,7 @@ public sealed class PatientTrajectoryOpened : DomainEvent
         OccurredAt = occurredAt;
     }
 
-    protected PatientTrajectoryOpened() { }
+    private PatientTrajectoryOpened() { }
 }
 
 public sealed class PatientTrajectoryStageRecorded : DomainEvent
@@ -58,7 +58,7 @@ public sealed class PatientTrajectoryStageRecorded : DomainEvent
         OccurredAt = occurredAt;
     }
 
-    protected PatientTrajectoryStageRecorded() { }
+    private PatientTrajectoryStageRecorded() { }
 }
 
 public sealed class PatientTrajectoryCompleted : DomainEvent
@@ -97,7 +97,7 @@ public sealed class PatientTrajectoryCompleted : DomainEvent
         OccurredAt = occurredAt;
     }
 
-    protected PatientTrajectoryCompleted() { }
+    private PatientTrajectoryCompleted() { }
 }
 
 public sealed class PatientTrajectoryCancelled : DomainEvent
@@ -136,7 +136,7 @@ public sealed class PatientTrajectoryCancelled : DomainEvent
         OccurredAt = occurredAt;
     }
 
-    protected PatientTrajectoryCancelled() { }
+    private PatientTrajectoryCancelled() { }
 }
 
 public sealed class PatientTrajectoryRebuilt : DomainEvent
@@ -165,5 +165,5 @@ public sealed class PatientTrajectoryRebuilt : DomainEvent
         OccurredAt = occurredAt;
     }
 
-    protected PatientTrajectoryRebuilt() { }
+    private PatientTrajectoryRebuilt() { }
 }
