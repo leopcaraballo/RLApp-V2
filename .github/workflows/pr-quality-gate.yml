@@ -81,12 +81,6 @@ jobs:
         run: |
           set -euo pipefail
 
-          head_ref="${{ github.head_ref }}"
-          if [[ "$head_ref" =~ ^feature/sync- ]]; then
-            echo "Sync branch detected (${head_ref}). Skipping code-vs-test validation."
-            exit 0
-          fi
-
           base_ref="origin/${{ github.base_ref }}"
           git fetch origin "${{ github.base_ref }}" --depth=1
           changed_files=$(git diff --name-only "$base_ref"...HEAD)
