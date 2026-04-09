@@ -38,6 +38,9 @@ jobs:
             before="${{ github.event.before }}"
             if [[ "$before" == "0000000000000000000000000000000000000000" ]]; then
               range="HEAD~1..HEAD"
+            elif ! git cat-file -e "${before}^{commit}" 2>/dev/null; then
+              echo "Previous commit ${before} is unreachable (force push). Validating HEAD only."
+              range="HEAD~1..HEAD"
             else
               range="$before..HEAD"
             fi
