@@ -6,9 +6,7 @@ const DEFAULT_PUBLIC_WAITING_ROOM_QUEUE_ID =
 const DEFAULT_SESSION_SECRET = 'rlapp-dev-session-secret-change-me';
 
 export function getBackendApiBaseUrl(): string {
-  const url = process.env.BACKEND_API_BASE_URL || DEFAULT_BACKEND_API_BASE_URL;
-  console.log('[env] getBackendApiBaseUrl():', url);
-  return url;
+  return process.env.BACKEND_API_BASE_URL || DEFAULT_BACKEND_API_BASE_URL;
 }
 
 export function getPublicWaitingRoomDefaultQueueId(): string {

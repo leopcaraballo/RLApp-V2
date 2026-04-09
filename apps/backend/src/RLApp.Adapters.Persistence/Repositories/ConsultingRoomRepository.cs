@@ -57,15 +57,13 @@ public class ConsultingRoomRepository : IConsultingRoomRepository
 
     public async Task<IList<ConsultingRoom>> GetAllAsync(CancellationToken cancellationToken = default)
     {
-        // Note: For a real implementation, we'd query a snapshot table or projection
-        // For now, this is a placeholder
+        // Not yet implemented — requires snapshot or projection query.
         return await Task.FromResult(new List<ConsultingRoom>());
     }
 
     public async Task<IList<ConsultingRoom>> GetActiveAsync(CancellationToken cancellationToken = default)
     {
-        // Note: For a real implementation, we'd query a projection
-        // For now, this is a placeholder
+        // Not yet implemented — requires projection query.
         return await Task.FromResult(new List<ConsultingRoom>());
     }
 

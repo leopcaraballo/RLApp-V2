@@ -518,8 +518,7 @@ async function login() {
         body: {
             identifier: "superadmin",
             password:
-                process.env.RLAPP_SEED_SUPERVISOR_PASSWORD ??
-                "local-supervisor-pass",
+                process.env.RLAPP_SEED_SUPERVISOR_PASSWORD ?? "superadmin",
         },
     });
 
