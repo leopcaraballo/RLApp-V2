@@ -6,8 +6,6 @@ import {
 } from '@/lib/env';
 
 describe('getBackendApiBaseUrl', () => {
-  const originalEnv = process.env;
-
   beforeEach(() => {
     vi.stubEnv('BACKEND_API_BASE_URL', '');
   });

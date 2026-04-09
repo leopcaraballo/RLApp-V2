@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import { canAccessPath, getVisibleNavigation } from '@/lib/authorization';
-import type { StaffRole } from '@/types/api';
 
 describe('canAccessPath', () => {
   it('allows Supervisor to access all routes', () => {
