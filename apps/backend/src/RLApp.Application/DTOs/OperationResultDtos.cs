@@ -1,11 +1,19 @@
 namespace RLApp.Application.DTOs;
 
+using RLApp.Ports.Outbound;
+
 /// <summary>
 /// Result payload for cashier call-next operations.
 /// </summary>
 public class PatientCallResultDto
 {
+    public string TurnId { get; set; } = string.Empty;
+    public string TurnNumber { get; set; } = string.Empty;
     public string PatientId { get; set; } = string.Empty;
+    public string CurrentState { get; set; } = OperationalVisibleStatuses.Called;
+    public string? CashierStationId { get; set; }
+    public string? ConsultingRoomId { get; set; }
+    public string CorrelationId { get; set; } = string.Empty;
     public DateTime CalledAt { get; set; }
     public int QueuePosition { get; set; }
 }
@@ -17,8 +25,12 @@ public class ClaimedPatientResultDto
 {
     public string QueueId { get; set; } = string.Empty;
     public string TurnId { get; set; } = string.Empty;
+    public string TurnNumber { get; set; } = string.Empty;
     public string PatientId { get; set; } = string.Empty;
-    public string RoomId { get; set; } = string.Empty;
+    public string ConsultingRoomId { get; set; } = string.Empty;
+    public string CurrentState { get; set; } = OperationalVisibleStatuses.WaitingForConsultation;
+    public string ClaimStatus { get; set; } = "Claimed";
+    public string CorrelationId { get; set; } = string.Empty;
     public DateTime ClaimedAt { get; set; }
 }
 

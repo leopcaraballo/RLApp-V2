@@ -11,7 +11,7 @@
 | UC-007 Call Next At Cashier | S-004 | S-009 | US-007 |
 | UC-008 Validate Payment | S-004 | S-009 | US-013 |
 | UC-009 Mark Payment Pending | S-004 | S-009 | US-014 |
-| UC-010 Cancel By Payment Policy | S-004 | S-009 | US-015 |
+| UC-010 Mark Absence At Cashier | S-004 | S-009 | US-008 |
 | UC-011 Claim Next Patient For Consultation | S-005 | S-009 | US-007, US-009 |
 | UC-012 Call Patient To Consultation | S-005 | S-006, S-009 | US-007, US-008 |
 | UC-013 Finish Consultation | S-005 | S-006, S-009 | US-010 |
@@ -22,8 +22,10 @@
 | UC-018 Reconstruct Patient Trajectory | S-011 | S-008, S-009 | US-012, US-018 |
 | UC-019 Protect Aggregate Writes With Optimistic Concurrency | S-008 | S-009 | US-019 |
 | UC-020 Correlate Sagas With Patient Trajectory | S-012 | S-007, S-009, S-011 | US-020 |
+| UC-021 Consume Synchronized Operational Views | S-013 | S-007, S-009, S-011 | US-021 |
 
 ## Notes
 
 - `S-009` es transversal y aplica a todos los casos de uso.
 - `S-006` depende de flujos de visibilidad y realtime derivados de monitor y consulta; no introduce un caso de uso independiente en el catalogo actual.
+- `S-013` sincroniza vistas operativas de staff y la mediacion de sesion/realtime sobre casos de uso ya existentes de monitor, dashboard y trayectoria.

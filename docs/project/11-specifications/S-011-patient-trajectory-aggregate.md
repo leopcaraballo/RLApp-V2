@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Definir el agregado `TrayectoriaPaciente`, su identificador canonico `TrajectoryId`, la consulta protegida de trayectoria longitudinal y el replay controlado para reconstruir historial de paciente sin fragmentar recepcion, caja y consulta.
+Definir el agregado `TrayectoriaPaciente`, su identificador canonico `TrajectoryId`, la consulta protegida de trayectoria longitudinal, el discovery operacional desde proyecciones persistidas y el replay controlado para reconstruir historial de paciente sin fragmentar recepcion, caja y consulta.
 
 ## Traceability
 
@@ -15,6 +15,7 @@ Definir el agregado `TrayectoriaPaciente`, su identificador canonico `Trajectory
 - apertura y cierre de una trayectoria unica por paciente dentro de `Waiting Room`
 - registro de hitos longitudinales desde recepcion, caja y consulta
 - consulta protegida de trayectoria por `trajectoryId`
+- discovery operacional de trayectorias por `patientId` y `queueId` cuando el `trajectoryId` no es conocido de antemano
 - rebuild y replay controlados para poblar o reconciliar trayectorias desde eventos historicos
 
 ## Preconditions
@@ -29,12 +30,17 @@ Definir el agregado `TrayectoriaPaciente`, su identificador canonico `Trajectory
 - ningun paciente puede mantener mas de una trayectoria activa en la misma `QueueId`
 - los hitos de recepcion, caja y consulta deben anexarse en orden cronologico monotono y con `trajectoryId` estable
 - una trayectoria cerrada por finalizacion o cancelacion no admite nuevos hitos salvo rehidratacion idempotente del historial
+- el discovery operacional debe consultar solo proyecciones persistidas; nunca puede disparar replay ni reconstruccion en hot path
+- el discovery requiere `patientId` y puede acotarse por `queueId`; debe devolver cero o mas candidatas ordenadas con trayectorias activas primero y luego por `openedAt` descendente
+- cada candidata de discovery debe exponer como minimo `trajectoryId`, `patientId`, `queueId`, `currentState`, `openedAt`, `closedAt` y el `correlationId` operativo mas reciente para continuar el diagnostico
+- la vista protegida de trayectoria puede usar `RLApp Clinical Orchestrator` como titulo visible de la consola, siempre que mantenga labels funcionales de trayectoria en descripciones, formularios y resultados
 - el rebuild debe reconstruir la misma trayectoria desde eventos historicos sin mutar eventos legacy ni reemitir side effects operativos
 - `trajectoryId` complementa `correlationId` para vistas longitudinales; la migracion completa de correlacion de sagas queda fuera de esta fase
 
 ## Contract dependencies
 
 - contrato de consulta y rebuild: `/docs/project/07-interfaces-and-contracts/16-PATIENT-TRAJECTORY-CONTRACTS.md`
+- queries canonicas: `GET /api/patient-trajectories`, `GET /api/patient-trajectories/{trajectoryId}`, `POST /api/patient-trajectories/rebuild`
 - metadata de eventos internos: `/docs/project/07-interfaces-and-contracts/09-INTERNAL-EVENT-CONTRACTS.md`
 - correlacion y auditoria: `/docs/project/06-application/08-AUDIT-AND-CORRELATION.md`
 - replay controlado: `/docs/project/09-data-and-messaging/09-REBUILD-AND-REPLAY-STRATEGY.md`
@@ -51,3 +57,4 @@ Definir el agregado `TrayectoriaPaciente`, su identificador canonico `Trajectory
 - el replay debe ser idempotente y no puede duplicar hitos ya aplicados
 - una trayectoria cerrada debe rechazar un nuevo hito mutante
 - la consulta debe devolver una vista cronologica desde proyeccion persistente, nunca desde replay en hot path
+- el discovery por `patientId` debe devolver candidatas consistentes con la proyeccion persistida y permitir llegar al `trajectoryId` correcto sin inspeccion manual del event store

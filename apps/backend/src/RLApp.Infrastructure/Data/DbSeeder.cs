@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Configuration;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using RLApp.Adapters.Persistence.Data;
@@ -13,13 +14,26 @@ namespace RLApp.Infrastructure.Data;
 /// </summary>
 public class DbSeeder
 {
+    private const string SupervisorPasswordConfigKey = "SeedUsers:Supervisor:Password";
+    private const string SupportPasswordConfigKey = "SeedUsers:Support:Password";
+    private const string SupervisorPasswordEnvVar = "RLAPP_SEED_SUPERVISOR_PASSWORD";
+    private const string SupportPasswordEnvVar = "RLAPP_SEED_SUPPORT_PASSWORD";
+    private const string DefaultSupervisorPassword = "superadmin";
+    private const string DefaultSupportPassword = "support";
+
     private readonly AppDbContext _context;
+    private readonly IConfiguration _configuration;
     private readonly IPasswordHashService _passwordHashService;
     private readonly ILogger<DbSeeder> _logger;
 
-    public DbSeeder(AppDbContext context, IPasswordHashService passwordHashService, ILogger<DbSeeder> logger)
+    public DbSeeder(
+        AppDbContext context,
+        IConfiguration configuration,
+        IPasswordHashService passwordHashService,
+        ILogger<DbSeeder> logger)
     {
         _context = context;
+        _configuration = configuration;
         _passwordHashService = passwordHashService;
         _logger = logger;
     }
@@ -30,12 +44,12 @@ public class DbSeeder
     ///
     /// Default Superadmin Credentials (Development Only):
     /// - Username: superadmin
-    /// - Password: SuperAdmin@2026Dev!
+    /// - Password configured through SeedUsers:Supervisor:Password or RLAPP_SEED_SUPERVISOR_PASSWORD
     /// - Role: Supervisor (all permissions)
     ///
     /// Default Support Credentials (Development Only):
     /// - Username: support
-    /// - Password: Support@2026Dev!
+    /// - Password configured through SeedUsers:Support:Password or RLAPP_SEED_SUPPORT_PASSWORD
     /// - Role: Support (controlled rebuild and diagnostic workflows)
     ///
     /// WARNING: Change these credentials immediately in production!
@@ -69,7 +83,10 @@ public class DbSeeder
             superadminId: "staff-superadmin",
             username: "superadmin",
             email: "superadmin@rlapp.local",
-            password: "SuperAdmin@2026Dev!",
+            password: ResolveSeedPassword(
+                SupervisorPasswordConfigKey,
+                SupervisorPasswordEnvVar,
+                DefaultSupervisorPassword),
             role: "Supervisor",
             logLabel: "superadmin");
 
@@ -82,9 +99,17 @@ public class DbSeeder
             superadminId: "staff-support-01",
             username: "support",
             email: "support@rlapp.local",
-            password: "Support@2026Dev!",
+            password: ResolveSeedPassword(
+                SupportPasswordConfigKey,
+                SupportPasswordEnvVar,
+                DefaultSupportPassword),
             role: "Support",
             logLabel: "support");
+
+    private string ResolveSeedPassword(string configurationKey, string envVarName, string fallbackPassword)
+        => _configuration[configurationKey]
+            ?? Environment.GetEnvironmentVariable(envVarName)
+            ?? fallbackPassword;
 
     private async Task SeedDefaultUser(
         string superadminId,

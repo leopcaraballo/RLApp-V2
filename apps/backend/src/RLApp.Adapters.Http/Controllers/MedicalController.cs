@@ -49,6 +49,48 @@ public class MedicalController : RLAppControllerBase
     }
 
     /// <summary>
+    /// POST /api/medical/call-next
+    /// </summary>
+    [Authorize(Policy = AuthorizationPolicies.DoctorOperations)]
+    [HttpPost("call-next")]
+    public async Task<IActionResult> CallNext(
+        [FromBody] MedicalCallNextRequest request,
+        [FromHeader(Name = "X-Correlation-Id")] string? correlationId,
+        CancellationToken cancellationToken)
+    {
+        var activeCorrelationId = correlationId ?? Guid.NewGuid().ToString();
+
+        var command = new MedicalCallNextCommand(
+            request.QueueId,
+            request.ConsultingRoomId,
+            activeCorrelationId,
+            CurrentUserId);
+        var result = await _mediator.Send(command, cancellationToken);
+        return FromCommandResult(result);
+    }
+
+    /// <summary>
+    /// POST /api/medical/start-consultation
+    /// </summary>
+    [Authorize(Policy = AuthorizationPolicies.DoctorOperations)]
+    [HttpPost("start-consultation")]
+    public async Task<IActionResult> StartConsultation(
+        [FromBody] StartConsultationRequest request,
+        [FromHeader(Name = "X-Correlation-Id")] string? correlationId,
+        CancellationToken cancellationToken)
+    {
+        var activeCorrelationId = correlationId ?? Guid.NewGuid().ToString();
+
+        var command = new StartConsultationCommand(
+            request.TurnId,
+            request.ConsultingRoomId,
+            activeCorrelationId,
+            CurrentUserId);
+        var result = await _mediator.Send(command, cancellationToken);
+        return FromCommandResult(result);
+    }
+
+    /// <summary>
     /// POST /api/medical/finish-consultation
     /// </summary>
     [Authorize(Policy = AuthorizationPolicies.DoctorOperations)]

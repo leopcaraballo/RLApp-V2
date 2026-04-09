@@ -51,4 +51,5 @@ Este paquete documental define la base Enterprise para generar con IA un proyect
 - Fase 1 — Completada (2026-04-01). Ver: docs/project/02-as-is-audit/14-FASE-1-CIERRE.md
 - Fase 2 — Completada (2026-04-05). Ver: docs/project/02-as-is-audit/16-FASE-2-CIERRE.md
 - Fase 3 — Completada (2026-04-05). Ver: docs/project/02-as-is-audit/18-FASE-3-CIERRE.md
-- Fase 4 — Kickoff de correlacion de sagas y state machines (2026-04-05). Ver: docs/project/02-as-is-audit/19-FASE-4-KICKOFF.md
+- Fase 4 — Completada (2026-04-06). Ver: docs/project/02-as-is-audit/20-FASE-4-CIERRE.md
+- Fase 5 — Kickoff de discovery operacional de trayectorias (2026-04-06). Ver: docs/project/02-as-is-audit/21-FASE-5-KICKOFF.md

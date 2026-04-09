@@ -9,19 +9,22 @@ using System.Text.Json.Serialization;
 public abstract class DomainEvent
 {
     [JsonPropertyName("eventType")]
-    public string EventType { get; set; }
+    public string EventType { get; set; } = string.Empty;
 
     [JsonPropertyName("occurredAt")]
     public DateTime OccurredAt { get; set; }
 
     [JsonPropertyName("correlationId")]
-    public string CorrelationId { get; set; }
+    public string CorrelationId { get; set; } = string.Empty;
 
     [JsonPropertyName("aggregateId")]
-    public string AggregateId { get; set; }
+    public string AggregateId { get; set; } = string.Empty;
 
     [JsonPropertyName("trajectoryId")]
     public string? TrajectoryId { get; set; }
+
+    [JsonPropertyName("schemaVersion")]
+    public int SchemaVersion { get; set; } = 1;
 
     protected DomainEvent(string eventType, string aggregateId, string correlationId)
     {

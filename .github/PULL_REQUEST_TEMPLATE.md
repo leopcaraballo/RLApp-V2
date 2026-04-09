@@ -2,10 +2,10 @@
 
 ## Traceability
 
-- US:
-- UC:
-- S:
-- BDD/TDD:
+- US: US-XXX
+- UC: UC-XXX
+- S: S-XXX
+- BDD/TDD: BDD-XXX or TDD-S-XXX
 
 ## Branch Policy
 

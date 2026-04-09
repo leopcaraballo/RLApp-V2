@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace RLApp.Adapters.Http.Requests;
 
@@ -46,20 +47,37 @@ public class ReceptionRegisterRequest
 public class CallPatientRequest
 {
     [Required]
+    [JsonPropertyName("queueId")]
     public string QueueId { get; set; } = string.Empty;
 
-    [Required]
-    public string PatientId { get; set; } = string.Empty;
+    [JsonPropertyName("turnId")]
+    public string? TurnId { get; set; }
 
-    [Required]
-    public string RoomId { get; set; } = string.Empty;
+    [JsonPropertyName("patientId")]
+    public string? PatientId { get; set; }
+
+    [JsonPropertyName("consultingRoomId")]
+    public string? ConsultingRoomId { get; set; }
+
+    [JsonPropertyName("roomId")]
+    public string? LegacyRoomId { get; set; }
+
+    public string ResolveConsultingRoomId()
+        => string.IsNullOrWhiteSpace(ConsultingRoomId) ? LegacyRoomId ?? string.Empty : ConsultingRoomId;
 }
 
 public class ClaimNextPatientRequest
 {
     [Required]
+    [JsonPropertyName("queueId")]
     public string QueueId { get; set; } = string.Empty;
 
-    [Required]
-    public string RoomId { get; set; } = string.Empty;
+    [JsonPropertyName("consultingRoomId")]
+    public string? ConsultingRoomId { get; set; }
+
+    [JsonPropertyName("roomId")]
+    public string? LegacyRoomId { get; set; }
+
+    public string ResolveConsultingRoomId()
+        => string.IsNullOrWhiteSpace(ConsultingRoomId) ? LegacyRoomId ?? string.Empty : ConsultingRoomId;
 }

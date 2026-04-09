@@ -13,6 +13,21 @@ public sealed class PatientTrajectory : DomainEntity
     public const string CashierStage = "Caja";
     public const string ConsultationStage = "Consulta";
 
+    /// <summary>
+    /// Allowed stage transitions. Key = current stage, Values = valid next stages.
+    /// Empty string represents the initial state (no stage recorded yet).
+    /// RN-09 / RN-10: transitions must respect the allowed flow.
+    /// </summary>
+    private static readonly Dictionary<string, HashSet<string>> AllowedTransitions = new(StringComparer.Ordinal)
+    {
+        [string.Empty] = new(StringComparer.Ordinal) { ReceptionStage },
+        [ReceptionStage] = new(StringComparer.Ordinal) { CashierStage },
+        [CashierStage] = new(StringComparer.Ordinal) { ConsultationStage },
+        [ConsultationStage] = new(StringComparer.Ordinal) { ConsultationStage }  // allow re-recording final stage on completion
+    };
+
+    public string? CurrentStage => Stages.Count > 0 ? Stages[^1].Stage : null;
+
     public string PatientId { get; private set; }
     public string QueueId { get; private set; }
     public string CurrentState { get; private set; }
@@ -28,6 +43,76 @@ public sealed class PatientTrajectory : DomainEntity
         QueueId = queueId;
         CurrentState = ActiveState;
         OpenedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Reconstructs a PatientTrajectory from its event history without using reflection.
+    /// </summary>
+    public static PatientTrajectory Replay(IReadOnlyList<DomainEvent> events)
+    {
+        var openedEvent = events.OfType<PatientTrajectoryOpened>().FirstOrDefault()
+            ?? throw new DomainException("Trajectory stream is missing the opening event");
+
+        var trajectory = new PatientTrajectory(openedEvent.AggregateId, openedEvent.PatientId, openedEvent.QueueId);
+
+        foreach (var @event in events)
+        {
+            switch (@event)
+            {
+                case PatientTrajectoryOpened opened:
+                    trajectory.OpenedAt = opened.OccurredAt;
+                    trajectory.CurrentState = ActiveState;
+                    trajectory.AddCorrelationId(opened.CorrelationId);
+                    break;
+
+                case PatientTrajectoryStageRecorded stageRecorded:
+                    trajectory.ApplyStageIfNotDuplicate(
+                        stageRecorded.Stage, stageRecorded.SourceEvent, stageRecorded.SourceState,
+                        stageRecorded.OccurredAt, stageRecorded.CorrelationId);
+                    trajectory.AddCorrelationId(stageRecorded.CorrelationId);
+                    break;
+
+                case PatientTrajectoryCompleted completed:
+                    trajectory.ApplyStageIfNotDuplicate(
+                        completed.Stage, completed.SourceEvent, completed.SourceState,
+                        completed.OccurredAt, completed.CorrelationId);
+                    trajectory.AddCorrelationId(completed.CorrelationId);
+                    trajectory.CurrentState = CompletedState;
+                    trajectory.ClosedAt = completed.OccurredAt;
+                    break;
+
+                case PatientTrajectoryCancelled cancelled:
+                    trajectory.AddCorrelationId(cancelled.CorrelationId);
+                    trajectory.CurrentState = CancelledState;
+                    trajectory.ClosedAt = cancelled.OccurredAt;
+                    break;
+
+                case PatientTrajectoryRebuilt rebuilt:
+                    trajectory.AddCorrelationId(rebuilt.CorrelationId);
+                    break;
+            }
+        }
+
+        trajectory.SetPersistedVersion(events.Count);
+        trajectory.ClearUnraisedEvents();
+        return trajectory;
+    }
+
+    private void ApplyStageIfNotDuplicate(
+        string stage, string sourceEvent, string? sourceState,
+        DateTime occurredAt, string correlationId)
+    {
+        if (!HasDuplicateStage(stage, sourceEvent, sourceState, occurredAt, correlationId))
+        {
+            Stages.Add(new TrajectoryStage
+            {
+                OccurredAt = occurredAt,
+                Stage = stage,
+                SourceEvent = sourceEvent,
+                SourceState = sourceState,
+                CorrelationId = correlationId
+            });
+        }
     }
 
     public static PatientTrajectory Start(
@@ -64,6 +149,7 @@ public sealed class PatientTrajectory : DomainEntity
             return false;
         }
 
+        EnsureValidTransition(stage);
         EnsureChronologicalOrder(occurredAt);
         RecordStageInternal(stage, sourceEvent, sourceState, occurredAt, correlationId, raiseDomainEvent: true);
         return true;
@@ -138,6 +224,15 @@ public sealed class PatientTrajectory : DomainEntity
     {
         if (CurrentState == CompletedState || CurrentState == CancelledState)
             throw new DomainException("A closed trajectory does not accept new stages");
+    }
+
+    private void EnsureValidTransition(string targetStage)
+    {
+        var current = CurrentStage ?? string.Empty;
+        if (AllowedTransitions.TryGetValue(current, out var allowed) && allowed.Contains(targetStage))
+            return;
+
+        throw new DomainException($"Invalid stage transition from '{(CurrentStage ?? "(none)")}' to '{targetStage}'");
     }
 
     private void EnsureChronologicalOrder(DateTime occurredAt)

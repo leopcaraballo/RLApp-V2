@@ -7,6 +7,19 @@
 - validar aceptacion exclusiva de ramas `feature/*`
 - validar rechazo de Conventional Commits invalidos
 - validar que la revision de subjects en Pull Request use el `merge-base` para no arrastrar commits historicos ajenos al alcance real del PR
+- validar que el workflow de seguridad use una configuracion compatible con pull requests para CodeQL y secret detection
+- validar que el workflow de seguridad no dependa de secretos embebidos en el repositorio para poder escanear el branch del PR
+- validar que el workflow de arquitectura exporte artefactos reutilizables del analisis de complejidad y patrones
+- validar que el workflow de performance siga siendo manual, parametrizable y con export de resultados
+- validar que CI publique cobertura y artefactos de validacion asociados al execution layer
 - validar que `/.gitignore` excluya outputs generados y caches locales sin ocultar fuentes canonicas del repo
 - validar remocion de `apps/frontend/.next/**` del versionado cuando aparezca trackeado por builds locales
 - validar que un cleanup repo-wide siga el flujo `feature/* -> develop` antes de cualquier promocion `develop -> main`
+- validar que exista un script repo-wide reutilizable para higiene y analisis estatico de residuos auditados
+- validar rechazo de placeholders backend (`Class1.cs`) y de shims obsoletos retirados del arbol productivo
+- validar rechazo de simbolos legacy backend retirados del runtime activo cuando reaparezcan en `apps/backend/src`
+- validar rechazo de tipos mapeados backend retirados por no tener consumidor confirmado en runtime
+- validar rechazo de contratos y simbolos retirados del flujo de cancelacion no soportado (`cancel-payment`, `PatientCancelledByPayment`, `PatientCancelledByAbsence`, `CancelPatientByAbsence`)
+- validar rechazo en lint frontend de helpers locales de presentacion realtime cuando ya exista utilidad compartida
+- validar que la misma regla de higiene se ejecute desde CI y desde PR sin drift de comportamiento
+- validar que exista una tarea local versionada del workspace que ejecute el mismo analisis repo-wide de higiene

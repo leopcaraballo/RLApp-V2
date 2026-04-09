@@ -1,7 +1,13 @@
+using System.Diagnostics;
 using MassTransit;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Logging;
 using RLApp.Api.Hubs;
+using RLApp.Adapters.Messaging.Observability;
+using RLApp.Domain.Common;
 using RLApp.Domain.Events;
+using RLApp.Infrastructure.Realtime;
+using RLApp.Ports.Outbound;
 
 namespace RLApp.Api.Consumers;
 
@@ -13,55 +19,354 @@ public class SignalRNotificationConsumer :
     IConsumer<PatientCheckedIn>,
     IConsumer<PatientCalled>,
     IConsumer<PatientClaimedForAttention>,
-    IConsumer<PatientAttentionCompleted>
+    IConsumer<PatientAttentionCompleted>,
+    IConsumer<PatientCalledAtCashier>,
+    IConsumer<PatientPaymentValidated>,
+    IConsumer<PatientPaymentPending>,
+    IConsumer<PatientAbsentAtCashier>,
+    IConsumer<PatientAbsentAtConsultation>,
+    IConsumer<PatientTrajectoryOpened>,
+    IConsumer<PatientTrajectoryStageRecorded>,
+    IConsumer<PatientTrajectoryCompleted>,
+    IConsumer<PatientTrajectoryCancelled>
 {
     private readonly IHubContext<NotificationHub> _hubContext;
+    private readonly RealtimeChannelStatus _realtimeChannelStatus;
+    private readonly ILogger<SignalRNotificationConsumer> _logger;
 
-    public SignalRNotificationConsumer(IHubContext<NotificationHub> hubContext)
+    public SignalRNotificationConsumer(
+        IHubContext<NotificationHub> hubContext,
+        RealtimeChannelStatus realtimeChannelStatus,
+        ILogger<SignalRNotificationConsumer> logger)
     {
         _hubContext = hubContext;
+        _realtimeChannelStatus = realtimeChannelStatus;
+        _logger = logger;
     }
 
     public async Task Consume(ConsumeContext<PatientCheckedIn> context)
     {
         var ev = context.Message;
-        await _hubContext.Clients.All.SendAsync("PatientCheckedIn", new
+        var payload = new
         {
+            ev.EventType,
+            ev.AggregateId,
+            ev.CorrelationId,
+            ev.TrajectoryId,
+            ev.OccurredAt,
             ev.PatientId,
             ev.PatientName,
-            Status = "Waiting"
-        });
+            QueueId = ev.AggregateId,
+            Status = OperationalVisibleStatuses.Waiting
+        };
+
+        await PublishScopedAsync(context, "PatientCheckedIn", payload, ev.AggregateId, ev.TrajectoryId);
     }
 
     public async Task Consume(ConsumeContext<PatientCalled> context)
     {
         var ev = context.Message;
-        await _hubContext.Clients.All.SendAsync("PatientCalled", new
+        var payload = new
         {
+            ev.EventType,
+            ev.AggregateId,
+            ev.CorrelationId,
+            ev.TrajectoryId,
+            ev.OccurredAt,
             ev.PatientId,
             ev.RoomId,
-            Status = "Called"
-        });
+            QueueId = ev.AggregateId,
+            Status = OperationalVisibleStatuses.Called
+        };
+
+        await PublishScopedAsync(context, "PatientCalled", payload, ev.AggregateId, ev.TrajectoryId);
     }
 
     public async Task Consume(ConsumeContext<PatientClaimedForAttention> context)
     {
         var ev = context.Message;
-        await _hubContext.Clients.Group($"queue-{ev.AggregateId}").SendAsync("PatientAtConsultation", new
+        if (!ev.RepresentsStartedAttention)
         {
+            return;
+        }
+
+        var payload = new
+        {
+            ev.EventType,
+            ev.AggregateId,
+            ev.CorrelationId,
+            ev.TrajectoryId,
+            ev.OccurredAt,
             ev.PatientId,
             ev.RoomId,
-            Status = "InConsultation"
-        });
+            QueueId = ev.AggregateId,
+            Status = OperationalVisibleStatuses.InConsultation
+        };
+
+        await PublishScopedAsync(context, "PatientAtConsultation", payload, ev.AggregateId, ev.TrajectoryId);
     }
 
     public async Task Consume(ConsumeContext<PatientAttentionCompleted> context)
     {
         var ev = context.Message;
-        await _hubContext.Clients.All.SendAsync("PatientAttentionCompleted", new
+        var payload = new
         {
+            ev.EventType,
+            ev.AggregateId,
+            ev.CorrelationId,
+            ev.TrajectoryId,
+            ev.OccurredAt,
             ev.PatientId,
-            Status = "Completed"
-        });
+            QueueId = ev.AggregateId,
+            Status = OperationalVisibleStatuses.Completed
+        };
+
+        await PublishScopedAsync(context, "PatientAttentionCompleted", payload, ev.AggregateId, ev.TrajectoryId);
+    }
+
+    public async Task Consume(ConsumeContext<PatientCalledAtCashier> context)
+    {
+        var ev = context.Message;
+        var payload = new
+        {
+            ev.EventType,
+            ev.AggregateId,
+            ev.CorrelationId,
+            ev.TrajectoryId,
+            ev.OccurredAt,
+            ev.PatientId,
+            QueueId = ev.AggregateId,
+            Status = OperationalVisibleStatuses.AtCashier
+        };
+
+        await PublishScopedAsync(context, "PatientCalledAtCashier", payload, ev.AggregateId, ev.TrajectoryId);
+    }
+
+    public async Task Consume(ConsumeContext<PatientPaymentValidated> context)
+    {
+        var ev = context.Message;
+        var payload = new
+        {
+            ev.EventType,
+            ev.AggregateId,
+            ev.CorrelationId,
+            ev.TrajectoryId,
+            ev.OccurredAt,
+            ev.PatientId,
+            QueueId = ev.AggregateId,
+            Status = OperationalVisibleStatuses.WaitingForConsultation
+        };
+
+        await PublishScopedAsync(context, "PatientPaymentValidated", payload, ev.AggregateId, ev.TrajectoryId);
+    }
+
+    public async Task Consume(ConsumeContext<PatientPaymentPending> context)
+    {
+        var ev = context.Message;
+        var payload = new
+        {
+            ev.EventType,
+            ev.AggregateId,
+            ev.CorrelationId,
+            ev.TrajectoryId,
+            ev.OccurredAt,
+            ev.PatientId,
+            QueueId = ev.AggregateId,
+            Status = OperationalVisibleStatuses.PaymentPending
+        };
+
+        await PublishScopedAsync(context, "PatientPaymentPending", payload, ev.AggregateId, ev.TrajectoryId);
+    }
+
+    public async Task Consume(ConsumeContext<PatientAbsentAtCashier> context)
+    {
+        var ev = context.Message;
+        var payload = new
+        {
+            ev.EventType,
+            ev.AggregateId,
+            ev.CorrelationId,
+            ev.TrajectoryId,
+            ev.OccurredAt,
+            ev.PatientId,
+            QueueId = ev.AggregateId,
+            Status = OperationalVisibleStatuses.Absent
+        };
+
+        await PublishScopedAsync(context, "PatientAbsentAtCashier", payload, ev.AggregateId, ev.TrajectoryId);
+    }
+
+    public async Task Consume(ConsumeContext<PatientAbsentAtConsultation> context)
+    {
+        var ev = context.Message;
+        var payload = new
+        {
+            ev.EventType,
+            ev.AggregateId,
+            ev.CorrelationId,
+            ev.TrajectoryId,
+            ev.OccurredAt,
+            ev.PatientId,
+            QueueId = ev.AggregateId,
+            Status = OperationalVisibleStatuses.Absent
+        };
+
+        await PublishScopedAsync(context, "PatientAbsentAtConsultation", payload, ev.AggregateId, ev.TrajectoryId);
+    }
+
+    public async Task Consume(ConsumeContext<PatientTrajectoryOpened> context)
+    {
+        var ev = context.Message;
+        var payload = new
+        {
+            ev.EventType,
+            ev.AggregateId,
+            ev.CorrelationId,
+            ev.OccurredAt,
+            ev.PatientId,
+            ev.QueueId,
+            TrajectoryId = ev.AggregateId,
+            State = "TrayectoriaActiva"
+        };
+
+        await PublishScopedAsync(context, "TrajectoryOpened", payload, ev.QueueId, ev.AggregateId);
+    }
+
+    public async Task Consume(ConsumeContext<PatientTrajectoryStageRecorded> context)
+    {
+        var ev = context.Message;
+        var payload = new
+        {
+            ev.EventType,
+            ev.AggregateId,
+            ev.CorrelationId,
+            ev.OccurredAt,
+            ev.PatientId,
+            ev.QueueId,
+            ev.Stage,
+            ev.SourceEvent,
+            ev.SourceState,
+            TrajectoryId = ev.AggregateId
+        };
+
+        await PublishScopedAsync(context, "TrajectoryStageRecorded", payload, ev.QueueId, ev.AggregateId);
+    }
+
+    public async Task Consume(ConsumeContext<PatientTrajectoryCompleted> context)
+    {
+        var ev = context.Message;
+        var payload = new
+        {
+            ev.EventType,
+            ev.AggregateId,
+            ev.CorrelationId,
+            ev.OccurredAt,
+            ev.PatientId,
+            ev.QueueId,
+            TrajectoryId = ev.AggregateId,
+            State = "TrayectoriaFinalizada"
+        };
+
+        await PublishScopedAsync(context, "TrajectoryCompleted", payload, ev.QueueId, ev.AggregateId);
+    }
+
+    public async Task Consume(ConsumeContext<PatientTrajectoryCancelled> context)
+    {
+        var ev = context.Message;
+        var payload = new
+        {
+            ev.EventType,
+            ev.AggregateId,
+            ev.CorrelationId,
+            ev.OccurredAt,
+            ev.PatientId,
+            ev.QueueId,
+            TrajectoryId = ev.AggregateId,
+            State = "TrayectoriaCancelada"
+        };
+
+        await PublishScopedAsync(context, "TrajectoryCancelled", payload, ev.QueueId, ev.AggregateId);
+    }
+
+    private async Task PublishScopedAsync<TEvent>(
+        ConsumeContext<TEvent> context,
+        string methodName,
+        object payload,
+        string queueId,
+        string? trajectoryId)
+        where TEvent : DomainEvent
+    {
+        await PublishAsync(
+            context,
+            clients => clients.Group(NotificationHub.DashboardGroup),
+            NotificationHub.DashboardGroup,
+            methodName,
+            payload);
+
+        var queueGroup = NotificationHub.QueueGroup(queueId);
+        await PublishAsync(
+            context,
+            clients => clients.Group(queueGroup),
+            queueGroup,
+            methodName,
+            payload);
+
+        if (!string.IsNullOrWhiteSpace(trajectoryId))
+        {
+            var trajectoryGroup = NotificationHub.TrajectoryGroup(trajectoryId);
+            await PublishAsync(
+                context,
+                clients => clients.Group(trajectoryGroup),
+                trajectoryGroup,
+                methodName,
+                payload);
+        }
+    }
+
+    private async Task PublishAsync<TEvent>(
+        ConsumeContext<TEvent> context,
+        Func<IHubClients, IClientProxy> targetFactory,
+        string deliveryScope,
+        string methodName,
+        object payload)
+        where TEvent : DomainEvent
+    {
+        using var activity = MessageFlowTelemetry.StartConsumerActivity(context.Message, nameof(SignalRNotificationConsumer), "realtime-publish-pending");
+        activity?.SetTag("delivery.scope", deliveryScope);
+        activity?.SetTag("realtime.method", methodName);
+
+        using var scope = MessageFlowTelemetry.BeginScope(
+            _logger,
+            context.Message,
+            "realtime-publish-pending",
+            consumerName: nameof(SignalRNotificationConsumer));
+
+        var stopwatch = Stopwatch.StartNew();
+
+        try
+        {
+            await targetFactory(_hubContext.Clients).SendAsync(methodName, payload, context.CancellationToken);
+
+            _realtimeChannelStatus.RecordPublishSucceeded(context.Message.EventType, deliveryScope, stopwatch.Elapsed);
+            MessageFlowTelemetry.SetResult(activity, "realtime-published");
+
+            _logger.LogInformation(
+                "Realtime notification published for {EventType} to {DeliveryScope}.",
+                context.Message.EventType,
+                deliveryScope);
+        }
+        catch (Exception ex)
+        {
+            _realtimeChannelStatus.RecordPublishFailed(context.Message.EventType, deliveryScope, stopwatch.Elapsed, ex);
+            MessageFlowTelemetry.RecordFailure(activity, ex, "realtime-publish-failed");
+
+            _logger.LogError(
+                ex,
+                "Realtime notification failed for {EventType} to {DeliveryScope}.",
+                context.Message.EventType,
+                deliveryScope);
+
+            throw;
+        }
     }
 }

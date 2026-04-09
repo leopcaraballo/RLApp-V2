@@ -16,6 +16,10 @@ Proveer una vista maestra de la estructura documental y de la dependencia entre 
   - 02-as-is-audit/17-FASE-3-KICKOFF.md: Fase 3 — inicio documental de concurrencia optimista en EventStore
   - 02-as-is-audit/18-FASE-3-CIERRE.md: Fase 3 — cierre tecnico de concurrencia optimista, evidencia backend y validacion Docker-first
   - 02-as-is-audit/19-FASE-4-KICKOFF.md: Fase 4 — inicio documental de correlacion de sagas y state machines por `trajectoryId`
+  - 02-as-is-audit/20-FASE-4-CIERRE.md: Fase 4 — cierre tecnico de correlacion longitudinal de sagas y persistencia durable
+  - 02-as-is-audit/21-FASE-5-KICKOFF.md: Fase 5 — inicio documental de discovery operacional de trayectorias desde proyecciones persistidas
+  - 02-as-is-audit/22-FASE-6-KICKOFF.md: Fase 6 — inicio documental de visibilidad operacional sincronizada y realtime mediado por BFF
+  - 02-as-is-audit/23-FASE-6-AUDITORIA-CODIGO-REAL-TRAYECTORIAS.md: Fase 6 — auditoria basada en codigo real del estado actual de trayectorias, CQRS, proyecciones y realtime
 - 03-target-architecture: arquitectura objetivo del proyecto nuevo
 - 04-adr: decisiones formales
 - 05-domain: modelo de dominio, estados y eventos
@@ -26,6 +30,13 @@ Proveer una vista maestra de la estructura documental y de la dependencia entre 
 - 10-product: actores, journeys e historias
 - 11-specifications: requisitos funcionales y tecnicos
 - 12-testing: estrategia y artefactos de prueba
+  - 12-testing/06-OPERATIONAL-FLOW-TEST-PLAN.md: plan integrado de pruebas para pacientes, staff, consultorios, trayectoria, monitor, dashboard y realtime
+  - 12-testing/07-SYNCHRONIZED-TRAJECTORY-QA-TEST-PLAN.md: plan QA del slice de trayectoria sincronizada y sus tres implementaciones de automatizacion
+  - 12-testing/08-SYNCHRONIZED-TRAJECTORY-QA-TEST-CASES.md: catalogo de casos QA y matriz de cobertura para trayectoria sincronizada
+  - 12-testing/qa/README.md: indice de anexos por implementacion para API Screenplay, Front POM y Front Screenplay
+  - 12-testing/qa/01-AUTO-API-SCREENPLAY-ANNEX.md: anexo de cobertura y ejecucion para la implementacion API Screenplay
+  - 12-testing/qa/02-AUTO-FRONT-POM-FACTORY-ANNEX.md: anexo de cobertura y ejecucion para la implementacion Front POM
+  - 12-testing/qa/03-AUTO-FRONT-SCREENPLAY-ANNEX.md: anexo de cobertura y ejecucion para la implementacion Front Screenplay
 - 13-operations: operacion y observabilidad
 - 14-diagrams: soporte visual
 - 15-traceability: matrices formales

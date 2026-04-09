@@ -16,7 +16,7 @@
 - UC-007 Call Next At Cashier
 - UC-008 Validate Payment
 - UC-009 Mark Payment Pending
-- UC-010 Cancel By Payment Policy
+- UC-010 Mark Absence At Cashier
 
 ## Consultation
 
@@ -29,6 +29,7 @@
 
 - UC-015 View Operations Dashboard
 - UC-016 Rebuild Projections
+- UC-021 Consume Synchronized Operational Views
 
 ## AI Governance
 

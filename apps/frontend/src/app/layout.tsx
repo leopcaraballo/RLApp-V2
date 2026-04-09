@@ -16,8 +16,9 @@ const displayFont = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: 'RLApp Frontend Console',
-  description: 'Operational frontend aligned to the implemented RLApp backend contract.',
+  title: 'RLApp Clinical Orchestrator',
+  description:
+    'RLApp Clinical Orchestrator is the staff frontend for synchronized clinical pathways and operational visibility.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

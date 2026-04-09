@@ -7,7 +7,7 @@ namespace RLApp.Domain.ValueObjects;
 /// </summary>
 public abstract class ValueObject
 {
-    public override bool Equals(object obj)
+    public override bool Equals(object? obj)
     {
         if (obj == null || obj.GetType() != GetType())
             return false;
@@ -23,16 +23,16 @@ public abstract class ValueObject
             .Aggregate((x, y) => x ^ y);
     }
 
-    protected abstract IEnumerable<object> GetEqualityComponents();
+    protected abstract IEnumerable<object?> GetEqualityComponents();
 
-    public static bool operator ==(ValueObject left, ValueObject right)
+    public static bool operator ==(ValueObject? left, ValueObject? right)
     {
         if (ReferenceEquals(left, null) ^ ReferenceEquals(right, null))
             return false;
-        return ReferenceEquals(left, null) || left.Equals(right);
+        return ReferenceEquals(left, null) || left.Equals(right as object);
     }
 
-    public static bool operator !=(ValueObject left, ValueObject right)
+    public static bool operator !=(ValueObject? left, ValueObject? right)
     {
         return !(left == right);
     }

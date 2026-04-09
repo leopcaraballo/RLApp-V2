@@ -62,7 +62,7 @@ paths:
                 summary: Login válido
                 value:
                   identifier: admin
-                  password: Password123!
+                  password: local-admin-pass
       responses:
         "200":
           description: Usuario autenticado correctamente.
@@ -768,6 +768,80 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "500":
           $ref: "#/components/responses/InternalServerError"
+  /api/patient-trajectories:
+    get:
+      tags:
+        - PatientTrajectory
+      summary: Descubrir trayectorias materializadas
+      description: |
+        Resuelve trayectorias candidatas cuando el operador conoce `patientId`
+        y opcionalmente `queueId`, pero todavia no tiene el `trajectoryId`
+        canonico.
+
+        Hallazgos importantes:
+        - Requiere política `SupportOrSupervisor`.
+        - `patientId` es obligatorio; `queueId` solo acota la búsqueda.
+        - La respuesta sale directamente desde la proyección persistente y no usa replay en hot path.
+      operationId: discoverPatientTrajectories
+      parameters:
+        - name: patientId
+          in: query
+          required: true
+          description: Identificador interno del paciente a buscar.
+          schema:
+            type: string
+            example: PAT-0045
+        - name: queueId
+          in: query
+          required: false
+          description: Queue operativa usada para acotar la búsqueda.
+          schema:
+            type: string
+            example: Q-2026-03-19-MAIN
+        - $ref: "#/components/parameters/CorrelationIdHeaderOptional"
+      responses:
+        "200":
+          description: Discovery ejecutado correctamente.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PatientTrajectoryDiscoveryResponse"
+              examples:
+                foundCandidates:
+                  value:
+                    total: 2
+                    items:
+                      - trajectoryId: TRJ-Q-2026-04-06-MAIN-PAT-0045-20260406081000000
+                        patientId: PAT-0045
+                        queueId: Q-2026-04-06-MAIN
+                        currentState: TrayectoriaActiva
+                        openedAt: "2026-04-06T08:10:00Z"
+                        closedAt: null
+                        lastCorrelationId: corr-active
+                      - trajectoryId: TRJ-Q-2026-04-05-MAIN-PAT-0045-20260405091000000
+                        patientId: PAT-0045
+                        queueId: Q-2026-04-05-MAIN
+                        currentState: TrayectoriaFinalizada
+                        openedAt: "2026-04-05T09:10:00Z"
+                        closedAt: "2026-04-05T09:42:00Z"
+                        lastCorrelationId: corr-complete
+        "400":
+          description: Alcance inválido para el discovery.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TrajectoryOperationError"
+              examples:
+                invalidScope:
+                  value:
+                    code: TRAJECTORY_DISCOVERY_SCOPE_INVALID
+                    correlationId: CORR-trj-discovery-400
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /api/patient-trajectories/{trajectoryId}:
     get:
       tags:
@@ -778,7 +852,7 @@ paths:
 
         Hallazgos importantes:
         - Requiere política `SupportOrSupervisor`.
-        - No existe endpoint de búsqueda por `patientId`; el cliente debe conocer `trajectoryId`.
+        - Si no se conoce `trajectoryId`, primero debe usarse `GET /api/patient-trajectories`.
         - La respuesta sale directamente desde la proyección persistente y no usa envelope de query.
       operationId: getPatientTrajectory
       parameters:
@@ -937,7 +1011,8 @@ paths:
 
         Hallazgos importantes:
         - No requiere autenticación.
-        - La implementación actual no evalúa `projection lag` ni el canal realtime, aunque la documentación operativa TO-BE sí lo exige.
+        - La implementación actual evalúa base de datos, broker opcional, `projection lag`, estado operativo del canal realtime y `self`.
+        - El canal realtime se marca `degraded` cuando la última publicación SignalR falla mientras existen conexiones activas.
       operationId: getHealth
       security: []
       responses:
@@ -1142,7 +1217,7 @@ components:
         password:
           type: string
           format: password
-          example: Password123!
+          example: local-admin-pass
     ChangeRoleRequest:
       type: object
       required:
@@ -1476,6 +1551,53 @@ components:
           type: string
           nullable: true
           example: CORR-trj-404
+    PatientTrajectoryDiscoveryEntry:
+      type: object
+      required:
+        - trajectoryId
+        - patientId
+        - queueId
+        - currentState
+        - openedAt
+      properties:
+        trajectoryId:
+          type: string
+          example: TRJ-Q-2026-04-06-MAIN-PAT-0045-20260406081000000
+        patientId:
+          type: string
+          example: PAT-0045
+        queueId:
+          type: string
+          example: Q-2026-04-06-MAIN
+        currentState:
+          type: string
+          example: TrayectoriaActiva
+        openedAt:
+          type: string
+          format: date-time
+          example: "2026-04-06T08:10:00Z"
+        closedAt:
+          type: string
+          format: date-time
+          nullable: true
+          example: "2026-04-05T09:42:00Z"
+        lastCorrelationId:
+          type: string
+          nullable: true
+          example: corr-active
+    PatientTrajectoryDiscoveryResponse:
+      type: object
+      required:
+        - total
+        - items
+      properties:
+        total:
+          type: integer
+          example: 2
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PatientTrajectoryDiscoveryEntry"
     TrajectoryStageEntry:
       type: object
       required:

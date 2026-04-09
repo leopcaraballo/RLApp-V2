@@ -9,6 +9,10 @@ namespace RLApp.Adapters.Messaging.Consumers;
 
 public class WaitingRoomMonitorConsumer :
     IConsumer<PatientCheckedIn>,
+    IConsumer<PatientCalledAtCashier>,
+    IConsumer<PatientPaymentValidated>,
+    IConsumer<PatientPaymentPending>,
+    IConsumer<PatientAbsentAtCashier>,
     IConsumer<PatientCalled>,
     IConsumer<PatientClaimedForAttention>,
     IConsumer<PatientAttentionCompleted>,
@@ -26,12 +30,75 @@ public class WaitingRoomMonitorConsumer :
     public async Task Consume(ConsumeContext<PatientCheckedIn> context)
     {
         var ev = context.Message;
+        var turnId = $"{ev.AggregateId}-{ev.PatientId}";
         var data = new Dictionary<string, object>
         {
+            { "QueueId", ev.AggregateId },
+            { "PatientId", ev.PatientId },
+            { "TurnId", turnId },
             { "PatientName", ev.PatientName },
-            { "Status", "Waiting" }
+            { "TicketNumber", turnId },
+            { "CheckedInAt", ev.OccurredAt },
+            { "UpdatedAt", ev.OccurredAt },
+            { "Status", OperationalVisibleStatuses.Waiting }
         };
-        await UpsertMonitorAsync(context, ev.PatientId, data, "Waiting");
+        await UpsertMonitorAsync(context, turnId, data, OperationalVisibleStatuses.Waiting);
+    }
+
+    public async Task Consume(ConsumeContext<PatientCalledAtCashier> context)
+    {
+        var ev = context.Message;
+        var data = new Dictionary<string, object>
+        {
+            { "PatientId", ev.PatientId },
+            { "UpdatedAt", ev.OccurredAt },
+            { "Status", OperationalVisibleStatuses.AtCashier }
+        };
+
+        if (!string.IsNullOrWhiteSpace(ev.CashierStationId))
+        {
+            data["RoomAssigned"] = ev.CashierStationId;
+        }
+
+        await UpsertMonitorAsync(context, ev.PatientId, data, OperationalVisibleStatuses.AtCashier);
+    }
+
+    public async Task Consume(ConsumeContext<PatientPaymentValidated> context)
+    {
+        var ev = context.Message;
+        var data = new Dictionary<string, object>
+        {
+            { "PatientId", ev.PatientId },
+            { "TurnId", ev.TurnId ?? $"{ev.AggregateId}-{ev.PatientId}" },
+            { "UpdatedAt", ev.OccurredAt },
+            { "Status", OperationalVisibleStatuses.WaitingForConsultation }
+        };
+        await UpsertMonitorAsync(context, ev.PatientId, data, OperationalVisibleStatuses.WaitingForConsultation);
+    }
+
+    public async Task Consume(ConsumeContext<PatientPaymentPending> context)
+    {
+        var ev = context.Message;
+        var data = new Dictionary<string, object>
+        {
+            { "PatientId", ev.PatientId },
+            { "UpdatedAt", ev.OccurredAt },
+            { "Status", OperationalVisibleStatuses.PaymentPending }
+        };
+        await UpsertMonitorAsync(context, ev.PatientId, data, OperationalVisibleStatuses.PaymentPending);
+    }
+
+    public async Task Consume(ConsumeContext<PatientAbsentAtCashier> context)
+    {
+        var ev = context.Message;
+        var data = new Dictionary<string, object>
+        {
+            { "PatientId", ev.PatientId },
+            { "TurnId", ev.TurnId ?? $"{ev.AggregateId}-{ev.PatientId}" },
+            { "UpdatedAt", ev.OccurredAt },
+            { "Status", OperationalVisibleStatuses.Absent }
+        };
+        await UpsertMonitorAsync(context, ev.PatientId, data, OperationalVisibleStatuses.Absent);
     }
 
     public async Task Consume(ConsumeContext<PatientCalled> context)
@@ -39,21 +106,30 @@ public class WaitingRoomMonitorConsumer :
         var ev = context.Message;
         var data = new Dictionary<string, object>
         {
-            { "Status", "Called" },
+            { "PatientId", ev.PatientId },
+            { "UpdatedAt", ev.OccurredAt },
+            { "Status", OperationalVisibleStatuses.Called },
             { "RoomAssigned", ev.RoomId }
         };
-        await UpsertMonitorAsync(context, ev.PatientId, data, "Called");
+        await UpsertMonitorAsync(context, ev.PatientId, data, OperationalVisibleStatuses.Called);
     }
 
     public async Task Consume(ConsumeContext<PatientClaimedForAttention> context)
     {
         var ev = context.Message;
+        if (!ev.RepresentsStartedAttention)
+        {
+            return;
+        }
+
         var data = new Dictionary<string, object>
         {
-            { "Status", "InConsultation" },
+            { "PatientId", ev.PatientId },
+            { "UpdatedAt", ev.OccurredAt },
+            { "Status", OperationalVisibleStatuses.InConsultation },
             { "RoomAssigned", ev.RoomId }
         };
-        await UpsertMonitorAsync(context, ev.PatientId, data, "InConsultation");
+        await UpsertMonitorAsync(context, ev.PatientId, data, OperationalVisibleStatuses.InConsultation);
     }
 
     public async Task Consume(ConsumeContext<PatientAttentionCompleted> context)
@@ -63,9 +139,12 @@ public class WaitingRoomMonitorConsumer :
         // For now, update to Completed
         var data = new Dictionary<string, object>
         {
-            { "Status", "Completed" }
+            { "PatientId", ev.PatientId },
+            { "TurnId", ev.TurnId ?? $"{ev.AggregateId}-{ev.PatientId}" },
+            { "UpdatedAt", ev.OccurredAt },
+            { "Status", OperationalVisibleStatuses.Completed }
         };
-        await UpsertMonitorAsync(context, ev.PatientId, data, "Completed");
+        await UpsertMonitorAsync(context, ev.PatientId, data, OperationalVisibleStatuses.Completed);
 
         // Optionally delete after some time, but for now we keep it or delete it:
         // await _projectionStore.DeleteAsync(ev.PatientId);
@@ -76,9 +155,12 @@ public class WaitingRoomMonitorConsumer :
         var ev = context.Message;
         var data = new Dictionary<string, object>
         {
-            { "Status", "Absent" }
+            { "PatientId", ev.PatientId },
+            { "TurnId", ev.TurnId ?? $"{ev.AggregateId}-{ev.PatientId}" },
+            { "UpdatedAt", ev.OccurredAt },
+            { "Status", OperationalVisibleStatuses.Absent }
         };
-        await UpsertMonitorAsync(context, ev.PatientId, data, "Absent");
+        await UpsertMonitorAsync(context, ev.PatientId, data, OperationalVisibleStatuses.Absent);
     }
 
     private async Task UpsertMonitorAsync<TMessage>(ConsumeContext<TMessage> context, string projectionId, Dictionary<string, object> data, string monitorStatus)

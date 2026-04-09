@@ -2,6 +2,7 @@ using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using RLApp.Application.Observability;
 using RLApp.Adapters.Messaging.Observability;
 using RLApp.Adapters.Http.Middleware;
 using RLApp.Adapters.Http.Security;
@@ -9,6 +10,7 @@ using RLApp.Adapters.Persistence.Data;
 using RLApp.Infrastructure;
 using RLApp.Infrastructure.BackgroundServices;
 using RLApp.Infrastructure.Data;
+using RLApp.Infrastructure.Observability;
 using RLApp.Api.Hubs;
 using RLApp.Api.Consumers;
 using OpenTelemetry.Metrics;
@@ -27,11 +29,14 @@ builder.Services.AddOpenTelemetry()
         .AddAspNetCoreInstrumentation()
         .AddEntityFrameworkCoreInstrumentation()
         .AddSource("MassTransit")
+        .AddSource(PatientTrajectoryTelemetry.ActivitySourceName)
         .AddSource(MessageFlowTelemetry.ActivitySourceName)
         .AddConsoleExporter())
     .WithMetrics(metrics => metrics
         .AddAspNetCoreInstrumentation()
         .AddRuntimeInstrumentation()
+        .AddMeter(PatientTrajectoryTelemetry.MeterName)
+        .AddMeter(RealtimeChannelTelemetry.MeterName)
         .AddMeter(OutboxProcessorTelemetry.MeterName)
         .AddPrometheusExporter());
 
@@ -133,6 +138,11 @@ var healthResponseWriter = new Microsoft.AspNetCore.Diagnostics.HealthChecks.Hea
 
 app.MapHealthChecks("/health", healthResponseWriter);
 app.MapHealthChecks("/health/ready", healthResponseWriter);
+app.MapHealthChecks("/health/startup", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("startup"),
+    ResponseWriter = healthResponseWriter.ResponseWriter
+});
 app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
 {
     Predicate = check => check.Tags.Contains("live"),

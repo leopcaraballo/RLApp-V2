@@ -20,6 +20,7 @@ Definir autenticacion de staff, autorizacion por rol y capacidad, gestion de rol
 ## Required behavior
 
 - Todo actor interno debe autenticarse antes de ejecutar operaciones protegidas.
+- La pantalla de acceso de staff debe presentar la marca visible `RLApp Clinical Orchestrator`; el texto secundario `Orquestador de Trayectorias Clínicas Sincronizadas` solo puede aparecer como copy complementario y no cambia contratos ni identificadores tecnicos.
 - La autorizacion se resuelve por rol y capacidad, nunca por convenciones del cliente.
 - Un acceso con credenciales invalidas debe rechazarse.
 - Un acceso autenticado con rol insuficiente debe devolverse como `403`.

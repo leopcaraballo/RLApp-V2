@@ -13,6 +13,8 @@ namespace RLApp.Tests.Integration;
 
 public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
+    private const string IntegrationJwtSecret = "integration-test-jwt-signing-key-local";
+
     private readonly PostgreSqlContainer _dbContainer = new PostgreSqlBuilder("postgres:16-alpine")
         .Build();
 
@@ -24,7 +26,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
             ["Messaging:Enabled"] = "false",
             ["Messaging:Transport"] = "InMemory",
             ["HealthChecks:RabbitMQ:Enabled"] = "false",
-            ["Jwt:Secret"] = "ThisIsAVerySecretKeyForTestingPurposeOnly1234567890!"
+            ["Jwt:Secret"] = IntegrationJwtSecret
         };
     }
 

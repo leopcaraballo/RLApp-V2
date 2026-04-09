@@ -15,8 +15,8 @@ export default function HealthPage() {
       <ContractAlert
         title="Known health coverage gaps"
         items={[
-          'The backend health endpoints do not currently validate projection lag.',
-          'Realtime channel health is not represented in the current readiness contract.',
+          'Readiness reflects API, database, broker, projection lag, and realtime channel registration, but it does not yet prove end-to-end staff clients are connected.',
+          'Health is still an operational surface only; business dashboards and monitors remain separate read-model work.',
         ]}
       />
 

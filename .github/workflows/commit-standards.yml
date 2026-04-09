@@ -38,12 +38,15 @@ jobs:
             before="${{ github.event.before }}"
             if [[ "$before" == "0000000000000000000000000000000000000000" ]]; then
               range="HEAD~1..HEAD"
+            elif ! git cat-file -e "${before}^{commit}" 2>/dev/null; then
+              echo "Previous commit ${before} is unreachable (force push). Validating HEAD only."
+              range="HEAD~1..HEAD"
             else
               range="$before..HEAD"
             fi
           fi
 
-          commits="$(git log --format=%s $range)"
+          commits="$(git log --first-parent --format=%s $range)"
           [[ -n "$commits" ]] || { echo "No commit subjects found to validate."; exit 0; }
 
           while IFS= read -r subject; do

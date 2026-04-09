@@ -9,7 +9,7 @@
 - UC-007 Call Next At Cashier
 - UC-008 Validate Payment
 - UC-009 Mark Payment Pending
-- UC-010 Cancel By Payment Policy
+- UC-010 Mark Absence At Cashier
 - UC-011 Claim Next Patient For Consultation
 - UC-012 Call Patient To Consultation
 - UC-013 Finish Consultation
@@ -20,3 +20,4 @@
 - UC-018 Reconstruct Patient Trajectory
 - UC-019 Protect Aggregate Writes With Optimistic Concurrency
 - UC-020 Correlate Sagas With Patient Trajectory
+- UC-021 Consume Synchronized Operational Views

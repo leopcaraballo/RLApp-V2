@@ -13,7 +13,7 @@ export function ContractAlert({ title, items }: ContractAlertProps) {
   return (
     <section className="contract-alert">
       <div className="contract-alert__header">
-        <StatusBadge tone="warning">Backend warning</StatusBadge>
+        <StatusBadge tone="warning">Importante</StatusBadge>
         <h3>{title}</h3>
       </div>
       <ul className="contract-alert__list">

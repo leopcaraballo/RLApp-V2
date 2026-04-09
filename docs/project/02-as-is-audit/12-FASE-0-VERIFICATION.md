@@ -4,8 +4,8 @@
 
 Resumen:
 
-- Archivos MD analizados: 281
-- Links verificados (aprox): 13
+- Archivos MD analizados: 309
+- Links verificados (aprox): 14
 - Links rotos encontrados: 0
 
 No se encontraron links rotos.

@@ -41,7 +41,10 @@ public class ReceptionController : RLAppControllerBase
             int.TryParse(request.Priority, out var p) ? p : 0,
             request.Notes,
             correlationId,
-            CurrentUserId);
+            CurrentUserId)
+        {
+            IdempotencyKey = idempotencyKey
+        };
         var result = await _mediator.Send(command, cancellationToken);
         return FromCommandResult(result);
     }

@@ -23,6 +23,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\RLApp.Domain\RLApp.Domain.csproj" />
     <ProjectReference Include="..\..\src\RLApp.Application\RLApp.Application.csproj" />
+    <ProjectReference Include="..\..\src\RLApp.Api\RLApp.Api.csproj" />
     <ProjectReference Include="..\..\src\RLApp.Infrastructure\RLApp.Infrastructure.csproj" />
   </ItemGroup>
 

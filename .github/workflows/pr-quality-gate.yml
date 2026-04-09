@@ -81,6 +81,12 @@ jobs:
         run: |
           set -euo pipefail
 
+          head_ref="${{ github.head_ref }}"
+          if [[ "$head_ref" =~ ^feature/sync- ]]; then
+            echo "Sync branch detected (${head_ref}). Skipping code-vs-test validation."
+            exit 0
+          fi
+
           base_ref="origin/${{ github.base_ref }}"
           git fetch origin "${{ github.base_ref }}" --depth=1
           changed_files=$(git diff --name-only "$base_ref"...HEAD)
@@ -94,6 +100,12 @@ jobs:
             echo "Code changes detected without associated tests or testing artifacts."
             exit 1
           fi
+
+      - name: Validate repository hygiene rules
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash .github/scripts/validate-repo-hygiene.sh
 
       - name: Validate architecture guardrails on domain code
         shell: bash
@@ -252,5 +264,133 @@ jobs:
           [[ -f .github/scripts/validate-conventional-commit.sh ]]
           [[ -f .github/scripts/generate-conventional-commit.sh ]]
           [[ -f .github/scripts/git-automation.sh ]]
+          [[ -f .github/scripts/validate-repo-hygiene.sh ]]
           [[ -f .githooks/commit-msg ]]
           [[ -f .githooks/pre-push ]]
+
+      - name: Detect frontend quality scope
+        if: github.event.action != 'edited'
+        id: frontend_quality_scope
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          base_ref="origin/${{ github.base_ref }}"
+          git fetch origin "${{ github.base_ref }}" --depth=1
+          changed_files=$(git diff --name-only "$base_ref"...HEAD)
+
+          if echo "$changed_files" | grep -Eq '^(apps/frontend/)'; then
+            echo "run_frontend_quality=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run_frontend_quality=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Skip frontend quality for non-frontend PR changes
+        if: github.event.action != 'edited' && steps.frontend_quality_scope.outputs.run_frontend_quality != 'true'
+        shell: bash
+        run: |
+          echo "Frontend typecheck/lint/build skipped because the PR does not change apps/frontend."
+
+      - name: Setup Node 22 for frontend quality
+        if: steps.frontend_quality_scope.outputs.run_frontend_quality == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install frontend dependencies for quality validation
+        if: steps.frontend_quality_scope.outputs.run_frontend_quality == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm --prefix apps/frontend ci
+
+      - name: Run frontend typecheck in PR gate
+        if: steps.frontend_quality_scope.outputs.run_frontend_quality == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm --prefix apps/frontend run typecheck
+
+      - name: Run frontend lint in PR gate
+        if: steps.frontend_quality_scope.outputs.run_frontend_quality == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm --prefix apps/frontend run lint
+
+      - name: Run frontend build in PR gate
+        if: steps.frontend_quality_scope.outputs.run_frontend_quality == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm --prefix apps/frontend run build
+
+      - name: Detect role smoke scope
+        if: github.event.action != 'edited'
+        id: role_smoke_scope
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          base_ref="origin/${{ github.base_ref }}"
+          git fetch origin "${{ github.base_ref }}" --depth=1
+          changed_files=$(git diff --name-only "$base_ref"...HEAD)
+
+          if echo "$changed_files" | grep -Eq '^(apps/backend/|apps/frontend/|docker-compose\.yml$|Dockerfile\.backend$|Dockerfile\.frontend$)'; then
+            echo "run_smoke=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run_smoke=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Skip role smoke for non-runtime PR changes
+        if: github.event.action != 'edited' && steps.role_smoke_scope.outputs.run_smoke != 'true'
+        shell: bash
+        run: |
+          echo "Role smoke skipped because the PR does not change backend, frontend, or integration runtime slices."
+
+      - name: Setup Node 22 for role smoke
+        if: steps.role_smoke_scope.outputs.run_smoke == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Validate Docker Compose config for role smoke
+        if: steps.role_smoke_scope.outputs.run_smoke == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker compose config --quiet
+
+      - name: Start frontend validation stack for role smoke
+        if: steps.role_smoke_scope.outputs.run_smoke == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker compose --profile frontend up --build -d --wait
+
+      - name: Run role-based frontend smoke in PR gate
+        if: steps.role_smoke_scope.outputs.run_smoke == 'true'
+        shell: bash
+        env:
+          RLAPP_SMOKE_BASE_URL: http://127.0.0.1:3000
+        run: |
+          set -euo pipefail
+          npm --prefix apps/frontend run smoke:roles
+
+      - name: Dump backend logs on role smoke failure
+        if: failure() && steps.role_smoke_scope.outputs.run_smoke == 'true'
+        shell: bash
+        run: |
+          docker compose logs backend --tail=200 || true
+
+      - name: Dump frontend logs on role smoke failure
+        if: failure() && steps.role_smoke_scope.outputs.run_smoke == 'true'
+        shell: bash
+        run: |
+          docker compose logs frontend --tail=200 || true
+
+      - name: Stop frontend validation stack for role smoke
+        if: always() && steps.role_smoke_scope.outputs.run_smoke == 'true'
+        shell: bash
+        run: |
+          docker compose --profile frontend down --remove-orphans || true

@@ -163,21 +163,3 @@ public class PatientAbsentAtCashier : DomainEvent
 
     protected PatientAbsentAtCashier() { }
 }
-
-/// <summary>
-/// EV-007 PatientCancelledByPayment
-/// Raised when a patient is cancelled due to payment policy.
-/// </summary>
-public class PatientCancelledByPayment : DomainEvent
-{
-    [JsonPropertyName("patientId")]
-    public string PatientId { get; set; } = string.Empty;
-
-    public PatientCancelledByPayment(string aggregateId, string patientId, string correlationId)
-        : base(nameof(PatientCancelledByPayment), aggregateId, correlationId)
-    {
-        PatientId = patientId;
-    }
-
-    protected PatientCancelledByPayment() { }
-}

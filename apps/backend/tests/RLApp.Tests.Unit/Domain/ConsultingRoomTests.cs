@@ -109,7 +109,8 @@ public class ConsultingRoomTests
         Assert.Equal("p-1", room.CurrentPatientId);
         var events = room.GetUnraisedEvents();
         Assert.Single(events);
-        Assert.IsType<PatientClaimedForAttention>(events[0]);
+        var @event = Assert.IsType<PatientClaimedForAttention>(events[0]);
+        Assert.Equal(PatientClaimedForAttention.ClaimedPhase, @event.ConsultationPhase);
     }
 
     [Fact]
