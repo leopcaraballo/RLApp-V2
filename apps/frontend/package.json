@@ -7,7 +7,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "smoke:roles": "node tests/e2e/role-smoke.mjs",
+    "smoke:roles": "node ../../tests/e2e/role-smoke.mjs",
     "typecheck": "tsc --noEmit",
     "generate:api-types": "openapi-typescript ../backend/docs/api/openapi.yaml -o src/generated/backend-api.ts",
     "lint": "eslint .",
