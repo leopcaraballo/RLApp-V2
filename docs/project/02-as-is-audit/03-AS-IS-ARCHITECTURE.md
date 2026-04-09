@@ -21,4 +21,5 @@
 
 - Program.cs con demasiada composicion y coordinacion
 - proyecciones volatiles
-- seguridad transicional por header
+- seguridad actual basada en JWT/RBAC (antes: headers transicionales)
+ 	- Documentación actualizada para reflejar el mecanismo vigente de autenticación y autorización.

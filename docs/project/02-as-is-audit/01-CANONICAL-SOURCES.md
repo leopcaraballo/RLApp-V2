@@ -13,4 +13,4 @@ Fijar la evidencia oficial del sistema actual antes de definir el proyecto nuevo
 
 ## Important note
 
-El archivo apps/backend/READMEBACKEND.md fue eliminado por gobernanza documental. Cualquier referencia previa a ese archivo debe migrarse a las fuentes canonicas vigentes.
+Nota: apps/backend/READMEBACKEND.md fue eliminado por gobernanza documental. Todas las referencias deben apuntar únicamente a las fuentes vigentes listadas arriba.
