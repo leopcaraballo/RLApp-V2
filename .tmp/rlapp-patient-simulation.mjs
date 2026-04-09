@@ -2,7 +2,7 @@ import { writeFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 
 const baseUrl = process.env.RLAPP_BASE_URL ?? "http://127.0.0.1:5094";
-const queueId = process.env.RLAPP_QUEUE_ID ?? "CONSULTA-EXTERNA-PRINCIPAL";
+const queueId = process.env.RLAPP_QUEUE_ID ?? "CONSULTA-INTERNA";
 const cashierStationId = process.env.RLAPP_CASHIER_ID ?? "CAJA-PRINCIPAL";
 const requestedPatients = Number(process.env.RLAPP_TOTAL_PATIENTS ?? 100);
 const initialRoomCount = Number(process.env.RLAPP_INITIAL_ROOMS ?? 10);
@@ -518,8 +518,7 @@ async function login() {
         body: {
             identifier: "superadmin",
             password:
-                process.env.RLAPP_SEED_SUPERVISOR_PASSWORD ??
-                "local-supervisor-pass",
+                process.env.RLAPP_SEED_SUPERVISOR_PASSWORD ?? "superadmin",
         },
     });
 
