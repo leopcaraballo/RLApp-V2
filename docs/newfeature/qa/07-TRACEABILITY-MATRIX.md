@@ -51,9 +51,50 @@ Vincular historias, reglas, escenarios, casos de prueba y archivos de test reale
 | **Frontend (Unit)** | `authorization.test.ts`, `display-text.test.ts`, `http-client.test.ts`, `env.test.ts` | 38 tests: auth, display, HTTP client, env | **Activo en CI** |
 | **Frontend (E2E)** | `role-smoke.mjs` | Smoke de roles con login | Manual trigger |
 
+## Evidencia de automatizacion externa (Serenity BDD)
+
+> Los tres proyectos de automatizacion externa Java/Serenity BDD complementan la cobertura interna. Detalle completo en `15-EXTERNAL-AUTOMATION-DESIGN.md`.
+
+### AUTO_API_SCREENPLAY — 22 tests, 18 escenarios
+
+| HU | Criterio | Feature / Escenario | Cobertura | Estado |
+|---|---|---|---|---|
+| HU-01 | CA-01 Unica trayectoria | `flujo_atencion_paciente` / E2E completo | Recepcion → Cola → Caja → Consulta → Cierre | **Automated** |
+| HU-01 | CA-03 Inicio valido | `flujo_atencion_paciente` / E2E completo | Registro en recepcion inicia trayectoria | **Automated** |
+| HU-02 | CA-01 Conservar informacion | `flujo_atencion_paciente` / E2E completo | Trayectoria con 5 etapas cronologicas | **Automated** |
+| HU-02 | CA-03 Una sola accion | `trayectoria_paciente` / Detalle cronologico | Verifica stages ordenados | **Automated** |
+| HU-02 | CA-05 Flujo permitido | `datos_limite_paciente` / DDT datos invalidos | Registro con datos invalidos rechazado | **Automated** |
+| HU-03 | CA-01 Mostrar etapa actual | `trayectoria_paciente` / Discovery positivo | GET discovery retorna trayectorias | **Automated** |
+| HU-03 | CA-03 Consistencia visible | `trayectoria_paciente` / Contrato discovery + detalle | Campos obligatorios presentes | **Automated** |
+| HU-03 | CA-04 Multiples pacientes | `trayectoria_paciente` / DDT filtros discovery (x3) | queueId, patientId, combinado | **Automated** |
+| HU-04 | CA-01 Historial completo | `trayectoria_paciente` / Detalle cronologico | 5 stages con timestamps | **Automated** |
+| HU-04 | CA-04 Filtros y auditoria | `contrato_seguridad_api` / RBAC (6 escenarios) | 401, 403, token invalido, rebuild roles | **Automated** |
+| — | Seguridad | `contrato_seguridad_api` / Sin token, token invalido, rol sin permisos | Errores canonicos 401/403/404 | **Automated** |
+| — | Limites | `datos_limite_paciente` / BVA + DDT (x3) | Nombre y ID en extremos | **Automated** |
+
+### AUTO_FRONT_POM_FACTORY — 12 tests, 7 escenarios
+
+| HU | Criterio | Feature / Escenario | Cobertura | Estado |
+|---|---|---|---|---|
+| HU-03 | CA-01 Mostrar etapa | `trajectory` / Acceso consola Supervisor | Login → consola con status badges | **Automated** |
+| HU-03 | CA-04 Multiples pacientes | `trajectory` / Busqueda con IDs limite (DDT x3) | BVA: 1 char, UUID, 50 chars | **Automated** |
+| — | Login | `login` / Login exitoso + DDT fallidos (x4) | 5 combinaciones de credenciales | **Automated** |
+| — | Negativo | `trajectory` / Paciente inexistente | UUID aleatorio → estado vacio | **Automated** |
+
+### AUTO_FRONT_SCREENPLAY — 8 tests, 6 escenarios
+
+| HU | Criterio | Feature / Escenario | Cobertura | Estado |
+|---|---|---|---|---|
+| HU-01 | CA-03 Inicio valido | `registration` / Registro exitoso | Login → datos validos → submit → exito | **Automated** |
+| HU-03 | CA-01 Mostrar etapa | `trajectory` / Consola Supervisor | Login → consola visible | **Automated** |
+| — | Registro | `registration` / Registro fallido | Datos incompletos → error | **Automated** |
+| — | Landing | `registration` / Pagina publica | Landing visible sin login | **Automated** |
+| — | Negativo | `trajectory` / Paciente inexistente | UUID aleatorio → vacio | **Automated** |
+| — | Limites | `trajectory` / IDs limite (DDT x3) | BVA: "X", UUID, 50 chars | **Automated** |
+
 ## Regla de lectura
 
-- **Automated**: existe y pasa en CI (GitHub Actions)
+- **Automated**: existe y pasa en CI (GitHub Actions) o en ejecucion local verificada
 - **Partial automated**: parte del criterio esta cubierta; el espectro completo no
 - **Enforced by code**: la regla se cumple por invariantes del dominio o infraestructura
 - **Backlog**: test identificado como necesario, no implementado

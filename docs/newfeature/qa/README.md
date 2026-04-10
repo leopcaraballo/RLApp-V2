@@ -42,6 +42,7 @@ El prompt de entrada usa endpoints conceptuales para describir la capacidad. Est
 | 12 | `12-GO-NO-GO-REPORT.md` | recomendacion de salida a produccion |
 | 13 | `13-EXECUTIVE-DEFENSE-PRESENTATION.md` | deck ejecutivo para sustentacion oral |
 | 14 | `14-ORAL-DEFENSE-GUIDE.md` | guion de exposicion, preguntas y respuestas |
+| 15 | `15-EXTERNAL-AUTOMATION-DESIGN.md` | arquitectura, patrones, evaluacion y recomendaciones de los 3 proyectos Serenity BDD externos (API Screenplay, POM Factory, UI Screenplay) |
 
 ## Compatibility artifacts for the QA phases
 
@@ -60,6 +61,6 @@ Estos archivos existen para alinearse con el framework del workspace QA y refere
 5. `05-TEST-SCENARIOS.md`
 6. `06-TEST-CASES.md`
 7. `07-TRACEABILITY-MATRIX.md`
-8. `08-10` para automatizacion y pipeline
+8. `08-10` y `15` para automatizacion, pipeline y reportes
 9. `11-13` para decision y sustentacion
 10. `14-15` para presentar y defender ejecutivamente el paquete

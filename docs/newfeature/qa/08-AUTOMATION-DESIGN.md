@@ -190,3 +190,18 @@ node apps/frontend/tests/e2e/role-smoke.mjs
 4. **Testcontainers para integracion**: PostgreSQL y RabbitMQ efimeros, sin fixtures compartidas
 5. **Coverage en CI**: coverlet.collector genera reportes automaticamente
 6. **Assertions explicitas**: FluentAssertions para legibilidad; assertions de estructura, no de implementacion
+
+---
+
+## 7. Automatizacion Externa (Serenity BDD)
+
+Adicionalmente a los tests internos documentados en este archivo, existen tres proyectos de automatizacion externa basados en Java 21, Gradle y Serenity BDD 4.0.15 que validan el sistema desde la perspectiva del usuario y consumidor de API:
+
+| Proyecto | Patron | Capa | Tests |
+|---|---|---|---|
+| `AUTO_API_SCREENPLAY` | Screenplay (API) | REST: E2E, contrato, seguridad, limites | 22 |
+| `AUTO_FRONT_POM_FACTORY` | Page Object Model | UI: login, trayectoria | 12 |
+| `AUTO_FRONT_SCREENPLAY` | Screenplay (Web) | UI: landing, registro, trayectoria | 8 |
+| **Total** | | | **42** |
+
+**Documentacion completa**: ver `15-EXTERNAL-AUTOMATION-DESIGN.md` para arquitectura, patrones, interacciones, evaluacion de calidad y recomendaciones de mejora de estos proyectos.

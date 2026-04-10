@@ -85,25 +85,90 @@
 
 ---
 
-## 5. Interpretacion
+## 5. Automatizacion Externa — Serenity BDD (42 tests)
+
+> Ejecucion local contra stack Docker (PostgreSQL + RabbitMQ + Backend .NET 10 + Frontend Next.js 16)
+
+### 5.1 Resumen
+
+| Proyecto | Patron | Tests | Escenarios | Pasados | Fallidos | Pendientes | Tasa |
+|---|---|---|---|---|---|---|---|
+| AUTO_API_SCREENPLAY | Screenplay API | 22 | 18 | 22 | 0 | 0 | 100% |
+| AUTO_FRONT_POM_FACTORY | POM + Step Library | 12 | 7 | 12 | 0 | 0 | 100% |
+| AUTO_FRONT_SCREENPLAY | Screenplay Web | 8 | 6 | 8 | 0 | 0 | 100% |
+| **Total externo** | | **42** | **31** | **42** | **0** | **0** | **100%** |
+
+### 5.2 Distribucion por Tipo de Test
+
+| Tipo | Escenarios | Proyectos |
+|---|---|---|
+| E2E (flujo completo) | 1 | API |
+| Functional (discovery, detalle, registro) | 6 | API, Screenplay |
+| Security / RBAC (401, 403) | 6 | API |
+| Contract (schema JSON) | 2 | API |
+| DDT / Boundary (Scenario Outline) | 9 | API, POM, Screenplay |
+| Negative | 5 | API, POM, Screenplay |
+| Smoke (landing, consola) | 4 | POM, Screenplay |
+| Login (happy + negative) | 5 | POM |
+
+### 5.3 Stack y Herramientas
+
+- **Java 21** (OpenJDK), Gradle 8.12.1 / 9.4.1
+- **Serenity BDD 4.0.15** con Cucumber y JUnit 4 + Vintage Engine
+- **Chrome 146.x headless** (Selenium WebDriver 4.14.1)
+- Reportes HTML en `target/site/serenity/index.html` por proyecto
+
+### 5.4 Evidencia de Reportes
+
+Los reportes Serenity BDD generados confirman 0 pendientes y 0 fallos:
+
+```bash
+# Reproducir ejecucion:
+cd AUTO_API_SCREENPLAY && ./gradlew clean test
+cd AUTO_FRONT_POM_FACTORY && ./gradlew clean test
+cd AUTO_FRONT_SCREENPLAY && ./gradlew clean test
+```
+
+> Documentacion completa de arquitectura y patrones: `15-EXTERNAL-AUTOMATION-DESIGN.md`
+
+---
+
+## 6. Resumen Consolidado (Interno + Externo)
+
+| Capa | Tests | Tasa |
+|---|---|---|
+| Backend Unit (.NET xUnit) | 210 | 100% |
+| Backend Integration (Testcontainers) | 25 | 100% |
+| Frontend Unit (vitest) | 38 | 100% |
+| External API (Serenity Screenplay) | 22 | 100% |
+| External UI POM (Serenity POM) | 12 | 100% |
+| External UI Screenplay (Serenity) | 8 | 100% |
+| **Total consolidado** | **315** | **100%** |
+
+---
+
+## 7. Interpretacion
 
 ### Fortalezas
 
-1. **100% pass rate**: todos los tests pasan sin flakiness conocida
+1. **100% pass rate**: todos los 315 tests pasan sin flakiness conocida
 2. **Integracion real**: Testcontainers garantizan pruebas contra PostgreSQL y RabbitMQ reales
 3. **Cobertura del dominio**: el aggregate `PatientTrajectory` tiene la mayor densidad de tests (~30)
-4. **RBAC verificado**: endpoints protegidos con assertions de autorizacion reales
+4. **RBAC verificado**: endpoints protegidos con assertions de autorizacion reales (backend + API externe)
+5. **Cobertura E2E externa**: 42 tests Serenity BDD cubren flujo completo API + UI con Screenplay y POM
+6. **Seguridad exhaustiva**: 6 escenarios API dedicados a 401/403, tokens invalidos y RBAC
+7. **React Hook Form compatibilidad**: solucion robusta con JS injection en los 3 proyectos UI
 
 ### Areas de Mejora Identificadas
 
 1. **Cobertura de concurrencia**: no hay tests que fuercen conflictos de version optimista
 2. **SLA de latencia**: no se mide que proyecciones se materialicen en < 1 segundo
 3. **Audit trail**: verificacion de logging/auditoria solo en rebuild, no en operaciones normales
-4. **Frontend E2E**: `role-smoke.mjs` es manual; no hay E2E automatizado en CI
+4. **Tags Cucumber**: los proyectos externos no tienen tags para ejecucion selectiva en CI
 
 ---
 
-## 6. Comando de Verificacion
+## 8. Comando de Verificacion
 
 ```bash
 # Reproducir estos resultados localmente:
@@ -114,11 +179,16 @@ dotnet test apps/backend/RLApp.slnx --configuration Release --verbosity normal
 # Frontend (requiere Node.js 22+ y pnpm)
 cd apps/frontend && pnpm test --run
 
-# Resultado esperado: 273 tests, 0 failures
+# Automatizacion externa (requiere Java 21, Gradle, Docker stack corriendo)
+cd AUTO_API_SCREENPLAY && ./gradlew clean test
+cd AUTO_FRONT_POM_FACTORY && ./gradlew clean test
+cd AUTO_FRONT_SCREENPLAY && ./gradlew clean test
+
+# Resultado esperado: 315 tests totales, 0 failures
 ```
 
 ---
 
-## 7. Diferencia con Reporte Anterior
+## 9. Diferencia con Reporte Anterior
 
-El reporte anterior (`10-TEST-REPORT-SIMULATED.md`) contenia datos simulados (148/140/131 tests) que no correspondian a ningun run real. Este documento reemplaza ese reporte con evidencia de ejecucion verificable.
+El reporte anterior (`10-TEST-REPORT-SIMULATED.md`) contenia datos simulados (148/140/131 tests) que no correspondian a ningun run real. Este documento reemplaza ese reporte con evidencia de ejecucion verificable, incluyendo 42 tests externos de automatizacion Serenity BDD.
