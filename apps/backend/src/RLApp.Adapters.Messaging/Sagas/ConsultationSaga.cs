@@ -1,5 +1,4 @@
 using Automatonymous;
-using MassTransit;
 using Microsoft.Extensions.Logging;
 using RLApp.Adapters.Messaging.Observability;
 using RLApp.Domain.Common;
